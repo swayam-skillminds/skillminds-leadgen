@@ -15,7 +15,7 @@ Two run profiles share the codebase, selected by config file:
 ```bash
 # Setup
 python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+pip install -e ".[dev]"          # pyproject.toml is the only dependency list; extras: dev, ai
 playwright install chromium
 
 # Tests (all offline — stubs/fakes, no network)
@@ -30,7 +30,7 @@ python run.py --export-only                                   # rescore + re-exp
 python run.py --enrich-only | --no-enrich | --no-sheets | --no-headless | -v
 python run.py --config config.nashik.yaml --dry-run           # venue profile
 
-# Formatted Excel workbooks from the local CSVs (need openpyxl, not in requirements.txt)
+# Formatted Excel workbooks from the local CSVs
 .venv/bin/python tools/build_leads_workbook.py
 .venv/bin/python tools/build_nashik_workbook.py
 ```

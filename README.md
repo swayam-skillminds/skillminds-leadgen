@@ -58,7 +58,7 @@ search engine has already indexed are recorded.
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -e ".[dev]"      # deps live in pyproject.toml; add ,ai for the Anthropic SDK backend
 playwright install chromium
 ```
 
