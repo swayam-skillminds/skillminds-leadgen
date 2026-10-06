@@ -2,7 +2,7 @@
 
 Date: 2026-10-06 · Branch: `phase-1/core-refactor` · Plan: `APP-BUILD-PROMPT.md` Section A + Phase 1
 
-**Result:** Phase 1 is complete. The suite is green: 378 passed, 3 skipped (it was 267 passed, 2 skipped). The third skip is the opt-in live Postgres test.
+**Result:** Phase 1 is complete. The suite is green: 381 passed, 6 skipped (it was 267 passed, 2 skipped). Four of the skips are the opt-in live Postgres tests, which pass against a real PostgreSQL 16 server (section 15).
 
 All four acceptance checks pass. The Phase 0 characterisation baselines hold exactly, now measured *through the new migration*: no golden file changed (`git diff main -- tests/characterisation/golden` is empty). The two Phase 0 open issues that name Phase 1 are resolved, and so is the unassigned SEO-name one.
 
@@ -40,7 +40,7 @@ Modules were moved with `git mv` and their imports rewritten mechanically, so `g
 - **SQLite runs in WAL mode** (`test_file_databases_use_wal`) and is the default, under the `platformdirs` user data directory. `LEADSCRAPER_DATA_DIR` or `LEADSCRAPER_DB_URL` override it.
 - **Postgres path.**
   - Tested here: every table and index compiles for Postgres, with records as `JSONB`. The full migration renders as offline SQL (`db upgrade --sql`).
-  - Not run here: `tests/test_postgres.py` is a live round trip (migrate, compare, upsert, merge, consolidate, dead domains, rescore). It runs when `LEADSCRAPER_TEST_POSTGRES_URL` points at a throwaway database. **It was not executed:** there's no Postgres on this machine, Docker isn't running, and no embedded Postgres exists for Python 3.14. Installing a server system-wide wasn't done without asking.
+  - Live, opt-in (`LEADSCRAPER_TEST_POSTGRES_URL` → a throwaway database): `tests/test_postgres.py` is a round trip (migrate, compare, upsert, merge, consolidate, dead domains, rescore) plus the locality-scan order. `tests/characterisation/test_char_postgres.py` migrates both real stores into Postgres and requires the SQLite goldens exactly. **All pass** on PostgreSQL 16.2, in both a `C.UTF-8` and an `en_US.UTF-8` database (section 15).
 - **What every write records.** Beyond the merged record, each write leaves:
   - identity keys, in claim order;
   - contacts, each `published` with its source and a confidence (0.8 for AI-read values, 1.0 otherwise);
@@ -128,6 +128,17 @@ The implicit defaults of pre-Phase-1 configs (IN, Mumbai, its centre, Maharashtr
 
 - **Schema.** `config/schema.py` is the A.8 pydantic model, `schema_version: 1`, with JSON Schema export (`python -m leadscraper config schema`). `lead_types.<key>` is validated against each lead type's own model from the registry, so a new lead type needs no schema edit.
 - **Minimal configs work.** A country, a place and one category are enough; sources default to every applicable source at polite delays (`test_country_place_and_one_category_are_enough`).
+- **Unchecked fields switch off the sources that only fill them** (A.8). Each enricher, and the decision-maker search, declares `fills`:
+
+  | Source | `fills` |
+  |---|---|
+  | `website` | emails, phones, socials, address, prices |
+  | `maps_lookup` | phones, website, address, ratings |
+  | `instagram` | phones, emails, website |
+  | `linkedin_serp` | decision_makers |
+
+  Source selection (shared by `plan()` and the pipeline) skips a source when `fields.include` asks for none of its fields, and logs it as "not needed — it only fills …". Discovery sources always run. A config without `fields` keeps everything, so both presets are unaffected (`test_phase1_acceptance.py::test_unchecked_fields_switch_off_the_sources_that_only_fill_them`, `::test_a_run_config_without_fields_keeps_every_source`).
+- **Settings not acted on yet are named, not silently dropped.** The schema holds the whole A.8 shape so saved configs never need to change. Today these do nothing at runtime: `filters`, `icp`, `depth`, `time_budget_minutes`, `output.excel` and `output.json`; the CSV is also written even with `output.csv: false`. `RunConfig.unapplied()` lists each one a config sets, with the phase that brings it. The runner logs them as warnings at run start, and `config validate` prints them (`test_config_schema.py::test_settings_this_build_does_not_apply_are_named`).
 - **Importer.** `config/importer.py` turns a legacy `config.yaml` into a run config, and `config/compile.py` is its exact inverse into the `Config` view that sources read.
 - **Presets.** `presets/mumbai-event-vendors.yaml` and `presets/nashik-venues.yaml` are the imported legacy configs. Tests prove:
   - both load (`test_legacy_preset_loads`);
@@ -240,7 +251,6 @@ None of these touch the characterisation results, which run the legacy configs t
 
 ## 13. Deviations from the plan, with reasons
 
-- **The live Postgres test wasn't executed.** It's written and opt-in; see section 2.
 - **Core sources stay in `sources/`** (section 1).
 - **The `Lead` dataclass is still the organisation record.**
   - `organizations.record` holds it; contacts, keys, people and evidence are normalised beside it.
@@ -257,12 +267,50 @@ None of these touch the characterisation results, which run the legacy configs t
 ## 14. Open issues, carried forward
 
 - **Terms of service vs A.2.4.** `docs/sources.md` flags inherited sources that sit close to "never scrape when a public API exists": Google Maps and Search, Airbnb, Booking.com, Instagram and Facebook. Phase 1 changed none of their behaviour. Whether each stays, moves to an official API, or is retired is your call.
-- **Bridging upserts aren't consolidated.** An incoming record that matches A by phone and B by place merges into A only, as before. Consolidating it would change the replay baseline. Do it deliberately, with a `CHAR_UPDATE` and its numbers, if wanted.
+- **Bridging upserts aren't consolidated — measured; recommend leaving them.** An incoming record that matches A by phone and B by place merges into A only, as before. Consolidating after every merging upsert was measured on the frozen stores (section 15): it adds **one** merge on Mumbai and none on Nashik, and that one is wrong. An event planner and a banquet hall share one phone number, but they have different domains and different Maps places. No code change was made; it's still your call.
 - **The legacy phone rule merges a venue operator's properties.** On the Nashik replay, VayaVia Divine and VayaVia The Frame share a reservations number and score 70 on name similarity (threshold 60), so they merge. This is unchanged Phase 0 behaviour, pinned by the baseline; raising the threshold is a tuning decision.
-- **Run the live Postgres test once** against a throwaway server. `docker compose` arrives in Phase 3.
 - **Migrate the real stores.** `migrate-legacy` was run only into a sandbox. Run it once into your real data directory (it copies the originals; they stay untouched). Until then, `run.py` on the legacy configs stops with that instruction.
+- **`filters` has no phase in the plan.** `min_rating`, `must_have` and `exclude_chains` are accepted and reported as not applied. Suggested home: the Phase 4 Records export, since filtering is a view over the project, not a reason to drop data. `suppression_lists` is Phase 3.
 - **Phase 2 inherits:**
   - `plan()` and `WorkUnit`;
   - per-unit timing via `store.record_unit` (now actually recorded);
   - the `runs` / `work_units` tables;
   - a DB-backed run record to resume from.
+
+## 15. Continuation (same day): Postgres verified, `fields` honoured
+
+This picks up the open items in section 14.
+
+**Live Postgres.** A throwaway PostgreSQL 16.2 server ran from the `pgserver` wheel in a scratch Python 3.12 venv: no system-wide install, no Docker, TCP on localhost only, deleted afterwards. `psycopg[binary]` (the `postgres` extra) runs on the project's Python 3.14.
+
+| Check | `C.UTF-8` DB | `en_US.UTF-8` DB |
+|---|---|---|
+| `test_postgres.py` round trip | pass | pass |
+| Mumbai, verbatim export + replay dedup vs SQLite goldens | identical | identical |
+| Nashik, verbatim export + replay dedup vs SQLite goldens | identical | identical |
+
+**One real divergence found and fixed.** The fuzzy-name rule breaks ties by the locality scan's `(category, score desc, id)` order:
+- SQLite compares categories bytewise.
+- A Postgres database with a locale collation (the official Docker image defaults to `en_US.utf8`) puts "Decorators" before "DJs".
+
+So a server could have resolved the same tie differently. The real stores happen not to hit it; their category names sort the same both ways. The scan now orders by `category COLLATE "C"` on Postgres. `test_postgres.py::test_locality_scan_orders_categories_bytewise_on_postgres` fails on an `en_US` database without the fix and passes with it. SQLite's SQL is unchanged.
+
+**`fields.include` and unapplied settings.** See section 6. A dry run of "dentists in Austin, US" with `fields: {include: [phones, emails]}` and a 30-minute budget:
+- built Google Maps, Google Search and Facebook;
+- skipped `linkedin_serp` as "not needed";
+- kept the website and Instagram enrichers;
+- warned that the time budget, Excel and the CSV switch aren't applied yet.
+
+**Bridging upserts, measured** (scratch only, nothing committed): a replay of both frozen stores with consolidation after every merging upsert.
+
+| Store | Stored today | With consolidation | Extra merges |
+|---|---|---|---|
+| Mumbai | 1,267 | 1,266 | 1, wrong: an event planner (Andheri) and a banquet hall (Dadar) sharing one phone; different domains and Maps places |
+| Nashik | 987 | 987 | 0 |
+
+**Still open, and yours to decide:**
+- the terms-of-service review (section 14);
+- the VayaVia phone-similarity threshold;
+- running `migrate-legacy` into your real data directory. It copies the originals, and wasn't done here because it writes to your per-user application database.
+
+Commits: `fix(db): order the locality scan bytewise on Postgres; real-data characterisation on Postgres`, `feat(config): fields.include switches off sources that only fill unchecked fields; name unapplied settings`, and this report.

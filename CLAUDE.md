@@ -24,6 +24,8 @@ playwright install chromium
 python -m pytest tests/ -q                                    # ~12 s
 python -m pytest tests/test_pipeline.py::test_name -q         # one test
 python -m pytest -q -m "not characterisation"                 # fast loop (~3 s)
+LEADSCRAPER_TEST_POSTGRES_URL=postgresql+psycopg://USER@HOST:PORT/THROWAWAY_DB \
+  python -m pytest -m postgres -q                             # server mode, incl. both real stores (drops app tables!)
 
 # Characterisation baseline (see below)
 python tests/characterisation/freeze.py                       # freeze DB copies + write real-data snapshots
@@ -88,7 +90,8 @@ Keep this property when you add or modify sources.
 **Sources and packs:**
 - Each source is one `Source` (discovery) or `Enricher` subclass with a `name`, a `priority` (its run order; the values reproduce the original registry order) and a `scope`: `"combo"` (per locality × category), `"locality"` or `"run"`.
 - Core sources live in `sources/`. A source that only makes sense somewhere lives in a pack (`packs/<pack>/__init__.py` declares `applicable_countries` / `applicable_verticals`), and a class can narrow further with its own `applicable_countries` (StayVista: IN).
-- `sources/registry.py` assembles core and every pack. `Pipeline._build` reports each entry as built, or not built with its reason (not requested / disabled / not applicable). An inapplicable pack is silent, never a failure.
+- `sources/registry.py` assembles core and every pack. `Pipeline._build` reports each entry as built, or not built with its reason (not requested / disabled / not applicable / not needed). An inapplicable pack is silent, never a failure.
+- A class that only exists to fill certain fields declares them in `fills` (enrichers; `linkedin_serp` = decision_makers). It isn't built when the run's `fields.include` leaves all of them out (A.8). Discovery sources have `fills = None` and always run.
 - Directory city slugs come from the pack (`Pack.city_slug`).
 - Site-specific selectors sit at the bottom of each source file.
 - Dependencies come in through `SourceContext` (config, `HttpClient`, `RateLimiter`, `FailureLog`, `BrowserSession`, store).
@@ -110,7 +113,7 @@ Keep this property when you add or modify sources.
 - `Lead.merge` unions lists, fills empty fields, settles conflicting ratings in favour of the higher review count, and never overwrites a value with a blank.
 - `IdentityResolver.find_match` order: registry ID → shared phone → same Maps place (phones must not contradict) → identical canonical name → fuzzy name ≥ 92 in the same locality → (venues) pins within 250 m → same registrable domain (blocklisted shared hosts excluded; phones must not contradict; names ≥ 60 similar; fewer than 3 holders; off for venue runs).
 - A longer incoming name replaces the stored one only when it *extends* it and isn't keyword-stuffed; otherwise it becomes an "also known as" note.
-- `LeadStore` answers the rules' lookups from indexed tables in the original store's row orders (`identity_keys` in claim order; locality scan ordered by category, score desc, id), so legacy decisions reproduce exactly.
+- `LeadStore` answers the rules' lookups from indexed tables in the original store's row orders (`identity_keys` in claim order; locality scan ordered by category, score desc, id, with categories compared bytewise even on a locale-collated Postgres), so legacy decisions reproduce exactly, on SQLite and Postgres alike.
 - Every write records contacts (with source), an evidence row, and run membership. `merge_into` / `update_fields` re-check identity and **consolidate** duplicates (lower id survives).
 - The venue profile adds rules via `DedupOptions`.
 - Schema changes need an Alembic migration (`db/migrations/versions/`). `tests/test_db.py::test_alembic_migrations_build_exactly_the_models` fails until the migration matches the models.
@@ -138,6 +141,7 @@ Keep this property when you add or modify sources.
 - `Config` (`config/legacy.py`) is the compiled runtime view: dotted `get`/`set` (CLI flags mutate it and are recorded in the run's snapshot).
 - Localities (areas) have aliases, keywords and centres; categories have queries and directory slugs. Anything added there flows through every source.
 - A run config leaving out `lead_types.local_business.sources` gets every applicable source at polite defaults (`DEFAULT_SOURCES`).
+- The schema holds the whole A.8 shape, but `filters`, `icp`, `depth`, `time_budget_minutes` and `output.excel/json` aren't acted on yet. `RunConfig.unapplied()` names each one a config sets; the runner logs them and `config validate` prints them. Drop a note there when you implement one.
 
 ## Credentials
 

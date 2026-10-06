@@ -85,7 +85,7 @@ Businesses by category and location. This is the original scraper, wrapped:
 |---|---|
 | Plugin object | `leadtypes/local_business/plugin.py` (`LOCAL_BUSINESS`) |
 | Config model | `leadtypes/local_business/config.py` (`LocalBusinessConfig`), plus `DEFAULT_SOURCES` for configs that leave `sources` out |
-| Source selection and unit order | `leadtypes/local_business/planning.py`, shared by `plan()` and the pipeline, so what's reported is what runs (`test_plan_lists_the_units_the_pipeline_executes_in_order`) |
+| Source selection and unit order | `leadtypes/local_business/planning.py`, shared by `plan()` and the pipeline, so what's reported is what runs (`test_plan_lists_the_units_the_pipeline_executes_in_order`). A source whose `fills` the run's `fields.include` leaves out is skipped as "not needed" |
 | Execution | `leadtypes/local_business/pipeline.py` (`Pipeline`): discovery → (venues: AI classification and brand roll-up) → name polish → enrichment → AI extraction → finalise |
 | Scoring | `leadtypes/local_business/scoring.py` (`Scorer`) |
 | Hospitality vertical | `packs/hospitality/venues.py`: venue types, tiers, prices |
