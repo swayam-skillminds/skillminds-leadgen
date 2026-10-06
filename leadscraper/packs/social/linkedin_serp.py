@@ -12,11 +12,11 @@ import logging
 import re
 from typing import Iterator
 
-from ..config import Category, Locality
-from ..models import Lead
-from ..normalize import clean_text, extract_linkedin
-from .base import Source
-from .google_search import SerpClient
+from ...config import Category, Locality
+from ...core.lead import Lead
+from ...core.normalize import clean_text, extract_linkedin
+from ...sources.base import Source
+from ...sources.google_search import SerpClient
 
 log = logging.getLogger(__name__)
 
@@ -30,6 +30,7 @@ _TITLE = re.compile(
 
 class LinkedInSerpSource(Source):
     name = "linkedin_serp"
+    priority = 51
 
     def rate_keys(self) -> list[str]:
         return ["linkedin_serp", "www.google.com", "duckduckgo.com"]

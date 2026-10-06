@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 import requests
 from bs4 import BeautifulSoup
 
-from .normalize import domain_of
+from ..core.normalize import domain_of
 from .ratelimit import BlockedError, PermanentError, RateLimiter, with_retry
 
 try:

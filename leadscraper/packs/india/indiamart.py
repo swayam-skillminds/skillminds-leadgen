@@ -17,13 +17,13 @@ from urllib.parse import quote_plus
 
 from bs4 import BeautifulSoup
 
-from ..config import Category, Locality
-from ..models import Lead
-from ..normalize import clean_text, extract_phones, normalize_url, parse_rating, parse_review_count
-from ..parsing import businesses_from_page
-from ..ratelimit import BlockedError
-from .base import Source
-from .google_search import SerpClient
+from ...config import Category, Locality
+from ...core.lead import Lead
+from ...core.normalize import clean_text, extract_phones, normalize_url, parse_rating, parse_review_count
+from ...core.parsing import businesses_from_page
+from ...net.ratelimit import BlockedError
+from ...sources.base import Source
+from ...sources.google_search import SerpClient
 
 log = logging.getLogger(__name__)
 
@@ -36,6 +36,7 @@ _SKIP_SLUGS = {"search", "impcat", "proddetail", "company", "products", "city"}
 
 class IndiaMartSource(Source):
     name = "indiamart"
+    priority = 40
     uses_browser = True
 
     def rate_keys(self) -> list[str]:
@@ -199,7 +200,7 @@ class IndiaMartSource(Source):
                       category=category.name, detail=repr(exc))
             return
 
-        from .google_search import business_name_from_title
+        from ...sources.google_search import business_name_from_title
 
         for result in results:
             name = business_name_from_title(

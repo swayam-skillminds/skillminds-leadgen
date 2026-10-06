@@ -10,60 +10,16 @@ driven by `VenueSettings` so thresholds live in config rather than code.
 
 from __future__ import annotations
 
-import math
 import re
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Iterable
 
-from .normalize import clean_text, dedupe_preserving_order
+from ...core.geo import as_float, as_int, coords_from_maps_url, haversine_km  # noqa: F401
+from ...core.normalize import clean_text, dedupe_preserving_order
+from ...core.ratings import all_ratings, best_rating  # noqa: F401
 
 if TYPE_CHECKING:  # pragma: no cover
-    from .models import Lead
-
-# --- geography -------------------------------------------------------------
-
-
-def haversine_km(lat1: float, lng1: float, lat2: float, lng2: float) -> float:
-    """Great-circle distance in km."""
-    radius = 6371.0
-    phi1, phi2 = math.radians(lat1), math.radians(lat2)
-    d_phi = math.radians(lat2 - lat1)
-    d_lambda = math.radians(lng2 - lng1)
-    a = math.sin(d_phi / 2) ** 2 + math.cos(phi1) * math.cos(phi2) * math.sin(d_lambda / 2) ** 2
-    return 2 * radius * math.asin(math.sqrt(a))
-
-
-_MAPS_COORDS = (
-    re.compile(r"!3d(-?\d{1,2}\.\d+)!4d(-?\d{1,3}\.\d+)"),   # place data -- the pin itself
-    re.compile(r"@(-?\d{1,2}\.\d+),(-?\d{1,3}\.\d+)"),        # viewport centre -- close enough
-)
-
-
-def coords_from_maps_url(url: str | None) -> tuple[float, float] | None:
-    """(lat, lng) embedded in a Google Maps place URL, pin before viewport."""
-    if not url:
-        return None
-    for pattern in _MAPS_COORDS:
-        match = pattern.search(url)
-        if match:
-            lat, lng = float(match.group(1)), float(match.group(2))
-            if -90 <= lat <= 90 and -180 <= lng <= 180:
-                return lat, lng
-    return None
-
-
-def as_float(value: Any) -> float | None:
-    try:
-        number = float(str(value).replace(",", "").strip())
-    except (TypeError, ValueError):
-        return None
-    return number if math.isfinite(number) else None
-
-
-def as_int(value: Any) -> int | None:
-    number = as_float(value)
-    return int(round(number)) if number is not None else None
-
+    from ...core.lead import Lead
 
 # --- money -----------------------------------------------------------------
 
@@ -463,36 +419,6 @@ class VenueSettings:
             if brand.name.lower() == (name or "").lower():
                 return brand
         return None
-
-
-# --- reputation ------------------------------------------------------------
-
-
-def all_ratings(lead: "Lead") -> list[tuple[str, float, int]]:
-    """Every (source, rating on a 5-point scale, review count) we hold."""
-    out: list[tuple[str, float, int]] = []
-    if lead.gmaps_rating is not None:
-        out.append(("google_maps", float(lead.gmaps_rating), int(lead.gmaps_reviews or 0)))
-    if lead.wmg_rating is not None:
-        out.append(("wedmegood", float(lead.wmg_rating), int(lead.wmg_reviews or 0)))
-    for platform, value in (lead.platform_ratings or {}).items():
-        if not value:
-            continue
-        rating = as_float(value[0]) if isinstance(value, (list, tuple)) else as_float(value)
-        reviews = as_int(value[1]) if isinstance(value, (list, tuple)) and len(value) > 1 else 0
-        if rating is not None and 0 < rating <= 5:
-            out.append((platform, rating, reviews or 0))
-    return out
-
-
-def best_rating(lead: "Lead") -> tuple[float | None, int]:
-    """The rating backed by the most reviews, and the total review count."""
-    ratings = all_ratings(lead)
-    if not ratings:
-        return None, 0
-    total = sum(count for _, _, count in ratings)
-    _, rating, _ = max(ratings, key=lambda r: (r[2], r[1]))
-    return rating, total
 
 
 # --- classification --------------------------------------------------------

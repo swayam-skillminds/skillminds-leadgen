@@ -15,20 +15,21 @@ import time
 from dataclasses import dataclass, field
 from typing import Callable, Iterable
 
-from .ai import AIAssistant
-from .browser import BrowserSession
-from .config import Category, Config, Locality
-from .export import write_csv, write_failures_csv
-from .failures import FailureLog
-from .http import HttpClient
-from .models import Lead
-from .ratelimit import RateLimiter
+from ...ai import AIAssistant
+from ...net.browser import BrowserSession
+from ...config import Category, Config, Locality
+from ...export.csv_writer import write_csv, write_failures_csv
+from ...engine.failures import FailureLog
+from ...net.http import HttpClient
+from ...core.lead import Lead
+from ...net.ratelimit import RateLimiter
 from .scoring import Scorer
-from .sheets import SheetsWriter
-from .sources import DISCOVERY_SOURCES, ENRICHMENT_SOURCES, SourceContext
-from .normalize import looks_like_seo_title, phone_display, set_extra_name_noise
-from .store import DedupOptions, LeadStore
-from .venues import TIERS, VENUE_TYPES
+from ...export.sheets import SheetsWriter
+from ...packs import inactive_reason
+from ...sources import DISCOVERY_SOURCES, ENRICHMENT_SOURCES, SourceContext
+from ...core.normalize import looks_like_seo_title, phone_display, set_extra_name_noise
+from ...db.store import DedupOptions, LeadStore
+from ...packs.hospitality.venues import TIERS, VENUE_TYPES
 
 log = logging.getLogger(__name__)
 
@@ -184,6 +185,10 @@ class Pipeline:
                 plan.skipped[name] = f"not requested -- this run asked for {asked_for}"
             elif not self.config.source_enabled(name):
                 plan.skipped[name] = "disabled in config"
+            elif (reason := inactive_reason(cls, self.config.country, self.config.verticals)):
+                # A pack that does not apply is inactive, not failing: it is
+                # reported here and never reaches the failure log.
+                plan.skipped[name] = f"not applicable -- {reason}"
             else:
                 built.append(cls(self.ctx))
                 plan.built.append(name)
@@ -515,7 +520,7 @@ class Pipeline:
         the name says "SaffronStays Le Soil"); the brand row is where a sales
         conversation with the operator itself starts.
         """
-        from .sources.platforms import BRAND_CATEGORY, REGION_WIDE
+        from ...packs.hospitality.platforms import BRAND_CATEGORY, REGION_WIDE
 
         settings = self.scorer.venue_settings
         portfolios: dict[str, list[Lead]] = {}
@@ -577,7 +582,7 @@ class Pipeline:
                         self.store.update_fields(pid, booking_contact=contact)
 
     def _brand_row(self, brand_name: str) -> int | None:
-        from .normalize import normalize_name
+        from ...core.normalize import normalize_name
 
         wanted = normalize_name(brand_name)
         for lead_id, lead in self.store.all_with_ids():
@@ -665,7 +670,7 @@ class Pipeline:
         malformed or hallucinated phone number is rejected here rather than
         landing in the sheet.
         """
-        from .normalize import clean_text, extract_emails, extract_instagram, extract_phones
+        from ...core.normalize import clean_text, extract_emails, extract_instagram, extract_phones
 
         def as_text(value) -> str:
             if isinstance(value, (list, tuple)):

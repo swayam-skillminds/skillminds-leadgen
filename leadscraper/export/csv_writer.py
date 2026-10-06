@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 from typing import Iterable
 
-from .models import Lead
+from ..core.lead import Lead
 
 log = logging.getLogger(__name__)
 

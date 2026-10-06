@@ -351,7 +351,7 @@ class Lead:
 
     def to_venue_row(self) -> dict[str, Any]:
         """Flat dict for the venue run's CSV / Sheet: the venue first, contacts after."""
-        from .venues import best_rating
+        from .ratings import best_rating
 
         def flag(value: bool | None) -> str:
             return "" if value is None else ("Yes" if value else "No")

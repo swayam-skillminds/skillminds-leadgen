@@ -17,8 +17,8 @@ import time
 from pathlib import Path
 from typing import Iterable
 
-from .export import leads_to_rows
-from .models import Lead
+from .csv_writer import leads_to_rows
+from ..core.lead import Lead
 
 log = logging.getLogger(__name__)
 

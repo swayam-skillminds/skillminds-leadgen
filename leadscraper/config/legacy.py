@@ -11,7 +11,8 @@ from typing import Any
 import yaml
 from dotenv import load_dotenv
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+from ..paths import PROJECT_ROOT
+
 DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config.yaml"
 
 
@@ -164,6 +165,19 @@ class Config:
         return self.profile == "venues"
 
     @property
+    def verticals(self) -> list[str]:
+        """Industry verticals the run targets; they decide which packs apply.
+
+        Configs written before verticals existed get what their profile
+        implied: a vendor run is the events trade, and a venue run also used
+        the events directories for banquets and lawns.
+        """
+        explicit = self.get("verticals")
+        if explicit is not None:
+            return [str(v).lower() for v in explicit]
+        return ["hospitality", "events"] if self.is_venue_run else ["events"]
+
+    @property
     def geo_center(self) -> tuple[float, float]:
         """(lat, lng) the run is centred on: Maps viewport and browser geolocation."""
         return _as_point(self.get("geo.center")) or (19.0760, 72.8777)  # Mumbai
@@ -200,7 +214,7 @@ class Config:
                     best = (len(keyword), locality)
         if lat is None or lng is None:
             return best[1] if best else weak
-        from .venues import haversine_km
+        from ..core.geo import haversine_km
 
         candidates = [(haversine_km(lat, lng, *loc.center), loc)
                       for loc in self.localities if loc.center]

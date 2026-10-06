@@ -23,14 +23,14 @@ import re
 
 from rapidfuzz import fuzz
 
-from ..models import Lead
-from ..normalize import (
+from ..core.lead import Lead
+from ..core.normalize import (
     clean_text, extract_instagram, extract_phones, is_vendor_website, name_key, normalize_url,
     parse_rating,
     parse_review_count,
 )
-from ..ratelimit import BlockedError
-from ..venues import coords_from_maps_url, haversine_km
+from ..net.ratelimit import BlockedError
+from ..core.geo import coords_from_maps_url, haversine_km
 from .base import Enricher
 from .google_maps import GoogleMapsSource
 
@@ -57,6 +57,7 @@ def distinctive_words(name: str) -> list[str]:
 
 class MapsLookupEnricher(Enricher):
     name = "maps_lookup"
+    priority = 10
 
     def __init__(self, ctx):
         super().__init__(ctx)

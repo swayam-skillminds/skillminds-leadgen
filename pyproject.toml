@@ -29,19 +29,36 @@ dependencies = [
     "google-auth>=2.28.0",
     # Excel workbooks (tools/build_*_workbook.py; the Phase 4 exporter)
     "openpyxl>=3.1.0",
+    # Persistence: one schema for SQLite (local, WAL) and Postgres (server)
+    "SQLAlchemy>=2.0.30",
+    "alembic>=1.13",
+    # Run-config schema (validation + JSON Schema for the future UI)
+    "pydantic>=2.6",
+    # Cross-platform data/config/cache locations
+    "platformdirs>=4.0",
+    # Registrable domains for identity matching (bundled suffix list, no fetch)
+    "tldextract>=5.1",
 ]
 
 [project.optional-dependencies]
 # Pay-as-you-go API backend for the AI layer. The default backend is the
 # `claude` CLI, which needs no Python package.
 ai = ["anthropic>=0.40.0"]
+# Server mode on Postgres.
+postgres = ["psycopg[binary]>=3.1"]
 dev = ["pytest>=8.0.0"]
+
+[project.scripts]
+leadscraper = "leadscraper.cli:main"
 
 [tool.setuptools.dynamic]
 version = { attr = "leadscraper.__version__" }
 
 [tool.setuptools.packages.find]
 include = ["leadscraper*"]
+
+[tool.setuptools.package-data]
+"leadscraper.db" = ["alembic.ini", "migrations/*.py", "migrations/versions/*.py"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

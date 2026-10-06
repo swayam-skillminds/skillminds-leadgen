@@ -14,14 +14,14 @@ from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
 
-from ..models import Lead
-from ..normalize import (
+from ..core.lead import Lead
+from ..core.normalize import (
     domain_of, extract_emails, extract_facebook, extract_instagram, extract_linkedin,
     extract_phones, extract_whatsapp, is_vendor_website, normalize_url,
 )
-from ..parsing import visible_text
-from ..ratelimit import BlockedError
-from ..venues import enrich_from_text
+from ..core.parsing import visible_text
+from ..net.ratelimit import BlockedError
+from ..packs.hospitality.venues import enrich_from_text
 from .base import Enricher
 
 log = logging.getLogger(__name__)
@@ -35,6 +35,7 @@ _CONTACT_HINTS = re.compile(
 
 class WebsiteEnricher(Enricher):
     name = "website"
+    priority = 20
 
     def rate_keys(self) -> list[str]:
         return ["website"]

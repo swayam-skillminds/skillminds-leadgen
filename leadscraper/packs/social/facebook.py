@@ -14,16 +14,16 @@ import logging
 import re
 from typing import Iterator
 
-from ..config import Category, Locality
-from ..models import Lead
-from ..normalize import (
+from ...config import Category, Locality
+from ...core.lead import Lead
+from ...core.normalize import (
     clean_text, extract_emails, extract_facebook, extract_instagram, extract_phones,
     is_vendor_website, normalize_url,
 )
-from ..parsing import meta_content, visible_text
-from ..ratelimit import BlockedError
-from .base import Source
-from .google_search import SerpClient, business_name_from_title
+from ...core.parsing import meta_content, visible_text
+from ...net.ratelimit import BlockedError
+from ...sources.base import Source
+from ...sources.google_search import SerpClient, business_name_from_title
 
 log = logging.getLogger(__name__)
 
@@ -33,6 +33,7 @@ _LOGIN_WALL = ("you must log in to continue", "log into facebook", "log in or si
 
 class FacebookSource(Source):
     name = "facebook"
+    priority = 50
 
     def rate_keys(self) -> list[str]:
         return ["facebook", "mbasic.facebook.com", "www.facebook.com",

@@ -8,15 +8,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest
 
-from leadscraper.models import Lead
-from leadscraper.normalize import (
+from leadscraper.core.lead import Lead
+from leadscraper.core.normalize import (
     extract_emails, extract_facebook, extract_instagram, extract_linkedin,
     extract_phones, extract_whatsapp, is_vendor_website, looks_like_seo_title,
     maps_place_key, name_key,
     normalize_phone, normalize_url, parse_rating, parse_review_count,
 )
-from leadscraper.scoring import Scorer
-from leadscraper.store import LeadStore
+from leadscraper.leadtypes.local_business.scoring import Scorer
+from leadscraper.db.store import LeadStore
 
 
 # --- phones ----------------------------------------------------------------
@@ -345,7 +345,7 @@ def test_merge_rejects_an_seo_title_that_starts_with_our_name():
 
 def test_shared_host_keeps_the_most_cautious_delay():
     """A source with short delays must not undo another's long ones."""
-    from leadscraper.ratelimit import RateLimiter
+    from leadscraper.net.ratelimit import RateLimiter
     limiter = RateLimiter()
     limiter.configure("www.google.com", 12.0, 28.0)   # google_search
     limiter.configure("www.google.com", 4.0, 9.0)     # a directory's fallback
@@ -353,7 +353,7 @@ def test_shared_host_keeps_the_most_cautious_delay():
 
 
 def test_rate_limiter_penalty_escalates_and_decays():
-    from leadscraper.ratelimit import RateLimiter
+    from leadscraper.net.ratelimit import RateLimiter
     limiter = RateLimiter()
     limiter.penalise("x", 30.0)
     limiter.penalise("x", 30.0)

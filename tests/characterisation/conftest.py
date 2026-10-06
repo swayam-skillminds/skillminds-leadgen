@@ -7,7 +7,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from leadscraper import normalize  # noqa: E402
+from leadscraper.core import normalize  # noqa: E402
 
 
 @pytest.fixture(autouse=True)

@@ -27,8 +27,8 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-from .models import Lead
-from .venues import VenueSettings, annotate, best_rating
+from ...core.lead import Lead
+from ...packs.hospitality.venues import VenueSettings, annotate, best_rating
 
 DEFAULT_WEIGHTS = {
     "maps_popularity": 0.40,

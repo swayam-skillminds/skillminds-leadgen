@@ -15,12 +15,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import pytest
 
 from leadscraper.config import Category, Config, Locality
-from leadscraper.http import HttpClient
-from leadscraper.ratelimit import PermanentError
+from leadscraper.net.http import HttpClient
+from leadscraper.net.ratelimit import PermanentError
 from leadscraper.sources import DISCOVERY_SOURCES
-from leadscraper.sources import directories as directories_mod
+from leadscraper.packs.events import directories as directories_mod
 from leadscraper.sources.base import SourceContext
-from leadscraper.sources.directories import WEDMEGOOD_STATIC_SLUGS, WedMeGoodSource
+from leadscraper.packs.events.directories import WEDMEGOOD_STATIC_SLUGS, WedMeGoodSource
 
 # Enough of the real listing page to exercise the href harvester.
 NAV_SLUGS = (
@@ -155,7 +155,7 @@ def test_discovery_failure_falls_back_to_static_slugs(caplog, monkeypatch):
     monkeypatch.setattr(WedMeGoodSource, "_render",
                         lambda self, url: (_ for _ in ()).throw(RuntimeError("no browser")))
 
-    with caplog.at_level(logging.WARNING, logger="leadscraper.sources.directories"):
+    with caplog.at_level(logging.WARNING, logger="leadscraper.packs.events.directories"):
         slugs = source.discovered_slugs("mumbai")
 
     assert slugs == WEDMEGOOD_STATIC_SLUGS
@@ -187,7 +187,7 @@ def test_resolve_slug_returns_none_for_a_category_the_site_lacks(caplog):
     source = make_source(pages=mumbai_pages())
     category = Category(name="Florists", directory_slugs={"wedmegood": "florist"})
 
-    with caplog.at_level(logging.INFO, logger="leadscraper.sources.directories"):
+    with caplog.at_level(logging.INFO, logger="leadscraper.packs.events.directories"):
         assert source.resolve_slug(category, "mumbai") is None
 
     assert any("no slug for category Florists" in rec.getMessage()
@@ -226,7 +226,7 @@ def test_resolve_city_slug_tries_variants_until_one_answers():
 def test_resolve_city_slug_returns_none_when_no_variant_works(caplog):
     source = make_source(pages={}, city="Atlantis")
 
-    with caplog.at_level(logging.INFO, logger="leadscraper.sources.directories"):
+    with caplog.at_level(logging.INFO, logger="leadscraper.packs.events.directories"):
         assert source.resolve_city_slug("Atlantis") is None
 
     assert any("no city slug worked" in rec.getMessage() for rec in caplog.records)
@@ -253,7 +253,7 @@ def test_serp_fallback_is_off_by_default(monkeypatch, caplog):
     called = _no_profiles(monkeypatch, source)
     category = Category(name="Caterers", directory_slugs={"wedmegood": "caterers"})
 
-    with caplog.at_level(logging.INFO, logger="leadscraper.sources.directories"):
+    with caplog.at_level(logging.INFO, logger="leadscraper.packs.events.directories"):
         urls = source._collect_profile_urls("wedding-catering", "mumbai", LOCALITY, category)
 
     assert urls == []
@@ -331,7 +331,7 @@ def local_source(cls, **source_cfg):
 
 @pytest.mark.parametrize("name", ["justdial", "sulekha"])
 def test_local_directory_makes_no_serp_query_by_default(monkeypatch, name):
-    from leadscraper.sources import local_directories
+    from leadscraper.packs.india import local_directories
 
     monkeypatch.setattr(local_directories, "SerpClient", RecordingSerp)
     RecordingSerp.queries = []
@@ -346,7 +346,7 @@ def test_local_directory_makes_no_serp_query_by_default(monkeypatch, name):
 
 @pytest.mark.parametrize("name", ["justdial", "sulekha"])
 def test_local_directory_serp_runs_when_opted_in(monkeypatch, name):
-    from leadscraper.sources import local_directories
+    from leadscraper.packs.india import local_directories
 
     monkeypatch.setattr(local_directories, "SerpClient", RecordingSerp)
     RecordingSerp.queries = []

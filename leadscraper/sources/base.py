@@ -7,12 +7,12 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Iterator
 
-from ..browser import BrowserSession
+from ..net.browser import BrowserSession
 from ..config import Category, Config, Locality
-from ..failures import FailureLog
-from ..http import HttpClient
-from ..models import Lead
-from ..ratelimit import RateLimiter
+from ..engine.failures import FailureLog
+from ..net.http import HttpClient
+from ..core.lead import Lead
+from ..net.ratelimit import RateLimiter
 
 log = logging.getLogger(__name__)
 
@@ -47,6 +47,12 @@ class Source(ABC):
     #:   "run"      -- once per run, locality=None and category=None (a sitemap
     #:                 lists the whole region in one go)
     scope: str = "combo"
+    #: Run order within a unit of work; lower runs first (see sources/registry.py).
+    priority: int = 100
+    #: Key of the pack this class belongs to, set by the pack; None for core.
+    pack: str | None = None
+    #: Narrows where this class applies, on top of its pack's own reach.
+    applicable_countries: frozenset[str] | None = None
 
     def __init__(self, ctx: SourceContext):
         self.ctx = ctx
@@ -93,7 +99,7 @@ class Source(ABC):
         """
         radius = self.ctx.config.region_radius_km
         if radius and lead.latitude is not None and lead.longitude is not None:
-            from ..venues import haversine_km
+            from ..core.geo import haversine_km
 
             center = self.ctx.config.geo_center
             return haversine_km(lead.latitude, lead.longitude, *center) > radius
@@ -121,6 +127,12 @@ class Enricher(ABC):
     """Base class for per-lead enrichment (website contact pages, Instagram)."""
 
     name: str = "enricher"
+    #: Run order within a unit of work; lower runs first (see sources/registry.py).
+    priority: int = 100
+    #: Key of the pack this class belongs to, set by the pack; None for core.
+    pack: str | None = None
+    #: Narrows where this class applies, on top of its pack's own reach.
+    applicable_countries: frozenset[str] | None = None
 
     def __init__(self, ctx: SourceContext):
         self.ctx = ctx

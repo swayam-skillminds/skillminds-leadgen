@@ -31,11 +31,11 @@ PROJECT_ROOT = HERE.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from leadscraper.config import Config  # noqa: E402
-from leadscraper.export import leads_to_rows  # noqa: E402
-from leadscraper.models import Lead  # noqa: E402
-from leadscraper.normalize import set_extra_name_noise  # noqa: E402
-from leadscraper.scoring import Scorer  # noqa: E402
-from leadscraper.store import DedupOptions, LeadStore  # noqa: E402
+from leadscraper.export.csv_writer import leads_to_rows  # noqa: E402
+from leadscraper.core.lead import Lead  # noqa: E402
+from leadscraper.core.normalize import set_extra_name_noise  # noqa: E402
+from leadscraper.leadtypes.local_business.scoring import Scorer  # noqa: E402
+from leadscraper.db.store import DedupOptions, LeadStore  # noqa: E402
 
 GOLDEN_DIR = HERE / "golden"
 CONFIG_DIR = HERE / "baseline_configs"

@@ -12,10 +12,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest
 
-from leadscraper import pipeline as pipeline_mod
+from leadscraper.leadtypes.local_business import pipeline as pipeline_mod
 from leadscraper.config import Config
-from leadscraper.models import Lead
-from leadscraper.pipeline import Pipeline
+from leadscraper.core.lead import Lead
+from leadscraper.leadtypes.local_business.pipeline import Pipeline
 from leadscraper.sources.base import Enricher, Source
 
 
@@ -165,7 +165,7 @@ def test_dry_run_makes_no_db_writes(tmp_path, monkeypatch):
     pipe.run()
     assert pipe.leads == []
     # Re-open the DB independently: a dry run must not have written anything.
-    from leadscraper.store import LeadStore
+    from leadscraper.db.store import LeadStore
     fresh = LeadStore(tmp_path / "leads.sqlite3")
     assert fresh.count() == 0
     fresh.close()
@@ -213,7 +213,7 @@ def ai_config(tmp_path, **over):
 
 def test_ai_extraction_results_are_revalidated_not_trusted(tmp_path):
     """A hallucinated phone must be rejected by the same normalisers as scraped data."""
-    from leadscraper.pipeline import Pipeline
+    from leadscraper.leadtypes.local_business.pipeline import Pipeline
     record = {"id": "1", "business_name": "X", "phones": ["not-a-number", "9820012345"],
               "emails": ["nope", "real@vendor.in"], "address": "Road, Mumbai", "instagram": "@vend"}
     partial = Pipeline._lead_from_ai_record(record)
@@ -223,7 +223,7 @@ def test_ai_extraction_results_are_revalidated_not_trusted(tmp_path):
 
 
 def test_ai_record_with_nothing_usable_returns_none():
-    from leadscraper.pipeline import Pipeline
+    from leadscraper.leadtypes.local_business.pipeline import Pipeline
     assert Pipeline._lead_from_ai_record(
         {"id": "1", "phones": [], "emails": [], "address": None, "instagram": None}
     ) is None

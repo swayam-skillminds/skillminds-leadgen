@@ -32,20 +32,20 @@ from urllib.parse import quote, urljoin, urlparse
 
 from bs4 import BeautifulSoup
 
-from ..config import Category, Locality
-from ..models import Lead
-from ..normalize import (
+from ...config import Category, Locality
+from ...core.lead import Lead
+from ...core.normalize import (
     clean_text, domain_of, extract_emails, extract_facebook, extract_instagram,
     extract_linkedin, extract_phones, normalize_url, parse_review_count,
 )
-from ..parsing import _address_string, iter_jsonld, meta_content, visible_text
-from ..ratelimit import BlockedError
-from ..venues import (
+from ...core.parsing import _address_string, iter_jsonld, meta_content, visible_text
+from ...net.ratelimit import BlockedError
+from .venues import (
     BRAND_CATEGORY, as_float, as_int, detect_event_friendly, detect_pet_friendly, enrich_from_text,
     extract_amenities, nightly_prices, parse_bathrooms, parse_bedrooms, parse_guests,
     parse_inr, set_price,
 )
-from .base import Source
+from ...sources.base import Source
 
 log = logging.getLogger(__name__)
 
@@ -487,6 +487,9 @@ class SitemapPlatformSource(PlatformSource):
 
 class StayVistaSource(SitemapPlatformSource):
     name = "stayvista"
+    priority = 60
+    #: Lists Indian villas only, though the hospitality pack is worldwide.
+    applicable_countries = frozenset({"IN"})
     platform = "stayvista"
     operator = "StayVista"
     base_url = "https://www.stayvista.com"
@@ -541,6 +544,9 @@ class StayVistaSource(SitemapPlatformSource):
 
 class SaffronStaysSource(SitemapPlatformSource):
     name = "saffronstays"
+    priority = 61
+    #: Lists Indian villas only, though the hospitality pack is worldwide.
+    applicable_countries = frozenset({"IN"})
     platform = "saffronstays"
     operator = "SaffronStays"
     base_url = "https://www.saffronstays.com"
@@ -612,6 +618,9 @@ class SaffronStaysSource(SitemapPlatformSource):
 
 class ElivaasSource(SitemapPlatformSource):
     name = "elivaas"
+    priority = 62
+    #: Lists Indian villas only, though the hospitality pack is worldwide.
+    applicable_countries = frozenset({"IN"})
     platform = "elivaas"
     operator = "Elivaas"
     base_url = "https://www.elivaas.com"
@@ -731,6 +740,7 @@ _AIRBNB_RATING = (
 
 class AirbnbSource(SearchPlatformSource):
     name = "airbnb"
+    priority = 63
     platform = "airbnb"
     base_url = "https://www.airbnb.co.in"
 
@@ -843,6 +853,7 @@ DEFAULT_BOOKING_TYPES = {
 
 class BookingSource(SearchPlatformSource):
     name = "booking"
+    priority = 64
     platform = "booking"
     base_url = "https://www.booking.com"
 

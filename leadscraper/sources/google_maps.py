@@ -22,13 +22,14 @@ from typing import Iterator
 from urllib.parse import quote_plus
 
 from ..config import Category, Locality
-from ..models import Lead
-from ..normalize import (
+from ..core.lead import Lead
+from ..core.normalize import (
     clean_text, extract_instagram, extract_phones, normalize_url, parse_rating,
     parse_review_count,
 )
-from ..ratelimit import BlockedError, with_retry
-from ..venues import coords_from_maps_url, extract_amenities, nightly_prices, set_price
+from ..net.ratelimit import BlockedError, with_retry
+from ..core.geo import coords_from_maps_url
+from ..packs.hospitality.venues import extract_amenities, nightly_prices, set_price
 from .base import Source
 
 log = logging.getLogger(__name__)
@@ -110,6 +111,7 @@ _FEED_LINKS_SCRIPT = """
 
 class GoogleMapsSource(Source):
     name = "google_maps"
+    priority = 10
     uses_browser = True
 
     @property

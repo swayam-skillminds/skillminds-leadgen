@@ -14,11 +14,11 @@ import json
 import logging
 import re
 
-from ..models import Lead
-from ..normalize import clean_text, extract_emails, extract_phones, extract_whatsapp, normalize_url
-from ..parsing import meta_content
-from ..ratelimit import BlockedError
-from .base import Enricher
+from ...core.lead import Lead
+from ...core.normalize import clean_text, extract_emails, extract_phones, extract_whatsapp, normalize_url
+from ...core.parsing import meta_content
+from ...net.ratelimit import BlockedError
+from ...sources.base import Enricher
 
 log = logging.getLogger(__name__)
 
@@ -44,6 +44,7 @@ def _unescape_json_fragment(raw: str) -> str:
 
 class InstagramEnricher(Enricher):
     name = "instagram"
+    priority = 30
 
     def __init__(self, ctx):
         super().__init__(ctx)
@@ -104,7 +105,7 @@ class InstagramEnricher(Enricher):
         link_match = _EXTERNAL_URL.search(body)
         if link_match:
             candidate = normalize_url(_unescape_json_fragment(link_match.group(1)))
-            from ..normalize import is_vendor_website
+            from ...core.normalize import is_vendor_website
             if candidate and is_vendor_website(candidate):
                 harvested.website = candidate
 

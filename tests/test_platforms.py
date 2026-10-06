@@ -18,17 +18,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import pytest
 from bs4 import BeautifulSoup
 
-from leadscraper import normalize
-from leadscraper import pipeline as pipeline_mod
-from leadscraper.failures import FailureLog
-from leadscraper.pipeline import Pipeline
-from leadscraper.ratelimit import RateLimiter
-from leadscraper.scoring import Scorer
+from leadscraper.core import normalize
+from leadscraper.leadtypes.local_business import pipeline as pipeline_mod
+from leadscraper.engine.failures import FailureLog
+from leadscraper.leadtypes.local_business.pipeline import Pipeline
+from leadscraper.net.ratelimit import RateLimiter
+from leadscraper.leadtypes.local_business.scoring import Scorer
 from leadscraper.sources.base import Source
-from leadscraper.sources.platforms import (
+from leadscraper.packs.hospitality.platforms import (
     AirbnbSource, BookingSource, SaffronStaysSource, StayVistaSource, split_tagline,
 )
-from leadscraper.store import DedupOptions, LeadStore
+from leadscraper.db.store import DedupOptions, LeadStore
 
 from test_venues import venue_config
 
@@ -285,7 +285,7 @@ def test_brand_rollup_merges_into_the_platform_brand_row(tmp_path, monkeypatch):
 
 # --- targeted Maps lookup -----------------------------------------------------------
 
-from leadscraper.models import Lead
+from leadscraper.core.lead import Lead
 from leadscraper.sources.maps_lookup import MapsLookupEnricher, distinctive_words
 
 

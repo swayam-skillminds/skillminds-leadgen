@@ -22,16 +22,16 @@ from urllib.parse import quote_plus
 
 from bs4 import BeautifulSoup
 
-from ..config import Category, Locality
-from ..models import Lead
-from ..normalize import (
+from ...config import Category, Locality
+from ...core.lead import Lead
+from ...core.normalize import (
     clean_text, extract_emails, extract_phones, normalize_url, parse_rating,
     parse_review_count,
 )
-from ..parsing import businesses_from_page
-from ..ratelimit import BlockedError
-from .base import Source
-from .google_search import SerpClient
+from ...core.parsing import businesses_from_page
+from ...net.ratelimit import BlockedError
+from ...sources.base import Source
+from ...sources.google_search import SerpClient
 
 log = logging.getLogger(__name__)
 
@@ -256,6 +256,7 @@ class LocalDirectorySource(Source):
 
 class JustdialSource(LocalDirectorySource):
     name = "justdial"
+    priority = 41
     base_url = "https://www.justdial.com"
     host = "www.justdial.com"
     listing_template = "https://www.justdial.com/{city}/{query}-in-{locality}"
@@ -271,6 +272,7 @@ class JustdialSource(LocalDirectorySource):
 
 class SulekhaSource(LocalDirectorySource):
     name = "sulekha"
+    priority = 42
     base_url = "https://www.sulekha.com"
     host = "www.sulekha.com"
     listing_template = "https://www.sulekha.com/{query}/{city_lower}"

@@ -31,13 +31,13 @@ import logging
 import sys
 
 from leadscraper.config import Config
-from leadscraper.export import write_csv
-from leadscraper.pipeline import Pipeline
-from leadscraper.scoring import Scorer
-from leadscraper.sheets import SheetsWriter
+from leadscraper.export.csv_writer import write_csv
+from leadscraper.leadtypes.local_business.pipeline import Pipeline
+from leadscraper.leadtypes.local_business.scoring import Scorer
+from leadscraper.export.sheets import SheetsWriter
 from leadscraper.sources import DISCOVERY_SOURCES, ENRICHMENT_SOURCES
-from leadscraper.normalize import set_extra_name_noise
-from leadscraper.store import DedupOptions, LeadStore
+from leadscraper.core.normalize import set_extra_name_noise
+from leadscraper.db.store import DedupOptions, LeadStore
 
 
 def build_parser() -> argparse.ArgumentParser:

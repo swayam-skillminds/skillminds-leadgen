@@ -12,9 +12,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest
 
-from leadscraper.errors import ERROR_TITLES, ERROR_TITLE_PATTERNS, is_error_title
-from leadscraper.models import Lead
-from leadscraper.store import LeadStore
+from leadscraper.core.errors import ERROR_TITLES, ERROR_TITLE_PATTERNS, is_error_title
+from leadscraper.core.lead import Lead
+from leadscraper.db.store import LeadStore
 
 
 @pytest.fixture

@@ -18,12 +18,12 @@ from typing import Iterator
 from urllib.parse import parse_qs, urlparse
 
 from ..config import Category, Locality
-from ..models import Lead
-from ..normalize import (
+from ..core.lead import Lead
+from ..core.normalize import (
     clean_text, domain_of, extract_emails, extract_phones, is_vendor_website,
     normalize_url,
 )
-from ..ratelimit import BlockedError
+from ..net.ratelimit import BlockedError
 from .base import Source
 
 log = logging.getLogger(__name__)
@@ -367,6 +367,7 @@ class GoogleSearchSource(Source):
     """Finds vendor sites and directory listings that Maps missed."""
 
     name = "google_search"
+    priority = 20
 
     def rate_keys(self) -> list[str]:
         return ["www.google.com", "duckduckgo.com"]

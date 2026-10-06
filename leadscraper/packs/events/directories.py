@@ -31,18 +31,18 @@ from typing import Iterator
 from bs4 import BeautifulSoup
 from rapidfuzz import fuzz, process
 
-from ..config import Category, Locality
-from ..models import Lead
-from ..normalize import (
+from ...config import Category, Locality
+from ...core.lead import Lead
+from ...core.normalize import (
     clean_text, dedupe_preserving_order, domain_of, extract_emails,
     extract_instagram, extract_phones, normalize_url, parse_rating,
     parse_review_count,
 )
-from ..parsing import businesses_from_page, meta_content, visible_text
-from ..ratelimit import BlockedError
-from ..venues import enrich_from_text
-from .base import Source
-from .google_search import SerpClient
+from ...core.parsing import businesses_from_page, meta_content, visible_text
+from ...net.ratelimit import BlockedError
+from ..hospitality.venues import enrich_from_text
+from ...sources.base import Source
+from ...sources.google_search import SerpClient
 
 log = logging.getLogger(__name__)
 
@@ -562,6 +562,7 @@ class DirectorySource(Source):
 
 class WedMeGoodSource(DirectorySource):
     name = "wedmegood"
+    priority = 30
     base_url = "https://www.wedmegood.com"
     listing_template = "https://www.wedmegood.com/vendors/{city}/{slug}/?page={page}"
     # Vendors live under /profile/, venues under /wedding-venues/<Name>-<id>;
@@ -577,6 +578,7 @@ class WedMeGoodSource(DirectorySource):
 
 class WeddingWireSource(DirectorySource):
     name = "weddingwire"
+    priority = 31
     base_url = "https://www.weddingwire.in"
     listing_template = "https://www.weddingwire.in/{slug}/{city}?page={page}"
     profile_pattern = re.compile(r"weddingwire\.in/[\w\-]+/[\w\-]+--e\d+", re.I)
