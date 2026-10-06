@@ -26,6 +26,8 @@ class FailureLog:
         self._records: list[dict[str, Any]] = []
         #: Also hand each record to this (the run history's failures table).
         self.sink = sink
+        #: Reasons recorded by the calling thread since `track()`.
+        self._tracked = threading.local()
 
     def record(
         self,
@@ -50,6 +52,9 @@ class FailureLog:
             "business": business,
             "detail": (detail or "")[:500],
         }
+        tracked = getattr(self._tracked, "reasons", None)
+        if tracked is not None:
+            tracked.append(reason)
         with self._lock:
             self._records.append(entry)
             try:
@@ -63,6 +68,18 @@ class FailureLog:
             except Exception as exc:  # the history is a bonus; the JSONL is the record
                 log.warning("Could not record failure in run history: %s", exc)
         log.debug("skipped [%s] %s (%s)", source, business or url or query, reason)
+
+    def track(self) -> list[str]:
+        """Start collecting the reasons this thread records; returns the live list.
+
+        Enrichment uses it to tell "this site has no email" (done; don't try
+        again next run) from "we were blocked" (try again next run).
+        """
+        self._tracked.reasons = []
+        return self._tracked.reasons
+
+    def untrack(self) -> None:
+        self._tracked.reasons = None
 
     @property
     def records(self) -> list[dict[str, Any]]:

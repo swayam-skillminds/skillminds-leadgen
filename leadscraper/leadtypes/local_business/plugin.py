@@ -90,6 +90,17 @@ class LocalBusinessLeadType(LeadType):
 
     # --- execution ------------------------------------------------------------
 
+    def open(self, context: Any):
+        """The engine's session: the pipeline, driven unit by unit."""
+        from .session import LocalBusinessSession
+
+        return LocalBusinessSession(context)
+
+    def apply_depth(self, cfg: Any, depth: str) -> list[str]:
+        from .estimates import apply_depth
+
+        return apply_depth(cfg, depth)
+
     def run(self, context: Any) -> LeadTypeResult:
         """Run the pipeline over `context`; any crash is contained and reported."""
         from .pipeline import Pipeline

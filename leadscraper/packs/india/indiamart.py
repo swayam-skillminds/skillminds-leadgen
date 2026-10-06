@@ -39,6 +39,9 @@ class IndiaMartSource(Source):
     priority = 40
     uses_browser = True
 
+    #: Google/DuckDuckGo are only hit by the opt-in `serp_fallback`.
+    serp_is_fallback = True
+
     def rate_keys(self) -> list[str]:
         return ["indiamart", "dir.indiamart.com", "www.indiamart.com",
                 "www.google.com", "duckduckgo.com"]

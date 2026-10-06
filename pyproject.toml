@@ -38,6 +38,8 @@ dependencies = [
     "platformdirs>=4.0",
     # Registrable domains for identity matching (bundled suffix list, no fetch)
     "tldextract>=5.1",
+    # Keep the machine awake while a run is active (macOS, Windows, Linux)
+    "wakepy>=0.9",
 ]
 
 [project.optional-dependencies]

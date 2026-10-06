@@ -390,8 +390,14 @@ def test_plan_lists_the_units_the_pipeline_executes_in_order(tmp_path, monkeypat
             "sources": sources}},
     })
     planned = [(u.source, u.area, u.category) for u in LOCAL_BUSINESS.plan(config)]
-    execute(RunRequest(config=config, install_signals=False))
+    # One worker: the engine runs units in plan order (the original order).
+    execute(RunRequest(config=config, install_signals=False, discovery_workers=1))
     assert calls == planned
+    # Parallel across hosts (Phase 2): the same units, each exactly once.
+    calls.clear()
+    execute(RunRequest(config=config, install_signals=False, discovery_workers=3))
+    assert sorted(calls, key=repr) == sorted(planned, key=repr)
+    assert calls[0] == ("sitemap", None, None)          # whole-region units still go first
     assert planned[0] == ("sitemap", None, None)
     # City-level: once per category, at the first locality it runs in.
     assert [p for p in planned if p[0] == "citywide"] == [

@@ -109,6 +109,7 @@ class BrowserSession:
         self._session()
 
     def _session(self) -> _ThreadBrowser:
+        self._check_generation()
         existing = getattr(self._local, "session", None)
         if existing is not None:
             return existing
@@ -223,6 +224,34 @@ class BrowserSession:
         import time
 
         time.sleep(random.uniform(low, high))
+
+    def revalidate(self) -> None:
+        """After the machine slept: every thread relaunches its browser on next use.
+
+        Called from any thread. Each worker thread notices the new generation
+        the next time it asks for a page and replaces its own browser there --
+        Playwright objects must only be touched from the thread that made them.
+        """
+        with self._lock:
+            self._generation = getattr(self, "_generation", 0) + 1
+
+    def _check_generation(self) -> None:
+        current = getattr(self, "_generation", 0)
+        session = getattr(self._local, "session", None)
+        if session is None:
+            self._local.generation = current
+            return
+        if getattr(self._local, "generation", 0) == current:
+            return
+        log.info("re-validating the browser of %s after a sleep",
+                 threading.current_thread().name)
+        with self._lock:
+            if session in self._sessions:
+                self._sessions.remove(session)
+        _teardown(session)
+        self._slots.release()
+        self._local.session = None
+        self._local.generation = current
 
     def close(self) -> None:
         """Tear down every thread's browser, not just the caller's.

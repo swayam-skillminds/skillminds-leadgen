@@ -23,3 +23,5 @@ def _isolated_data_dir(tmp_path_factory, monkeypatch):
     """Application state (DB, caches) goes to a temp dir, never the real one."""
     monkeypatch.setenv("LEADSCRAPER_DATA_DIR", str(tmp_path_factory.mktemp("appdata")))
     monkeypatch.delenv("LEADSCRAPER_DB_URL", raising=False)
+    # Runs never hold a real OS keep-awake lock in tests (test_keepawake mocks it).
+    monkeypatch.setenv("LEADSCRAPER_KEEP_AWAKE", "0")

@@ -4,6 +4,17 @@ Design rule for the whole pipeline: a failure anywhere is recorded and stepped
 over. A dead directory, a CAPTCHA, a malformed profile page -- none of them
 end the run. Everything gathered so far is flushed to disk (and to Sheets)
 periodically and again on exit, including on Ctrl-C.
+
+Two ways to drive it:
+
+* ``Pipeline.run()`` -- the whole thing, sequentially, in plan order (direct
+  use, tests).
+* The engine (``engine/runner.py`` via ``session.LocalBusinessSession``) --
+  it takes ``discovery_units()``, schedules them against the time budget,
+  runs each with ``run_planned_unit()`` (possibly several at once, on
+  different hosts), then calls ``post_discovery()`` and ``finalise()``.
+  ``control`` is the engine's ``RunControl``: pause, cancel and the deadline
+  stop new work exactly like Ctrl-C does.
 """
 
 from __future__ import annotations
@@ -11,6 +22,7 @@ from __future__ import annotations
 import inspect
 import logging
 import signal
+import threading
 import time
 from dataclasses import dataclass, field
 from typing import Callable, Iterable
@@ -20,19 +32,36 @@ from ...net.browser import BrowserSession
 from ...config import Category, Config, Locality
 from ...export.csv_writer import write_csv, write_failures_csv
 from ...engine.failures import FailureLog
+from ...engine.parallel import HostQueue, run_across_hosts
 from ...net.http import HttpClient
 from ...core.country import format_money
 from ...core.lead import Lead
 from ...net.ratelimit import RateLimiter
 from .scoring import Scorer
 from ...export.sheets import SheetsWriter
-from .planning import SelectionPlan, plan_discovery, select_sources
+from .planning import DiscoveryPlan, SelectionPlan, plan_discovery, select_sources
 from ...sources import DISCOVERY_SOURCES, ENRICHMENT_SOURCES, SourceContext
 from ...core.normalize import looks_like_seo_title, phone_display
 from ...db.store import DedupOptions, LeadStore, store_target
 from ...packs.hospitality.venues import TIERS, VENUE_TYPES
 
 log = logging.getLogger(__name__)
+
+#: Failure reasons that mean "try this lead again next run": the enricher was
+#: turned away, not told there is nothing there.
+TRANSIENT_ENRICH_REASONS = frozenset({"blocked", "fetch_failed", "run_cap_reached",
+                                      "search_failed", "login_wall", "enricher_crashed"})
+
+
+@dataclass
+class UnitResult:
+    """What one discovery unit did (the engine wraps it in a ``UnitOutcome``)."""
+
+    found: int = 0
+    new: int = 0
+    merged: int = 0
+    status: str = "done"
+    error: str = ""
 
 
 @dataclass
@@ -71,13 +100,32 @@ class Pipeline:
         install_signals: bool = True,
         failure_sink: Callable[[dict], None] | None = None,
         unit_sink: Callable[[dict], None] | None = None,
+        control=None,
+        events=None,
+        engine_driven: bool = False,
+        force_enrich: bool | None = None,
     ):
         self.config = config
         self.localities = localities
         self.categories = categories
         self.dry_run = dry_run
         self.stats = RunStats(combos_total=len(localities) * len(categories))
-        self._stop_requested = False
+        #: The engine's RunControl (pause / cancel / deadline), when it drives us.
+        self.control = control
+        #: The engine's EventBus, for activity events during enrichment.
+        self.events = events
+        #: The engine records units and unit stats itself.
+        self._engine_driven = engine_driven
+        self._stop_flag = False
+        self.force_enrich = (bool(config.get("runtime.force_enrich", False))
+                             if force_enrich is None else force_enrich)
+        self.enrich_workers = max(1, int(config.get("runtime.enrich_workers", 8) or 1))
+        self._stats_lock = threading.Lock()
+        self._flush_lock = threading.Lock()
+        self._plan: DiscoveryPlan | None = None
+        self._units: dict[str, tuple] = {}
+        self._combo_remaining: dict[int, int] = {}
+        self._finalised = False
         #: Final ranked leads, populated by `run()`. Kept after the store is
         #: closed so callers embedding this pipeline can read the results.
         self.leads: list[Lead] = []
@@ -142,6 +190,11 @@ class Pipeline:
         self._ai_extract_queue: list[tuple[int, str]] = []
 
         self.sources, self.source_plan = self._build("source", DISCOVERY_SOURCES, source_names)
+        if enricher_names is None and not config.get("runtime.enrichment", True):
+            # A depth preset (quick) switched enrichment off; naming an
+            # enricher on the command line still runs it.
+            log.info("enrichment off for this run (depth %s)", config.get("depth", "?"))
+            enricher_names = []
         self.enrichers, self.enricher_plan = self._build(
             "enricher", ENRICHMENT_SOURCES, enricher_names
         )
@@ -225,6 +278,25 @@ class Pipeline:
 
     # --- lifecycle --------------------------------------------------------
 
+    @property
+    def _stop_requested(self) -> bool:
+        """Start nothing new: Ctrl-C here, or the engine's pause/cancel/deadline."""
+        return self._stop_flag or (self.control is not None and self.control.stop_requested)
+
+    @_stop_requested.setter
+    def _stop_requested(self, value: bool) -> None:
+        self._stop_flag = bool(value)
+
+    def _cut_unit(self) -> bool:
+        """Abandon the unit in flight? Only on a direct Ctrl-C, or once a unit
+        has overrun into the budget's reserved tail (the run must finish
+        within budget + tail). A pause or cancel lets it finish."""
+        if self._stop_flag:
+            return True
+        control = self.control
+        return bool(control is not None and control.budgeted
+                    and control.remaining() < -control.tail_seconds / 2)
+
     def install_signal_handler(self) -> None:
         """Ctrl-C finishes the current item, flushes, and exits cleanly."""
         def handler(signum, frame):
@@ -250,80 +322,138 @@ class Pipeline:
 
         try:
             self._discover()
-            if not self._stop_requested and self.config.is_venue_run:
-                self._ai_phase("venue classification", self._ai_classify_venues)
-                self._venue_rollup()
-            if not self._stop_requested:
-                self._ai_phase("name polish", self._ai_polish_names)
-            if not self._stop_requested:
-                self._enrich()
-            if not self._stop_requested:
-                self._ai_phase("fallback extraction", self._ai_fallback_extraction)
+            self.post_discovery()
         except KeyboardInterrupt:
             log.warning("interrupted -- flushing what we have")
         finally:
             self._finalise()
         return self.stats
 
+    def post_discovery(self) -> None:
+        """Everything after discovery: venue passes, name polish, enrichment, AI extraction."""
+        if not self._stop_requested and self.config.is_venue_run:
+            self._activity("ai", "venue classification and brand roll-up")
+            self._ai_phase("venue classification", self._ai_classify_venues)
+            self._venue_rollup()
+        if not self._stop_requested:
+            self._ai_phase("name polish", self._ai_polish_names)
+        if not self._stop_requested:
+            self._enrich()
+        if not self._stop_requested:
+            self._ai_phase("fallback extraction", self._ai_fallback_extraction)
+
+    def _activity(self, phase: str, text: str) -> None:
+        if self.events is None:
+            return
+        from ...engine.events import Activity
+
+        self.events.publish(Activity(phase=phase, text=text, lead_type="local_business"))
+
     # --- phases -----------------------------------------------------------
 
     def _scoped(self, scope: str) -> list:
         return [s for s in self.sources if getattr(s, "scope", "combo") == scope]
 
+    # --- discovery units ----------------------------------------------------
+
+    def _discovery_plan(self) -> DiscoveryPlan:
+        """The units, in plan order, indexed by key (built once)."""
+        if self._plan is not None:
+            return self._plan
+        plan = plan_discovery(self.config, self.sources, self.localities, self.categories)
+        for source, unit in plan.run_units:
+            self._units[unit.key] = (source, None, None, None)
+        for loc_plan in plan.localities:
+            for source, unit in loc_plan.units:
+                self._units[unit.key] = (source, loc_plan.locality, None, None)
+            for combo in loc_plan.combos:
+                combo_id = id(combo)
+                self._combo_remaining[combo_id] = len(combo.units)
+                for source, unit in combo.units:
+                    self._units[unit.key] = (source, loc_plan.locality, combo.category, combo_id)
+        self.stats.combos_total = plan.combos_total if self.sources else 0
+        # A combination none of the sources runs (category filters) is
+        # processed by definition.
+        self.stats.combos_done += sum(1 for n in self._combo_remaining.values() if n == 0)
+        self._plan = plan
+        return plan
+
+    def discovery_units(self) -> list:
+        """Every discovery WorkUnit, in plan order (what the engine schedules)."""
+        if not self.sources:
+            return []
+        return self._discovery_plan().units()
+
+    def source_named(self, name: str):
+        return next((s for s in self.sources if s.name == name), None)
+
+    def run_planned_unit(self, unit) -> UnitResult:
+        """Run one planned unit by its key. Thread-safe; never raises."""
+        self._discovery_plan()
+        entry = self._units.get(unit.key)
+        if entry is None:
+            return UnitResult(status="failed", error=f"unknown unit {unit.key}")
+        source, locality, category, combo_id = entry
+        result = self._run_unit(source, locality, category)
+        if combo_id is not None:
+            with self._stats_lock:
+                self._combo_remaining[combo_id] -= 1
+                finished = self._combo_remaining[combo_id] == 0
+                if finished:
+                    self.stats.combos_done += 1
+            if finished:
+                log.info("progress: %d/%d combinations, %d leads stored",
+                         self.stats.combos_done, self.stats.combos_total, self.store.count())
+        return result
+
     def _discover(self) -> None:
+        """Every unit in plan order (direct use; the engine schedules them itself)."""
         if not self.sources:
             # --enrich-only: reporting 72/72 combinations here would be a lie.
             self.stats.combos_total = 0
             log.info("no discovery sources active -- skipping straight to enrichment")
             return
-        plan = plan_discovery(self.config, self.sources, self.localities, self.categories)
-        for source, _unit in plan.run_units:
+        plan = self._discovery_plan()
+        for unit in plan.units():
             if self._stop_requested:
                 return
-            self._run_unit(source, None, None)
+            self.run_planned_unit(unit)
 
-        self.stats.combos_total = plan.combos_total
-        for loc_plan in plan.localities:
-            for source, _unit in loc_plan.units:
-                if self._stop_requested:
-                    return
-                self._run_unit(source, loc_plan.locality, None)
-            for combo in loc_plan.combos:
-                if self._stop_requested:
-                    return
-                for source, _unit in combo.units:
-                    if self._stop_requested:
-                        return
-                    self._run_unit(source, loc_plan.locality, combo.category)
-                self.stats.combos_done += 1
-                log.info("progress: %d/%d combinations, %d leads stored",
-                         self.stats.combos_done, self.stats.combos_total, self.store.count())
-
-    def _run_unit(self, source, locality: Locality | None, category: Category | None) -> None:
+    def _run_unit(self, source, locality: Locality | None,
+                  category: Category | None) -> UnitResult:
         where = f"{locality.name if locality else 'all localities'} / " \
                 f"{category.name if category else 'all categories'}"
         log.info("[%s] %s", source.name, where)
-        found, status, error = 0, "done", ""
-        started, new_before = time.time(), self.stats.new_leads
+        result = UnitResult()
+        started = time.time()
         try:
             for lead in source.discover(locality, category):
-                if self._stop_requested:
+                if self._cut_unit():
+                    result.status, result.error = "partial", "stopped mid-unit"
                     break
-                found += 1
-                self._store_lead(lead, source.name)
+                result.found += 1
+                action = self._store_lead(lead, source.name)
+                if action == "new":
+                    result.new += 1
+                elif action == "merged":
+                    result.merged += 1
         except Exception as exc:
             # A source that raises despite its own guards must not kill the run.
-            status, error = "failed", repr(exc)
+            result.status, result.error = "failed", repr(exc)
             self.failures.record(
                 source.name, "source_crashed",
                 locality=locality.name if locality else None,
                 category=category.name if category else None, detail=repr(exc),
             )
             log.exception("source %s crashed on %s", source.name, where)
-        self.stats.units_done += 1
-        self._note_unit(source, locality, category, started, found,
-                        self.stats.new_leads - new_before, status, error)
-        log.info("[%s] %s -> %d raw leads", source.name, where, found)
+        with self._stats_lock:
+            self.stats.units_done += 1
+        if not self._engine_driven:
+            self._note_unit(source, locality, category, started, result.found, result.new,
+                            result.status, result.error)
+        log.info("[%s] %s -> %d raw leads", source.name, where, result.found)
+        self._maybe_flush()
+        return result
 
     def _note_unit(self, source, locality, category, started: float, found: int, new: int,
                    status: str, error: str) -> None:
@@ -349,27 +479,39 @@ class Pipeline:
         except Exception as exc:  # bookkeeping never stops a run
             log.warning("could not record unit %s %s/%s: %s", source.name, area, cat, exc)
 
-    def _store_lead(self, lead: Lead, source_name: str) -> None:
-        self.stats.leads_seen += 1
-        self.stats.note_source(source_name)
+    def _store_lead(self, lead: Lead, source_name: str) -> str | None:
+        with self._stats_lock:
+            self.stats.leads_seen += 1
+            self.stats.note_source(source_name)
         try:
             _, action, _ = self.store.upsert(lead)
         except ValueError as exc:
             self.failures.record(source_name, "invalid_lead", detail=str(exc))
-            return
+            return None
         except Exception as exc:
             self.failures.record(source_name, "store_failed",
                                  business=lead.business_name, detail=repr(exc))
-            return
+            return None
 
-        if action == "new":
-            self.stats.new_leads += 1
-        elif action == "merged":
-            self.stats.merged_leads += 1
+        with self._stats_lock:
+            if action == "new":
+                self.stats.new_leads += 1
+            elif action == "merged":
+                self.stats.merged_leads += 1
+            self._since_flush += 1
+        if threading.current_thread() is threading.main_thread():
+            self._maybe_flush()
+        return action
 
-        self._since_flush += 1
-        if self._since_flush >= self._flush_every:
-            self._flush()
+    def _maybe_flush(self) -> None:
+        """Flush when enough has changed. One flush at a time; never from two threads."""
+        with self._stats_lock:
+            due = self._since_flush >= self._flush_every
+        if due and self._flush_lock.acquire(blocking=False):
+            try:
+                self._flush()
+            finally:
+                self._flush_lock.release()
 
     def _enrich(self) -> None:
         """Fill in contact details for leads we already have.
@@ -386,34 +528,94 @@ class Pipeline:
             except Exception as exc:
                 self.failures.record(enricher.name, "target_selection_failed", detail=repr(exc))
                 continue
+            targets = self._not_yet_enriched(enricher, targets)
             log.info("%s enrichment: %d candidate leads", enricher.name, len(targets))
             self._run_enricher(enricher, targets)
 
-    def _run_enricher(self, enricher, targets: Iterable[tuple[int, Lead]]) -> None:
-        for lead_id, lead in targets:
-            if self._stop_requested:
-                return
-            try:
-                partial = enricher.enrich(lead)
-            except Exception as exc:
-                self.failures.record(enricher.name, "enricher_crashed",
-                                     business=lead.business_name, detail=repr(exc))
-                continue
+    def _not_yet_enriched(self, enricher, targets: list) -> list:
+        """Skip leads this enricher already went through on an earlier run (Part 2.5)."""
+        if self.force_enrich:
+            return list(targets)
+        reader = getattr(self.store, "enriched_ids", None)
+        if not callable(reader):
+            return list(targets)
+        try:
+            done = reader(enricher.name)
+        except Exception as exc:
+            log.debug("enrichment marks unavailable (ignored): %s", exc)
+            return list(targets)
+        kept = [(lead_id, lead) for lead_id, lead in targets if lead_id not in done]
+        if len(kept) < len(targets):
+            log.info("%s enrichment: %d leads already enriched on an earlier run "
+                     "(--force-enrich redoes them)", enricher.name, len(targets) - len(kept))
+        return kept
 
-            pending = getattr(enricher, "pending_text", None)
-            if pending and self.ai.uses("extract"):
+    def _run_enricher(self, enricher, targets: Iterable[tuple[int, Lead]]) -> None:
+        """Enrich concurrently across hosts (each vendor site is its own host)."""
+        def host_of(target):
+            try:
+                return enricher.target_host(target[1])
+            except Exception:
+                return enricher.name
+
+        work = HostQueue(targets, host_of)
+        total, done = work.total, [0]
+        tag = getattr(self.store, "lead_type", None)
+        last_note = [time.time()]
+
+        def one(target) -> None:
+            if tag and hasattr(self.store, "tag_thread"):
+                self.store.tag_thread(tag)
+            self._enrich_one(enricher, *target)
+
+        def finished(_target, _result, error) -> None:
+            done[0] += 1
+            if error is not None:
+                log.warning("%s enrichment task failed: %r", enricher.name, error)
+            if self.events is not None and (time.time() - last_note[0] > 10 or done[0] == total):
+                last_note[0] = time.time()
+                self._activity("enrichment", f"{enricher.name} enrichment: {done[0]}/{total}")
+            self._maybe_flush()
+
+        run_across_hosts(work.next, work.hosts_of, one, finished,
+                         workers=self.enrich_workers, should_stop=lambda: self._stop_requested,
+                         thread_name=f"enrich-{enricher.name}")
+
+    def _enrich_one(self, enricher, lead_id: int, lead: Lead) -> None:
+        reasons = self.failures.track()
+        crashed = False
+        try:
+            partial = enricher.enrich(lead)
+        except Exception as exc:
+            crashed = True
+            partial = None
+            self.failures.record(enricher.name, "enricher_crashed",
+                                 business=lead.business_name, detail=repr(exc))
+        finally:
+            self.failures.untrack()
+
+        pending = getattr(enricher, "pending_text", None)
+        if pending and self.ai.uses("extract"):
+            with self._stats_lock:
                 self._ai_extract_queue.append((lead_id, pending))
-                enricher.pending_text = None
-            if not partial:
-                continue
-            changed = self.store.merge_into(lead_id, partial)
-            if changed:
+            enricher.pending_text = None
+        if not crashed and not TRANSIENT_ENRICH_REASONS.intersection(reasons):
+            # Done for good: next run skips this lead unless forced.
+            marker = getattr(self.store, "mark_enriched", None)
+            if callable(marker):
+                try:
+                    marker(lead_id, enricher.name)
+                except Exception as exc:
+                    log.debug("could not mark %s enriched (ignored): %s", lead_id, exc)
+        if not partial:
+            return
+        changed = self.store.merge_into(lead_id, partial)
+        if changed:
+            with self._stats_lock:
                 self.stats.enriched += 1
-                log.debug("enriched %s via %s: %s", lead.business_name,
-                          enricher.name, ", ".join(changed))
                 self._since_flush += 1
-                if self._since_flush >= self._flush_every:
-                    self._flush()
+            log.debug("enriched %s via %s: %s", lead.business_name,
+                      enricher.name, ", ".join(changed))
 
     # --- AI phases --------------------------------------------------------
 
@@ -719,6 +921,9 @@ class Pipeline:
         self.sheets.sync(leads)
 
     def _finalise(self) -> None:
+        if self._finalised:
+            return
+        self._finalised = True
         log.info("finalising: rescoring and writing output")
         try:
             self.store.rescore_all()
@@ -856,9 +1061,13 @@ class Pipeline:
         print(f"\nCombinations: {self.stats.combos_total}"
               f" x {len(combo)} per-combination sources = "
               f"{self.stats.combos_total * len(combo)} source runs (before category filters)")
-        estimate = self._estimate_minutes()
-        print(f"Rough time estimate: {estimate:.0f}-{estimate * 2:.0f} minutes"
-              " (dominated by the configured delays)\n")
+        if not self._engine_driven:
+            # The engine prints its own estimate (p50/p90, budget) after this.
+            estimate = self._estimate_minutes()
+            print(f"Rough time estimate: {estimate:.0f}-{estimate * 2:.0f} minutes"
+                  " (dominated by the configured delays)\n")
+        else:
+            print()
         self._close()
 
     def _estimate_minutes(self) -> float:

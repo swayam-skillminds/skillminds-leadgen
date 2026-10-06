@@ -119,10 +119,11 @@ def test_settings_this_build_does_not_apply_are_named():
         icp={"industries": ["dental"]}, depth="deep", time_budget_minutes=30,
         output={"excel": True, "csv": False, "json": True}))
     notes = loud.unapplied()
-    assert len(notes) == 8
+    assert len(notes) == 6
     assert any(n.startswith("filters.min_rating") for n in notes)
-    assert any("Phase 2" in n and "time_budget_minutes" in n for n in notes)
     assert any(n.startswith("output.csv is off") for n in notes)
+    # Phase 2 applies depth presets and the time budget: no longer named.
+    assert not any("time_budget_minutes" in n or n.startswith("depth") for n in notes)
 
 def test_a_new_project_never_writes_over_the_legacy_csv(tmp_path, monkeypatch):
     monkeypatch.setenv("LEADSCRAPER_DATA_DIR", str(tmp_path))

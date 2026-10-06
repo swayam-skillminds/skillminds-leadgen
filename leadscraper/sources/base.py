@@ -16,6 +16,9 @@ from ..net.ratelimit import RateLimiter
 
 log = logging.getLogger(__name__)
 
+#: Search-engine hosts shared by every SERP-based source.
+SERP_HOSTS = frozenset({"www.google.com", "duckduckgo.com"})
+
 
 @dataclass
 class SourceContext:
@@ -68,6 +71,23 @@ class Source(ABC):
     def rate_keys(self) -> list[str]:
         """Hostnames this source hits, for rate-limiter configuration."""
         return [self.name]
+
+    def hosts(self) -> list[str]:
+        """Hosts a unit of this source mainly hits. Units sharing a host never
+        run at the same time (the engine parallelises across hosts only).
+
+        Defaults to the rate-limiter keys. Directories list Google and
+        DuckDuckGo among those for their opt-in ``site:`` fallback; they drop
+        them here unless the fallback is on, so a directory unit can run
+        beside a Maps unit.
+        """
+        keys = self.rate_keys()
+        if self.cfg.get("serp_fallback", False) or not self.serp_is_fallback:
+            return keys
+        return [k for k in keys if k not in SERP_HOSTS] or keys
+
+    #: True when the SERP hosts among the rate keys are only an opt-in fallback.
+    serp_is_fallback: bool = False
 
     # --- the run's country, as every parser needs it ---------------------
 
@@ -185,6 +205,11 @@ class Enricher(ABC):
         names.
         """
         return store.all_with_ids()
+
+    def target_host(self, lead: Lead) -> str:
+        """The host enriching `lead` hits. Leads on different hosts are enriched
+        concurrently; leads on one host (every Instagram profile) take turns."""
+        return self.name
 
     @abstractmethod
     def enrich(self, lead: Lead) -> Lead | None:

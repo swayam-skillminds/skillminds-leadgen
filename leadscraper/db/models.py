@@ -12,6 +12,9 @@ Workspace -> Project -> Run, and the organisation-centric lead database:
   with its source; ``evidence`` records every write: source, URL, fields, when.
 * ``runs`` / ``run_organizations`` / ``work_units`` / ``failures`` /
   ``ai_usage`` -- run history; ``run_organizations`` powers "new since last run".
+* ``run_events`` -- every run's typed progress stream (Phase 2), persisted so
+  history can replay it; ``workers`` -- the worker processes taking runs off
+  the DB-backed queue (process infrastructure, so not workspace-owned).
 * ``suppression_*`` and ``schedules`` are created now and used from Phase 3.
 
 Every user-owned table carries ``workspace_id`` (A.2.2): one default
@@ -125,6 +128,54 @@ class Run(Base):
     stats: Mapped[dict[str, Any]] = mapped_column(JSONType, default=dict)
     error: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = _created()
+    #: What to run beyond the config: area/category/source restrictions, flags.
+    request: Mapped[dict[str, Any]] = mapped_column(JSONType, default=dict)
+    #: The estimator's answer when the run was planned (estimate vs. actual).
+    estimate: Mapped[dict[str, Any]] = mapped_column(JSONType, default=dict)
+    #: Where a resumed run picks up: {"phase": "discovery" | "post" | "finalise"}.
+    checkpoint: Mapped[dict[str, Any]] = mapped_column(JSONType, default=dict)
+    #: "worker:<name>" or "cli:<host>:<pid>" -- who is executing it now.
+    worker_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
+                                                          nullable=True)
+    #: Seconds spent running, across pauses and resumes (the time budget's clock).
+    active_seconds: Mapped[float] = mapped_column(Float, default=0.0)
+    #: How many times execution started (1 + resumes).
+    attempts: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class RunEvent(Base):
+    """One typed progress event (engine/events.py), in emission order."""
+
+    __tablename__ = "run_events"
+    __table_args__ = (UniqueConstraint("run_id", "seq"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    workspace_id: Mapped[int] = _workspace_fk()
+    run_id: Mapped[int] = mapped_column(ForeignKey("runs.id", ondelete="CASCADE"))
+    seq: Mapped[int] = mapped_column(Integer)
+    type: Mapped[str] = mapped_column(String(40))
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONType, default=dict)
+    created_at: Mapped[datetime] = _created()
+
+
+class Worker(Base):
+    """A worker process. Not workspace-owned: one worker serves every workspace."""
+
+    __tablename__ = "workers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(200), unique=True)
+    hostname: Mapped[str] = mapped_column(String(200), default="")
+    pid: Mapped[int] = mapped_column(Integer, default=0)
+    #: idle | busy | stopping | stopped
+    status: Mapped[str] = mapped_column(String(20), default="idle")
+    current_run_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    #: Set by `leadscraper worker stop`: a graceful stop that needs no signals.
+    stop_requested: Mapped[bool] = mapped_column(Boolean, default=False)
+    started_at: Mapped[datetime] = _created()
+    heartbeat_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
+                                                          nullable=True)
 
 
 # --- organisations and their facts ----------------------------------------------
@@ -276,7 +327,10 @@ class RunOrganization(Base):
 
 
 class WorkUnitRow(Base):
+    """One planned unit of a run, and what became of it: the run's checkpoint."""
+
     __tablename__ = "work_units"
+    __table_args__ = (Index("ix_work_units_run_key", "run_id", "unit_key"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     workspace_id: Mapped[int] = _workspace_fk()
@@ -292,6 +346,17 @@ class WorkUnitRow(Base):
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     error: Mapped[str] = mapped_column(Text, default="")
+    #: WorkUnit.key: "lead_type|source|area|category".
+    unit_key: Mapped[str] = mapped_column(String(700), default="")
+    new: Mapped[int] = mapped_column(Integer, default=0)
+    merged: Mapped[int] = mapped_column(Integer, default=0)
+    seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
+    #: The scheduler's view when it was planned: cost, yield, priority.
+    expected_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
+    expected_new: Mapped[float | None] = mapped_column(Float, nullable=True)
+    priority: Mapped[float | None] = mapped_column(Float, nullable=True)
+    #: Why a unit was skipped (time budget, stop) -- the run report lists them.
+    skip_reason: Mapped[str] = mapped_column(Text, default="")
 
 
 class FailureRow(Base):
@@ -409,6 +474,9 @@ class UnitStat(Base):
     total_seconds: Mapped[float] = mapped_column(Float, default=0.0)
     total_new_leads: Mapped[int] = mapped_column(Integer, default=0)
     last_run: Mapped[float] = mapped_column(Float)
+    #: Sum of squared durations: with ``runs`` and ``total_seconds``, the variance
+    #: the estimator's p90 needs.
+    total_sq_seconds: Mapped[float] = mapped_column(Float, default=0.0)
 
 
 class EnrichmentMark(Base):

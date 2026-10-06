@@ -52,7 +52,8 @@ def test_alembic_migrations_build_exactly_the_models(tmp_path):
 
 def test_every_owned_table_carries_workspace_id():
     """A.2.2: auth can arrive later without remodelling the data."""
-    unowned = {"workspaces"}
+    # Worker processes serve every workspace; they hold no user data.
+    unowned = {"workspaces", "workers"}
     for table in Base.metadata.sorted_tables:
         if table.name in unowned:
             continue

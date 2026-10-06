@@ -127,7 +127,10 @@ class LeadStore:
             scorer = Scorer()
         self.options = options or DedupOptions()
         self.scorer = scorer
-        self.lead_type = lead_type
+        #: The lead type writes are tagged with. Per thread: the engine runs
+        #: units of different lead types side by side against one store.
+        self._tag = threading.local()
+        self._default_lead_type = lead_type
         self.country = country
         self.run_id = run_id
         #: Set by an importer so contacts and evidence name the import, not
@@ -148,6 +151,20 @@ class LeadStore:
         self.project_name = project
         self._conn.commit()
         self.stats = {"new": 0, "merged": 0, "unchanged": 0, "consolidated": 0}
+
+    @property
+    def lead_type(self) -> str:
+        return getattr(self._tag, "lead_type", None) or self._default_lead_type
+
+    @lead_type.setter
+    def lead_type(self, key: str) -> None:
+        """Tag this thread's writes with `key`; also the default for new threads."""
+        self._tag.lead_type = key
+        self._default_lead_type = key
+
+    def tag_thread(self, key: str) -> None:
+        """Tag only the calling thread's writes (a worker running one lead type's unit)."""
+        self._tag.lead_type = key
 
     # --- tenancy ---------------------------------------------------------------
 
@@ -630,15 +647,17 @@ class LeadStore:
         key = and_(UNITS.c.workspace_id == self.workspace_id, UNITS.c.source == source,
                    UNITS.c.area == area, UNITS.c.category == category)
         with self._lock:
+            seconds = float(seconds)
             done = self._conn.execute(update(UNITS).where(key).values(
-                runs=UNITS.c.runs + 1, total_seconds=UNITS.c.total_seconds + float(seconds),
+                runs=UNITS.c.runs + 1, total_seconds=UNITS.c.total_seconds + seconds,
+                total_sq_seconds=UNITS.c.total_sq_seconds + seconds * seconds,
                 total_new_leads=UNITS.c.total_new_leads + int(new_leads),
                 last_run=time.time())).rowcount
             if not done:
                 self._conn.execute(UNITS.insert().values(
                     workspace_id=self.workspace_id, source=source, area=area, category=category,
-                    runs=1, total_seconds=float(seconds), total_new_leads=int(new_leads),
-                    last_run=time.time()))
+                    runs=1, total_seconds=seconds, total_sq_seconds=seconds * seconds,
+                    total_new_leads=int(new_leads), last_run=time.time()))
             self._conn.commit()
 
     def unit_stat(self, source: str, area: str, category: str) -> tuple[float, float] | None:
@@ -682,6 +701,15 @@ class LeadStore:
                 organization_id=int(lead_id), enricher=enricher,
                 workspace_id=self.workspace_id, done_at=time.time()))
             self._conn.commit()
+
+    def enriched_ids(self, enricher: str) -> set[int]:
+        """Organisations of this project `enricher` has already been through."""
+        with self._lock:
+            rows = self._conn.execute(
+                select(MARKS.c.organization_id)
+                .join(ORGS, ORGS.c.id == MARKS.c.organization_id)
+                .where(MARKS.c.enricher == enricher, self._org_filter())).all()
+        return {int(r[0]) for r in rows}
 
     def is_enriched(self, lead_id: int, enricher: str) -> bool:
         with self._lock:

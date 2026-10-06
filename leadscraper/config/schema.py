@@ -209,12 +209,6 @@ class RunConfig(_Strict):
             notes.append("filters.suppression_lists: suppression lists arrive in Phase 3")
         if self.icp != ICP():
             notes.append("icp is recorded with the run but does not steer it yet")
-        if self.depth != "balanced":
-            notes.append(f"depth {self.depth!r}: depth presets arrive in Phase 2; "
-                         "each source runs at its own settings")
-        if self.time_budget_minutes is not None:
-            notes.append("time_budget_minutes is not enforced until Phase 2: "
-                         "the run goes to completion")
         if self.output.excel:
             notes.append("output.excel: the Overview + Records workbook is Phase 4 "
                          "(tools/build_*_workbook.py meanwhile)")

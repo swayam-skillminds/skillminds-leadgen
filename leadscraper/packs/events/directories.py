@@ -144,6 +144,9 @@ class DirectorySource(Source):
     #: True only for WedMeGood, whose signals are scored separately.
     is_wedmegood: bool = False
 
+    #: Google/DuckDuckGo are only hit by the opt-in `serp_fallback`.
+    serp_is_fallback = True
+
     def rate_keys(self) -> list[str]:
         return [self.name, self.host, "www.google.com", "duckduckgo.com"]
 

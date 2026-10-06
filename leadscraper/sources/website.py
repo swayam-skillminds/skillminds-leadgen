@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import re
+import threading
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup
@@ -45,9 +46,22 @@ class WebsiteEnricher(Enricher):
         """Leads that have a website but no email yet."""
         return store.website_enrichment_targets()
 
+    def target_host(self, lead: Lead) -> str:
+        """Each vendor site is its own host: enrichment fetches several at once."""
+        return domain_of(lead.website or "") or "website"
+
     #: Set when a page fetched fine but yielded no contacts. The pipeline
-    #: drains this and hands the text to the AI fallback extractor.
-    pending_text: str | None = None
+    #: drains this and hands the text to the AI fallback extractor. Per
+    #: thread: sites are enriched concurrently.
+    _pending = threading.local()
+
+    @property
+    def pending_text(self) -> str | None:
+        return getattr(self._pending, "text", None)
+
+    @pending_text.setter
+    def pending_text(self, value: str | None) -> None:
+        self._pending.text = value
 
     def enrich(self, lead: Lead) -> Lead | None:
         if not lead.website or not is_vendor_website(lead.website):

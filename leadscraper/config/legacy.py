@@ -135,9 +135,14 @@ class Config:
             node = node[part]
         return node
 
-    def set(self, dotted: str, value: Any) -> None:
-        """Apply a CLI override in place."""
-        self.overrides[dotted] = value
+    def set(self, dotted: str, value: Any, *, record: bool = True) -> None:
+        """Apply a CLI override in place.
+
+        ``record=False`` for values derived from the config itself (a depth
+        preset's knobs): the snapshot already says why they are what they are.
+        """
+        if record:
+            self.overrides[dotted] = value
         parts = dotted.split(".")
         node = self._data
         for part in parts[:-1]:

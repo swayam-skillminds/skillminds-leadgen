@@ -54,6 +54,9 @@ class LocalDirectorySource(Source):
     listing_pattern: re.Pattern[str] = re.compile(r"$^")
     host: str = ""
 
+    #: Google/DuckDuckGo are only hit by the opt-in `serp_fallback`.
+    serp_is_fallback = True
+
     def rate_keys(self) -> list[str]:
         return [self.name, self.host, "www.google.com", "duckduckgo.com"]
 
