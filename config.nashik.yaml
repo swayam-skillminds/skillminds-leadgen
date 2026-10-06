@@ -225,6 +225,7 @@ sources:
     min_delay: 10.0
     max_delay: 22.0
     max_pages: 1
+    serp_fallback: false     # site: queries are opt-in (they burn the SERP budget)
   facebook:
     enabled: true
     min_delay: 6.0

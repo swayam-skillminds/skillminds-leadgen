@@ -301,3 +301,57 @@ def test_shaadisaga_source_is_deleted():
     assert not hasattr(sources_pkg, "ShaadiSagaSource")
     assert not hasattr(directories_mod, "ShaadiSagaSource")
     assert "shaadisaga" not in DISCOVERY_SOURCES
+
+
+# --- Justdial / Sulekha: SERP lookups are opt-in ---------------------------
+#
+# REBUILD Part 0.4 turned the SERP fallback off in directories.py, but the
+# local directories still ran one `site:` query per locality x category on
+# top of their listing template -- the same CAPTCHA trap by another door.
+
+class RecordingSerp:
+    queries: list[str] = []
+
+    def __init__(self, ctx):
+        pass
+
+    def search(self, query, pages=1, per_page=20):
+        RecordingSerp.queries.append(query)
+        return []
+
+
+def local_source(cls, **source_cfg):
+    config = Config({"city": "Mumbai",
+                     "sources": {cls.name: {"enabled": True, "min_delay": 0, "max_delay": 0,
+                                            **source_cfg}}})
+    ctx = SourceContext(config=config, http=StubHttp(), limiter=StubLimiter(),
+                        failures=StubFailures(), browser=None, store=StubStore())
+    return cls(ctx)
+
+
+@pytest.mark.parametrize("name", ["justdial", "sulekha"])
+def test_local_directory_makes_no_serp_query_by_default(monkeypatch, name):
+    from leadscraper.sources import local_directories
+
+    monkeypatch.setattr(local_directories, "SerpClient", RecordingSerp)
+    RecordingSerp.queries = []
+    source = local_source(DISCOVERY_SOURCES[name])
+    category = Category(name="Caterers", queries=["catering services"])
+
+    urls = source._listing_urls(LOCALITY, category, max_pages=1)
+
+    assert RecordingSerp.queries == []
+    assert urls and all(source.host in url for url in urls), "listing template still used"
+
+
+@pytest.mark.parametrize("name", ["justdial", "sulekha"])
+def test_local_directory_serp_runs_when_opted_in(monkeypatch, name):
+    from leadscraper.sources import local_directories
+
+    monkeypatch.setattr(local_directories, "SerpClient", RecordingSerp)
+    RecordingSerp.queries = []
+    source = local_source(DISCOVERY_SOURCES[name], serp_fallback=True)
+    category = Category(name="Caterers", queries=["catering services"])
+
+    source._listing_urls(LOCALITY, category, max_pages=1)
+    assert RecordingSerp.queries == [f"site:{source.host} catering services Andheri East Mumbai"]
