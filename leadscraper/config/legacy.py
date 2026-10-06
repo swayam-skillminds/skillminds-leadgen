@@ -77,6 +77,8 @@ class Config:
     def __init__(self, data: dict[str, Any], path: Path | None = None):
         self._data = data
         self.path = path
+        #: The validated run config this view was compiled from, if any.
+        self.run_config = None
         # `areas` is the newer vocabulary for the same list; accept either so a
         # config written in one style loads under the other.
         city = str(data.get("city") or "")

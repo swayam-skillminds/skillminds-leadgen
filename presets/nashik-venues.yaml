@@ -1,0 +1,219 @@
+# Run config (schema_version 1) -- see leadscraper/config/schema.py.
+# Validate: python -m leadscraper config validate <this file>
+schema_version: 1
+name: Nashik venues
+project: Nashik venues
+description: Imported from the legacy config config.nashik.yaml.
+geography:
+  country: IN
+  places: [Nashik]
+  areas:
+  - name: Nashik City
+    aliases: [Nashik, Gangapur Road Nashik, Panchavati Nashik]
+    keywords: [nashik, nasik, gangapur road, college road, panchavati, pathardi, indira nagar, indiranagar,
+      nashik road, satpur, trimbak road, makhmalabad, adgaon, cidco, ambad, deolali, mhasrul, anandvalli,
+      pathardi phata, dwarka nashik]
+    center: [19.9975, 73.7898]
+  - name: Gangapur Dam Belt
+    aliases: [Gangapur Dam Nashik, Sula Vineyards Nashik, Savargaon Nashik]
+    keywords: [gangapur dam, gangapur, girnare, gangavhare, gangawhare, savargaon, govardhan, dugaon,
+      kashyapi, sula]
+    center: [20.03, 73.67]
+  - name: Igatpuri
+    aliases: [Igatpuri, Ghoti Igatpuri, Vaitarna Igatpuri]
+    keywords: [igatpuri, igtpuri, ghoti, kasara, vaitarna, bhavli, bhavali, waki, mundhegaon, wadivarhe,
+      talegaon, kavnai, darna]
+    center: [19.695, 73.5626]
+  - name: Trimbakeshwar
+    aliases: [Trimbakeshwar, Anjaneri Nashik]
+    keywords: [trimbakeshwar, trimbak, anjaneri, harsul, waldevi, beze, brahmagiri, pahine, vaghera]
+    center: [19.9322, 73.5306]
+  - name: Wine Country (Dindori / Ozar / Niphad)
+    aliases: [Dindori Nashik, Ozar Nashik, Niphad Nashik]
+    keywords: [dindori, ozar, ozhar, niphad, pimpalgaon baswant, janori, mohadi, kadwa]
+    center: [20.13, 73.93]
+  - name: Sinnar
+    aliases: [Sinnar Nashik]
+    keywords: [sinnar, nandur madhyameshwar, musalgaon, wavi, gonde]
+    center: [19.85, 74.0]
+  - name: North & East District
+    aliases: [Kalwan Nashik, Chandwad Nashik, Malegaon, Satana Nashik, Peth Nashik]
+    keywords: [kalwan, chandwad, malegaon, satana, baglan, yeola, nandgaon, deola, surgana]
+    center: [20.4, 74.1]
+  - name: Bhandardara (adjacent)
+    aliases: [Bhandardara, Bhandardara Ahmednagar]
+    keywords: [bhandardara, randha, arthur lake, wilson dam, akole, ratangad, shendi, ghatghar, samrad]
+    center: [19.5456, 73.7536]
+  - name: Saputara (adjacent)
+    aliases: [Saputara Gujarat]
+    keywords: [saputara, waghai]
+    center: [20.576, 73.749]
+  - name: Jawhar / Mokhada (adjacent)
+    aliases: [Jawhar Palghar, Mokhada Palghar]
+    keywords: [jawhar, mokhada]
+    center: [19.91, 73.23]
+  radius_km: 125.0
+  center: [19.9975, 73.7898]
+  admin_area: Maharashtra
+  maps_zoom: 10
+  keywords: [nashik, nasik]
+  exclude_keywords: [shahapur, bhiwandi, kalyan, thane, vasind, asangaon, khardi, murbad, lonavala, khandala,
+    karjat, vikramgad, aurangabad, dhule, silvassa, daman, vapi, valsad, dahanu, surat]
+  default_area: Nashik Region (unplaced)
+  place_noise: [mumbai]
+lead_types:
+  local_business:
+    enabled: true
+    verticals: [hospitality, events]
+    categories:
+    - name: Luxury & Pool Villas
+      queries: [luxury villa, private pool villa, villa on rent, holiday home]
+      sources: [google_maps, google_search, facebook]
+    - name: Farmhouses & Estates
+      queries: [farmhouse, farm stay, farmhouse for party]
+      sources: [google_maps, google_search]
+    - name: Vineyard & Winery Resorts
+      queries: [vineyard resort, winery]
+      sources: [google_maps, google_search]
+      only_areas: [Nashik City, Gangapur Dam Belt, Wine Country (Dindori / Ozar / Niphad)]
+    - name: Resorts
+      queries: [luxury resort, resort]
+      sources: [google_maps, google_search, facebook]
+    - name: Glamping & Nature Stays
+      queries: [glamping, luxury camping, tent stay]
+      sources: [google_maps]
+    - name: Premium Hotels
+      queries: [5 star hotel, luxury hotel]
+      sources: [google_maps]
+      only_areas: [Nashik City, Igatpuri, Trimbakeshwar, Saputara (adjacent)]
+    - name: Banquets & Event Lawns
+      queries: [wedding lawn, banquet hall, destination wedding venue]
+      directory_slugs: {wedmegood: wedding-venues}
+      sources: [google_maps, wedmegood, justdial, google_search]
+    - name: Villa Rental Operators
+      queries: [villa rental agency, holiday homes rental company]
+      sources: [google_maps, google_search, linkedin_serp]
+      only_areas: [Nashik City, Igatpuri]
+    sources:
+      google_maps: {enabled: true, min_delay: 2.5, max_delay: 6.0, max_results_per_query: 20, scroll_rounds: 6,
+        locality_phrasings: 1, rate_key: google_maps}
+      google_search: {enabled: true, min_delay: 12.0, max_delay: 28.0, results_per_query: 20, pages: 1,
+        fallback_to_duckduckgo: true, query_suffix: contact number}
+      stayvista: {enabled: true, min_delay: 2.0, max_delay: 5.0, max_properties: 120, render_for_price: true,
+        category: Platform Listings}
+      saffronstays: {enabled: true, min_delay: 2.0, max_delay: 5.0, max_properties: 120, render_for_price: false,
+        category: Platform Listings}
+      elivaas: {enabled: true, min_delay: 2.0, max_delay: 5.0, max_properties: 80, render_for_price: true,
+        category: Platform Listings}
+      airbnb: {enabled: true, min_delay: 8.0, max_delay: 16.0, max_pages: 2, entire_homes_only: true,
+        category: Platform Listings}
+      booking:
+        enabled: true
+        min_delay: 8.0
+        max_delay: 16.0
+        max_pages: 1
+        days_ahead: 21
+        category: Platform Listings
+        property_types: {'213': Villa, '220': Holiday home, '206': Resort, '204': Hotel, '210': Farm stay,
+          '224': Luxury tent}
+      wedmegood: {enabled: true, min_delay: 4.0, max_delay: 9.0, max_pages: 4, serp_fallback: false, city_level: true,
+        plain_http_first: true}
+      justdial: {enabled: true, min_delay: 10.0, max_delay: 22.0, max_pages: 1, serp_fallback: false}
+      facebook: {enabled: true, min_delay: 6.0, max_delay: 14.0}
+      linkedin_serp: {enabled: true, min_delay: 15.0, max_delay: 30.0}
+      indiamart: {enabled: false}
+      sulekha: {enabled: false}
+      weddingwire: {enabled: false}
+      maps_lookup: {enabled: true, min_delay: 2.5, max_delay: 6.0, min_name_similarity: 85, max_distance_km: 20,
+        candidates: 3}
+      website: {enabled: true, min_delay: 1.5, max_delay: 4.0, max_pages_per_site: 5}
+      instagram: {enabled: true, min_delay: 8.0, max_delay: 20.0, max_profiles_per_run: 150}
+    scoring:
+      weights: {premium_signal: 0.4, reputation: 0.25, contact_completeness: 0.2, source_corroboration: 0.15}
+      reviews_saturation: 300.0
+      sources_saturation: 4.0
+      completeness_fields: {phones: 0.3, emails: 0.25, website: 0.15, instagram: 0.12, whatsapp: 0.06,
+        address: 0.06, facebook: 0.04, linkedin: 0.02}
+    dedup:
+      phone_match_min_similarity: 60
+      geo_match_radius_m: 250.0
+      geo_match_min_similarity: 70
+      extra_name_noise: [villa, villas, resort, resorts, farmhouse, farm house, farm stay, homestay, home
+          stay, stays, bhk, luxury, private pool, pool, igatpuri, trimbakeshwar, trimbak, nashik, by stayvista,
+        stayvista, saffronstays, elivaas, bungalow, cottage]
+    hospitality:
+      brands:
+      - name: StayVista
+        aliases: [stay vista, vista rooms, vistarooms]
+        tier: premium
+        website: https://www.stayvista.com
+        phones: ['+918104954254']
+        emails: [villas@stayvista.com]
+        instagram: stayvista_official
+      - name: SaffronStays
+        aliases: [saffron stays]
+        tier: premium
+        website: https://www.saffronstays.com
+        phones: ['+918069160000']
+        instagram: saffronstays
+      - name: Elivaas
+        tier: premium
+        website: https://www.elivaas.com
+        phones: ['+917969469950']
+        instagram: stay.elivaas
+      - name: EKOSTAY
+        aliases: [ekostay luxe, eko stay]
+        tier: premium
+      - name: Lohono Stays
+        aliases: [lohono]
+        tier: premium
+      - {name: Isprava, tier: premium}
+      - name: LuxUnlock
+        aliases: [lux unlock]
+        tier: premium
+      - name: OYO
+        aliases: [oyo rooms, oyo flagship, capital o, collection o, townhouse oak]
+        tier: budget
+      - {name: Treebo, tier: budget}
+      - name: FabHotels
+        aliases: [fabhotel, fab hotel]
+        tier: budget
+      - {name: Zostel, tier: budget}
+      venue_tiers:
+        rating_min: 4.3
+        rating_min_reviews: 20
+        bedrooms_min: 3
+        luxury_night_price: 25000
+        luxury_plate_price: 2000
+        luxury_points: 8
+        budget_night_price: 4000
+        points_saturation: 12
+        night_price_points: {50000: 5, 25000: 4, 15000: 3, 8000: 2, 4000: 1}
+        plate_price_points: {2500: 4, 1500: 3, 1000: 2, 700: 1}
+      premium_platforms: [stayvista, saffronstays, elivaas, lohono, isprava, luxunlock, airbnb_luxe]
+      platform_searches: {Nashik City: 'Nashik, Maharashtra', Igatpuri: 'Igatpuri, Maharashtra', Trimbakeshwar: 'Trimbakeshwar,
+          Maharashtra', Bhandardara (adjacent): 'Bhandardara, Maharashtra', Saputara (adjacent): 'Saputara,
+          Gujarat', Jawhar / Mokhada (adjacent): 'Jawhar, Maharashtra'}
+scoring:
+  weights: {fit: 1.0, intent: 0.0, reach: 0.0}
+ai:
+  enabled: true
+  provider: claude_cli
+  features: [extract, names, venues]
+  budget_usd: 5.0
+  allow_billed_api: false
+  model: claude-haiku-4-5
+  judge_model: claude-opus-5
+  batch_size: 12
+  failure_limit: 4
+  timeout: 180
+output:
+  excel: true
+  csv: true
+  json: false
+  google_sheets: true
+  sheets: {spreadsheet_id: 1AIPg53vGw4iKzrvon0M3tlD8ILkJGGgnoAuxN83lLpA, spreadsheet_name: Mumbai Event
+      Industry Leads, worksheet_name: Nashik Venues, failures_worksheet_name: Nashik Skipped, share_with: ''}
+runtime: {max_retries: 3, backoff_base: 2.0, request_timeout: 30, headless: true, db_path: data/nashik/venues.sqlite3,
+  failure_log: logs/nashik/failures.jsonl, run_log: logs/nashik/run.log, csv_export: data/nashik/venues.csv,
+  ai_cache: data/ai_cache.sqlite3, sheets_flush_every: 25, enrich_workers: 8, browser_contexts: 3, skip_enriched: true}

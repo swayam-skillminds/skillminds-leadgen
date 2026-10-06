@@ -166,7 +166,7 @@ def export_only(config: Config) -> int:
         store.rescore_all()
         leads = store.sorted_leads()
         csv_path = config.path_for("csv_export", "data/leads.csv")
-        write_csv(leads, csv_path, config.profile)
+        write_csv(leads, csv_path, config.profile, config.currency)
         print(f"Re-scored and exported {len(leads)} leads -> {csv_path}")
 
         sheets = SheetsWriter(config)

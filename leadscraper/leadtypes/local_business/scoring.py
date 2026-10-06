@@ -20,6 +20,11 @@ scores are unchanged by the venue components existing.
 
 Nothing is ever discarded for scoring low -- a one-source listing with no
 reviews still lands in the sheet, just near the bottom of its group.
+
+Scoring v2 (``core/scoring.py``): this weighted total, /100, is the
+``local_business`` **fit** contribution, contact completeness is its **reach**,
+and it emits no intent. The run's fit/intent/reach weights then make the final
+score; legacy configs weight fit only, so their rankings are unchanged.
 """
 
 from __future__ import annotations
@@ -28,6 +33,7 @@ import math
 from dataclasses import dataclass
 
 from ...core.lead import Lead
+from ...core.scoring import LEGACY_WEIGHTS, OverallScore, ScoreParts, combine
 from ...packs.hospitality.venues import VenueSettings, annotate, best_rating
 
 DEFAULT_WEIGHTS = {
@@ -88,6 +94,9 @@ class Scorer:
         )
         self.venue_run = str(get("profile", "vendors") or "vendors").lower() == "venues"
         self.venue_settings = VenueSettings.from_config(config) if self.venue_run else None
+        #: Scoring v2 fit/intent/reach weights; a config without them is a
+        #: legacy one, whose score is the legitimacy/venue score alone.
+        self.score_weights = get("score_weights", None) or LEGACY_WEIGHTS
 
     # --- components -------------------------------------------------------
 
@@ -187,10 +196,65 @@ class Scorer:
         return parts
 
     def score(self, lead: Lead) -> float:
-        return round(self.breakdown(lead).total, 2)
+        return self.explain(lead).total
 
     def apply(self, lead: Lead) -> Lead:
         if self.venue_settings is not None:
             annotate(lead, self.venue_settings)
         lead.score = self.score(lead)
         return lead
+
+    # --- scoring v2 ---------------------------------------------------------
+
+    def parts(self, lead: Lead, breakdown: ScoreBreakdown | None = None) -> ScoreParts:
+        """This lead type's fit / reach contribution, with reasons."""
+        breakdown = breakdown or self.breakdown(lead)
+        return ScoreParts(
+            lead_type="local_business",
+            fit=round(breakdown.total, 2) / 100.0,
+            reach=breakdown.contact_completeness,
+            reasons=self.reasons(lead, breakdown),
+        )
+
+    def explain(self, lead: Lead) -> OverallScore:
+        """The combined score for a lead found by this lead type alone."""
+        return combine([self.parts(lead)], self.score_weights)
+
+    def reasons(self, lead: Lead, parts: ScoreBreakdown) -> list[str]:
+        """Plain-language reasons, strongest contribution first."""
+        weighted: list[tuple[float, str]] = []
+
+        def add(component: str, text: str) -> None:
+            if text:
+                weighted.append((self.weights.get(component, 0) * getattr(parts, component), text))
+
+        if lead.gmaps_rating is not None:
+            reviews = f" from {lead.gmaps_reviews:,} reviews" if lead.gmaps_reviews else ""
+            add("maps_popularity", f"Google rating {lead.gmaps_rating:.1f}{reviews}")
+        sources = sorted(set(lead.sources))
+        if len(sources) > 1:
+            add("source_corroboration", f"listed by {len(sources)} sources ({', '.join(sources)})")
+        elif sources:
+            add("source_corroboration", f"found on {sources[0]} only")
+        if lead.wmg_rating is not None or lead.wmg_featured:
+            bits = []
+            if lead.wmg_rating is not None:
+                bits.append(f"{lead.wmg_rating:.1f}"
+                            + (f" from {lead.wmg_reviews:,} reviews" if lead.wmg_reviews else ""))
+            if lead.wmg_featured:
+                bits.append("featured")
+            add("directory_signal", "WedMeGood " + ", ".join(bits))
+        if self.venue_run:
+            if lead.venue_tier:
+                detail = "; ".join(lead.tier_reasons[:3])
+                add("premium_signal", f"{lead.venue_tier} venue" + (f" ({detail})" if detail else ""))
+            rating, reviews = best_rating(lead)
+            if rating is not None:
+                add("reputation", f"best rating {rating:.1f} over {reviews:,} reviews")
+        channels = [label for label, present in (
+            ("phone", lead.phones), ("email", lead.emails), ("website", lead.website),
+            ("Instagram", lead.instagram), ("WhatsApp", lead.whatsapp)) if present]
+        add("contact_completeness",
+            f"reachable by {', '.join(channels)}" if channels else "no phone, email or website yet")
+        weighted.sort(key=lambda pair: -pair[0])
+        return [text for _, text in weighted]

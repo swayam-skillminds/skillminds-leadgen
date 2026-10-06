@@ -89,6 +89,7 @@ class SheetsWriter:
         self.worksheet_name = config.get("sheets.worksheet_name", "Leads")
         self.failures_worksheet_name = config.get("sheets.failures_worksheet_name", "Skipped")
         self.profile = str(config.get("profile", "vendors") or "vendors").lower()
+        self.currency = str(getattr(config, "currency", "") or "INR")
         self._client = None
         self._spreadsheet = None
         self._worksheet = None
@@ -160,7 +161,7 @@ class SheetsWriter:
         """Rewrite the whole sorted table. Returns True on success."""
         if not self.available:
             return False
-        rows = leads_to_rows(leads, self.profile)
+        rows = leads_to_rows(leads, self.profile, self.currency)
         try:
             self._write_rows(self._worksheet, rows)
             self._format_header(self._worksheet)

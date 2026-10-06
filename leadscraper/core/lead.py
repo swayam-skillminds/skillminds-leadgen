@@ -349,8 +349,12 @@ class Lead:
             "Last Updated": time.strftime("%Y-%m-%d %H:%M", time.localtime(self.last_updated)),
         }
 
-    def to_venue_row(self) -> dict[str, Any]:
-        """Flat dict for the venue run's CSV / Sheet: the venue first, contacts after."""
+    def to_venue_row(self, currency: str = "INR") -> dict[str, Any]:
+        """Flat dict for the venue run's CSV / Sheet: the venue first, contacts after.
+
+        Prices are in the run's `currency`; the venue vertical's default is
+        INR, the currency its default price thresholds are written in.
+        """
         from .ratings import best_rating
 
         def flag(value: bool | None) -> str:
@@ -375,8 +379,8 @@ class Lead:
             "Managed By": self.managed_by,
             "Locality": self.locality,
             "Distance from City (km)": num(self.distance_km),
-            "Price From (INR)": num(self.price_min),
-            "Price To (INR)": num(self.price_max),
+            f"Price From ({currency})": num(self.price_min),
+            f"Price To ({currency})": num(self.price_max),
             "Price Basis": self.price_basis,
             "Price Source": self.price_source,
             "Bedrooms": num(self.bedrooms),
@@ -424,12 +428,12 @@ class Lead:
             "Last Updated": time.strftime("%Y-%m-%d %H:%M", time.localtime(self.last_updated)),
         }
 
-    def row_for(self, profile: str = "vendors") -> dict[str, Any]:
-        return self.to_venue_row() if profile == "venues" else self.to_row()
+    def row_for(self, profile: str = "vendors", currency: str = "INR") -> dict[str, Any]:
+        return self.to_venue_row(currency) if profile == "venues" else self.to_row()
 
     @staticmethod
-    def row_headers(profile: str = "vendors") -> list[str]:
-        return list(Lead().row_for(profile).keys())
+    def row_headers(profile: str = "vendors", currency: str = "INR") -> list[str]:
+        return list(Lead().row_for(profile, currency).keys())
 
     def to_json(self) -> str:
         return json.dumps(asdict(self), ensure_ascii=False)

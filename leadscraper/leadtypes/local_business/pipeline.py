@@ -26,7 +26,7 @@ from ...core.lead import Lead
 from ...net.ratelimit import RateLimiter
 from .scoring import Scorer
 from ...export.sheets import SheetsWriter
-from ...packs import inactive_reason
+from .planning import SelectionPlan, plan_discovery, select_sources
 from ...sources import DISCOVERY_SOURCES, ENRICHMENT_SOURCES, SourceContext
 from ...core.normalize import looks_like_seo_title, phone_display
 from ...db.store import DedupOptions, LeadStore
@@ -40,6 +40,7 @@ class RunStats:
     started_at: float = field(default_factory=time.time)
     combos_done: int = 0
     combos_total: int = 0
+    units_done: int = 0
     leads_seen: int = 0
     new_leads: int = 0
     merged_leads: int = 0
@@ -55,30 +56,6 @@ class RunStats:
         self.per_source[name] = self.per_source.get(name, 0) + 1
 
 
-@dataclass
-class SelectionPlan:
-    """What `_build` did with one registry, kept so the run can say it out loud.
-
-    Four sources sat in the registry for months without ever executing because
-    the skip was silent; every entry now leaves a trace with its reason.
-    """
-
-    kind: str
-    registered: list[str] = field(default_factory=list)
-    #: What the caller asked for -- ["all"] when nothing was named.
-    requested: list[str] = field(default_factory=list)
-    built: list[str] = field(default_factory=list)
-    #: name -> why it was not built.
-    skipped: dict[str, str] = field(default_factory=dict)
-
-    def describe(self) -> str:
-        skipped = ", ".join(f"{name} ({reason})" for name, reason in self.skipped.items())
-        return (f"{self.kind}s registered [{', '.join(self.registered) or 'none'}]"
-                f" | requested [{', '.join(self.requested) or 'none'}]"
-                f" | built [{', '.join(self.built) or 'none'}]"
-                f" | skipped [{skipped or 'none'}]")
-
-
 class Pipeline:
     def __init__(
         self,
@@ -90,6 +67,8 @@ class Pipeline:
         enricher_names: list[str] | None = None,
         headless: bool = True,
         dry_run: bool = False,
+        store=None,
+        install_signals: bool = True,
     ):
         self.config = config
         self.localities = localities
@@ -111,11 +90,18 @@ class Pipeline:
         # The store is built BEFORE the http client: it owns the dead-domain
         # cache, and the client needs those bound methods to skip hosts that
         # were already proved dead on an earlier run.
-        self.store = LeadStore(config.path_for("db_path", "data/leads.sqlite3"), self.scorer)
+        #: A store handed in (by the engine, shared across lead types) belongs
+        #: to the caller, who closes it; one opened here is closed here.
+        self._owns_store = store is None
+        self.store = store if store is not None else LeadStore(
+            config.path_for("db_path", "data/leads.sqlite3"), self.scorer)
+        if hasattr(self.store, "scorer"):
+            self.store.scorer = self.scorer
         # Set after construction so a store without dedup options (a stub, an
         # older store) still builds a pipeline.
         if hasattr(self.store, "options"):
             self.store.options = DedupOptions.from_config(config)
+        self._install_signals = install_signals
         self.http = HttpClient(
             self.limiter,
             timeout=int(config.get("runtime.request_timeout", 30)),
@@ -154,50 +140,17 @@ class Pipeline:
         )
         self._flush_every = int(config.get("runtime.sheets_flush_every", 25))
         self._since_flush = 0
-        #: (source, category) pairs a city-level source has already covered.
-        self._city_level_done: set[tuple[str, str]] = set()
 
     def _build(self, kind: str, registry: dict,
                requested: list[str] | None) -> tuple[list, SelectionPlan]:
-        """Instantiate the entries that are both enabled and requested.
+        """Instantiate the entries that are requested, enabled and applicable.
 
         Every registered entry is accounted for at INFO, built or not. A source
         that silently never runs is the most expensive kind of bug here: it
         looks exactly like a source that runs and finds nothing.
         """
-        # `None` means "everything enabled"; an empty list means "none" --
-        # that's how --enrich-only turns discovery off.
-        explicit = requested is not None and "all" not in [n.lower() for n in requested]
-        if explicit:
-            wanted = {n.strip().lower() for n in requested}
-            unknown = wanted - set(registry)
-            if unknown:
-                raise ValueError(
-                    f"Unknown source(s): {sorted(unknown)}. Available: {sorted(registry)}"
-                )
-        else:
-            wanted = set(registry)
-
-        plan = SelectionPlan(
-            kind=kind,
-            registered=list(registry),
-            requested=sorted(wanted) if explicit else ["all"],
-        )
-        asked_for = ", ".join(sorted(wanted)) or "nothing"
-        built = []
-        for name, cls in registry.items():
-            if name not in wanted:
-                plan.skipped[name] = f"not requested -- this run asked for {asked_for}"
-            elif not self.config.source_enabled(name):
-                plan.skipped[name] = "disabled in config"
-            elif (reason := inactive_reason(cls, self.config.country, self.config.verticals)):
-                # A pack that does not apply is inactive, not failing: it is
-                # reported here and never reaches the failure log.
-                plan.skipped[name] = f"not applicable -- {reason}"
-            else:
-                built.append(cls(self.ctx))
-                plan.built.append(name)
-
+        classes, plan = select_sources(kind, registry, requested, self.config)
+        built = [cls(self.ctx) for cls in classes]
         for name in plan.built:
             log.info("%s %s: built", kind, name)
         for name, reason in plan.skipped.items():
@@ -277,7 +230,8 @@ class Pipeline:
         signal.signal(signal.SIGINT, handler)
 
     def run(self) -> RunStats:
-        self.install_signal_handler()
+        if self._install_signals:
+            self.install_signal_handler()
         log.info(
             "run start: %d localities x %d categories = %d combinations; %s; %s",
             len(self.localities), len(self.categories), self.stats.combos_total,
@@ -315,48 +269,28 @@ class Pipeline:
             self.stats.combos_total = 0
             log.info("no discovery sources active -- skipping straight to enrichment")
             return
-        # Whole-region sources first (sitemaps): they give the richest venue
-        # records, which later Maps/directory hits then merge into.
-        for source in self._scoped("run"):
+        plan = plan_discovery(self.config, self.sources, self.localities, self.categories)
+        for source, _unit in plan.run_units:
             if self._stop_requested:
                 return
             self._run_unit(source, None, None)
 
-        combo_sources = self._scoped("combo")
-        self.stats.combos_total = sum(
-            1 for loc in self.localities for cat in self.categories if cat.runs_in(loc)
-        ) if combo_sources else 0
-        for locality in self.localities:
-            for source in self._scoped("locality"):
+        self.stats.combos_total = plan.combos_total
+        for loc_plan in plan.localities:
+            for source, _unit in loc_plan.units:
                 if self._stop_requested:
                     return
-                self._run_unit(source, locality, None)
-            if not combo_sources:
-                continue
-            for category in self.categories:
+                self._run_unit(source, loc_plan.locality, None)
+            for combo in loc_plan.combos:
                 if self._stop_requested:
                     return
-                if not category.runs_in(locality):
-                    continue
-                self._run_combo(locality, category)
+                for source, _unit in combo.units:
+                    if self._stop_requested:
+                        return
+                    self._run_unit(source, loc_plan.locality, combo.category)
                 self.stats.combos_done += 1
                 log.info("progress: %d/%d combinations, %d leads stored",
                          self.stats.combos_done, self.stats.combos_total, self.store.count())
-
-    def _run_combo(self, locality: Locality, category: Category) -> None:
-        for source in self._scoped("combo"):
-            if self._stop_requested:
-                return
-            if not category.runs_source(source.name):
-                continue
-            # A city-level source (a directory that lists the whole city on one
-            # page) runs once per category, not once per locality.
-            if self.config.get(f"sources.{source.name}.city_level", False):
-                key = (source.name, category.name)
-                if key in self._city_level_done:
-                    continue
-                self._city_level_done.add(key)
-            self._run_unit(source, locality, category)
 
     def _run_unit(self, source, locality: Locality | None, category: Category | None) -> None:
         where = f"{locality.name if locality else 'all localities'} / " \
@@ -377,6 +311,7 @@ class Pipeline:
                 category=category.name if category else None, detail=repr(exc),
             )
             log.exception("source %s crashed on %s", source.name, where)
+        self.stats.units_done += 1
         log.info("[%s] %s -> %d raw leads", source.name, where, found)
 
     def _store_lead(self, lead: Lead, source_name: str) -> None:
@@ -708,7 +643,8 @@ class Pipeline:
         self._since_flush = 0
         leads = self.store.sorted_leads()
         try:
-            write_csv(leads, self.config.path_for("csv_export", "data/leads.csv"), self.profile)
+            write_csv(leads, self.config.path_for("csv_export", "data/leads.csv"), self.profile,
+                      self.config.currency)
         except Exception as exc:
             log.warning("CSV write failed: %s", exc)
         self.sheets.sync(leads)
@@ -724,7 +660,7 @@ class Pipeline:
         self.leads = leads
         csv_path = self.config.path_for("csv_export", "data/leads.csv")
         try:
-            write_csv(leads, csv_path, self.profile)
+            write_csv(leads, csv_path, self.profile, self.config.currency)
         except Exception as exc:
             log.error("final CSV write failed: %s", exc)
 
@@ -738,7 +674,10 @@ class Pipeline:
         self._report(leads)
 
     def _close(self) -> None:
-        for closer in (self.browser.close, self.http.close, self.store.close, self.ai.close):
+        closers = [self.browser.close, self.http.close, self.ai.close]
+        if self._owns_store:
+            closers.insert(2, self.store.close)
+        for closer in closers:
             try:
                 closer()
             except Exception as exc:

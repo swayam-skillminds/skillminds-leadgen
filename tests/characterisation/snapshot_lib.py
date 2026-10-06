@@ -155,7 +155,7 @@ def export_snapshot(baseline: Path, config: Config, scratch: Path) -> dict[str, 
         store.close()
 
     profile = config.profile
-    rows = leads_to_rows(sorted_leads, profile)
+    rows = leads_to_rows(sorted_leads, profile, config.currency)
     snapshot: dict[str, Any] = {
         "lead_count": len(by_id),
         "headers": rows[0],
