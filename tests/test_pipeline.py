@@ -392,16 +392,18 @@ def test_keyword_stuffed_maps_names_reach_ai_name_polish(tmp_path, monkeypatch):
     assert names == ["Events Aura", "Galaxy Caterers - St. Arnold's Lawns"]
 
 
-def test_ai_off_leaves_the_messy_name_untouched(tmp_path, monkeypatch):
-    """Control case: without AI the pipeline behaves exactly as before."""
+def test_ai_off_cleans_the_messy_name_by_rule(tmp_path, monkeypatch):
+    """Control case: without AI nothing is extracted by a model, but since Phase 1
+    a keyword-stuffed name is cut back by rule (Phase 0 open issue)."""
     monkeypatch.setattr(pipeline_mod, "DISCOVERY_SOURCES", {"stub": SerpishSource})
     monkeypatch.setattr(pipeline_mod, "ENRICHMENT_SOURCES", {"stub_enricher": SilentWebsiteEnricher})
     config = make_config(tmp_path)          # ai.enabled defaults to False
     pipe = Pipeline(config, localities=config.localities, categories=config.categories,
                     source_names=["stub"], enricher_names=["stub_enricher"])
     pipe.run()
-    assert pipe.leads[0].business_name.startswith("Studio Fine Arts |")
-    assert pipe.leads[0].phones == []
+    assert pipe.leads[0].business_name == "Studio Fine Arts"
+    assert any(n.startswith("renamed by rule from: Studio Fine Arts |") for n in pipe.leads[0].notes)
+    assert pipe.leads[0].phones == []       # no AI extraction without AI
 
 
 # --- billing safety --------------------------------------------------------
@@ -533,3 +535,28 @@ def test_unlimited_budget_means_no_cap(tmp_path):
     ai = AIAssistant(cfg, backend=StubBackend([]))
     assert ai.max_cost == float("inf") and ai.over_budget is False
     ai.close()
+
+
+def test_keyword_stuffed_names_are_cleaned_by_rule_when_ai_is_off(tmp_path, monkeypatch):
+    """Phase 0 open issue: without an AI backend SEO titles used to stay as names."""
+    class StuffedSource(Source):
+        name = "stub"
+
+        def discover(self, locality, category):
+            yield self.make_lead(business_name="Royal Caterers | Best Caterers in Mumbai",
+                                 locality=locality.name, category=category.name,
+                                 phones=["+919820012345"], sources=["google_maps"])
+            # All keywords, no name: nothing to keep, so it is left alone.
+            yield self.make_lead(business_name="Best Caterers in Andheri | Book Now",
+                                 locality=locality.name, category=category.name)
+
+    monkeypatch.setattr(pipeline_mod, "DISCOVERY_SOURCES", {"stub": StuffedSource})
+    monkeypatch.setattr(pipeline_mod, "ENRICHMENT_SOURCES", {})
+    config = make_config(tmp_path)
+    config.set("ai.enabled", False)
+    pipe = build(config, source_names=["stub"], enricher_names=[])
+    pipe.run()
+    names = sorted(lead.business_name for lead in pipe.leads)
+    assert names == ["Best Caterers in Andheri | Book Now", "Royal Caterers"]
+    royal = next(lead for lead in pipe.leads if lead.business_name == "Royal Caterers")
+    assert "renamed by rule from: Royal Caterers | Best Caterers in Mumbai" in royal.notes

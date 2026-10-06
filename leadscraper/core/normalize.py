@@ -338,6 +338,30 @@ def looks_like_seo_title(name: str | None) -> bool:
     return len(parts) == 2 and bool(_SEO_TAIL.search(parts[1]))
 
 
+def seo_title_head(name: str | None) -> str | None:
+    """The business name a keyword-stuffed title starts with, or None.
+
+    Only ever cuts, never rewrites: "Royal Caterers | Best Caterers in Mumbai"
+    -> "Royal Caterers"; "Ram Caterers (South Indian Caterers in Mumbai | ..."
+    -> "Ram Caterers". None when the title isn't keyword-stuffed, or nothing
+    plausible is left. Whether the head is a name rather than more keywords
+    is the caller's call (it knows the run's category and place words).
+    """
+    if not looks_like_seo_title(name):
+        return None
+    text = re.sub(r"\s*\|\s*", " | ", str(name)).strip()
+    head = text.split(" | ", 1)[0]
+    parts = _SEO_SPLIT.split(head, maxsplit=1)
+    if len(parts) == 2 and _SEO_TAIL.search(parts[1]):
+        head = parts[0]
+    if head.count("(") > head.count(")"):
+        head = head.split("(", 1)[0]
+    head = head.strip(" -–—:,·|~")
+    if len(head) < 3 or looks_like_seo_title(head) or head == name:
+        return None
+    return head
+
+
 # A Maps place URL carries the feature id as "!1s0x<cell>:0x<cid>"; share links
 # and older exports carry the same place as "?cid=<decimal>". Both reduce to
 # the cid, so one place compares equal however its URL was written.

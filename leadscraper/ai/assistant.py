@@ -436,8 +436,17 @@ class AIAssistant:
         The templates are written for the Mumbai vendor run and come back
         byte-identical for it, so that run's response cache stays valid.
         """
-        city = str(self.config.get("city", "Mumbai") or "Mumbai")
+        from ..core.country import country
+
+        info = country(str(self.config.get("country") or "IN"))
+        city = str(self.config.get("city") or info.name)
         text = template.replace("Mumbai", city)
+        if info.code != "IN":
+            # The templates' phone hint is India's; every other run gets its own.
+            text = text.replace(
+                "Indian phone numbers may be written with or without +91.",
+                f"Phone numbers in {info.name} may be written with or without "
+                f"+{info.calling_code}.")
         if str(self.config.get("profile", "vendors") or "vendors").lower() == "venues":
             text = (text.replace("event-industry lead list", "high-end venue list")
                         .replace("event-vendor lead list", "high-end venue list"))

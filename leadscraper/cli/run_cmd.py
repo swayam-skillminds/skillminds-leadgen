@@ -222,6 +222,13 @@ def main(argv: list[str] | None = None, prog: str | None = None) -> int:
         return 2
 
     setup_logging(config, verbose=args.verbose, quiet=args.quiet)
+    if config.run_config is not None and not (args.dry_run or args.export_only):
+        from ..config.compile import compile_run_config
+        from ..config.geography import needs_geocoding, resolve_geography
+
+        if needs_geocoding(config.run_config):
+            # A place name is enough: centre and state come from the geocoder.
+            config = compile_run_config(resolve_geography(config.run_config), path=config.path)
     apply_overrides(config, args)
 
     if args.export_only:

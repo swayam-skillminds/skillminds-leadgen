@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 from bs4 import BeautifulSoup
 
@@ -178,3 +180,34 @@ def test_geocoder_failure_is_not_fatal_and_not_cached(tmp_path):
     geocoder = Geocoder(cache=GeocodeCache(tmp_path / "geo.json"), fetch=broken, min_interval=0)
     assert geocoder.geocode("Austin", "US") is None
     assert not (tmp_path / "geo.json").exists()
+
+
+def test_resolve_geography_fills_only_what_the_config_left_out(tmp_path):
+    from leadscraper.config.compile import compile_run_config
+    from leadscraper.config.geography import needs_geocoding, resolve_geography
+    from leadscraper.config.schema import RunConfig
+
+    calls = []
+
+    def fetch(url, params, headers):
+        calls.append(params["q"])
+        return AUSTIN
+
+    geocoder = Geocoder(cache=GeocodeCache(tmp_path / "geo.json"), fetch=fetch, min_interval=0)
+    rc = RunConfig.model_validate({
+        "name": "Austin dentists", "project": "austin",
+        "geography": {"country": "US", "places": ["Austin"]},
+        "lead_types": {"local_business": {"categories": [{"name": "Dentists"}]}}})
+    assert needs_geocoding(rc)
+    resolved = resolve_geography(rc, geocoder)
+    config = compile_run_config(resolved)
+    assert config.geo_center == (30.2711286, -97.7436995)
+    assert config.admin_area == "Texas"
+    assert config.region_radius_km is None          # a vendor run's radius is never guessed
+    assert not needs_geocoding(resolved)
+    assert calls == ["Austin"]
+
+    # The legacy presets state everything: no lookups at all.
+    for name in ("mumbai-event-vendors", "nashik-venues"):
+        preset = Config.load(Path(__file__).resolve().parent.parent / "presets" / f"{name}.yaml")
+        assert not needs_geocoding(preset.run_config)

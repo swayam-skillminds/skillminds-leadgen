@@ -570,6 +570,7 @@ class Pipeline:
     def _ai_polish_names(self) -> None:
         """Clean SERP-derived and keyword-stuffed names; flag non-businesses."""
         if not self.ai.uses("names"):
+            self._rule_polish_names()
             return
 
         candidates = []
@@ -619,6 +620,39 @@ class Pipeline:
                 updates["notes"] = notes
             if updates:
                 self.stats.ai_updates += len(self.store.update_fields(lead_id, **updates))
+
+    def _rule_polish_names(self) -> None:
+        """Without AI, cut keyword-stuffed names back to the name they start with.
+
+        "Royal Caterers | Best Caterers in Mumbai" -> "Royal Caterers", by the
+        same rules that turn a search-result title into a name. A title that
+        is all keywords ("Best Caterers in Andheri") is left alone: there is
+        no name in it to keep. The original stays in the notes.
+        """
+        from ...core.normalize import seo_title_head
+        from ...sources.google_search import _has_distinctive_token
+
+        renamed = 0
+        for lead_id, lead in self.store.all_with_ids():
+            better = seo_title_head(lead.business_name)
+            if not better:
+                continue
+            category = next((c for c in self.config.categories if c.name == lead.category), None)
+            locality = next((loc for loc in self.config.localities
+                             if loc.name == lead.locality), None)
+            terms = (lead.category, *(category.queries if category else ()),
+                     *(locality.aliases if locality else ()))
+            # "Best Caterers in Andheri | Book Now" has no name to keep.
+            if not _has_distinctive_token(better, lead.locality, tuple(t for t in terms if t),
+                                          [*self.config.place_words, self.config.city]):
+                continue
+            notes = [*lead.notes, f"renamed by rule from: {lead.business_name}"]
+            if self.store.update_fields(lead_id, business_name=better, notes=notes,
+                                        _source="rule_polish"):
+                renamed += 1
+        if renamed:
+            log.info("name polish (rules, AI off): %d keyword-stuffed names cleaned", renamed)
+            self.stats.ai_updates += renamed
 
     def _ai_fallback_extraction(self) -> None:
         """Read contacts off pages whose selectors/regexes came up empty."""

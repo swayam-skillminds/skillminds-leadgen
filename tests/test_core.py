@@ -417,3 +417,18 @@ def test_serp_breaker_resets_on_any_success():
     health.record_success()
     health.record_failure()
     assert health.disabled is False, "a success must clear the failure streak"
+
+
+@pytest.mark.parametrize("title,head", [
+    ("Royal Caterers | Best Caterers in Mumbai", "Royal Caterers"),
+    ("ayaan photography |Best Wedding Photographers in Mumbai", "ayaan photography"),
+    ("Ram Caterers (South Indian Caterers in Mumbai | Veg Caterers", "Ram Caterers"),
+    ("1517 Greek House By Kaz Stays | 3 BHK Villa in Igatpuri", "1517 Greek House By Kaz Stays"),
+    ("Homefood Kravings - Best Tiffin Service in Andheri", "Homefood Kravings"),
+    ("Galaxy Caterers - St. Arnold's Lawns", None),        # a real name, not stuffed
+    ("Royal Caterers", None),
+])
+def test_seo_title_head_only_cuts(title, head):
+    from leadscraper.core.normalize import seo_title_head
+
+    assert seo_title_head(title) == head

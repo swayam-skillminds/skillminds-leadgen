@@ -403,7 +403,7 @@ def test_search_terms_use_the_configured_city(tmp_path):
 
 
 def test_mumbai_prompts_are_byte_identical_and_venue_prompts_are_not(tmp_path):
-    mumbai = AIAssistant(Config({"ai": {"enabled": False}}))
+    mumbai = AIAssistant(Config({"city": "Mumbai", "country": "IN", "ai": {"enabled": False}}))
     assert mumbai._prompt(AIAssistant.NAME_SYSTEM) == AIAssistant.NAME_SYSTEM
     nashik = AIAssistant(venue_config(tmp_path))
     prompt = nashik._prompt(AIAssistant.NAME_SYSTEM)
