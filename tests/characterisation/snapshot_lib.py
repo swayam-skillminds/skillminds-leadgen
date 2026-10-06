@@ -33,7 +33,6 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from leadscraper.config import Config  # noqa: E402
 from leadscraper.export.csv_writer import leads_to_rows  # noqa: E402
 from leadscraper.core.lead import Lead  # noqa: E402
-from leadscraper.core.normalize import set_extra_name_noise  # noqa: E402
 from leadscraper.leadtypes.local_business.scoring import Scorer  # noqa: E402
 from leadscraper.db.store import DedupOptions, LeadStore  # noqa: E402
 
@@ -65,7 +64,7 @@ def load_config(profile: str) -> Config:
 
 def apply_name_noise(config: Config) -> None:
     """Exactly what Pipeline/export_only do before touching the store."""
-    set_extra_name_noise([config.city, *(config.get("dedup.extra_name_noise") or [])])
+    config.apply_name_noise()
 
 
 def open_store(path: Path, config: Config) -> LeadStore:

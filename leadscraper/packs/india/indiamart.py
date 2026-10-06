@@ -100,7 +100,7 @@ class IndiaMartSource(Source):
         soup = self.ctx.http.soup(html)
 
         # Preferred path: structured data.
-        for record in businesses_from_page(soup):
+        for record in businesses_from_page(soup, self.region):
             lead = self._lead_from_record(record, locality, category, page_url)
             if lead:
                 yield lead
@@ -131,7 +131,7 @@ class IndiaMartSource(Source):
             return None
 
         text = clean_text(card.get_text(" ", strip=True))
-        phones = extract_phones(text)[:2]
+        phones = extract_phones(text, self.region)[:2]
 
         profile_url = None
         if name_el is not None and name_el.has_attr("href"):
@@ -204,7 +204,8 @@ class IndiaMartSource(Source):
 
         for result in results:
             name = business_name_from_title(
-                result.title, locality.name, tuple(category.indiamart_queries or category.queries)
+                result.title, locality.name, tuple(category.indiamart_queries or category.queries),
+                self.place_words,
             )
             if not name:
                 continue
@@ -213,7 +214,7 @@ class IndiaMartSource(Source):
                 business_name=name,
                 category=category.name,
                 locality=locality.name,
-                phones=extract_phones(blob)[:2],
+                phones=extract_phones(blob, self.region)[:2],
                 source_urls=[result.url],
                 notes=["discovered via IndiaMART search-engine fallback"],
             )

@@ -9,17 +9,17 @@ from __future__ import annotations
 
 import html
 import re
+from functools import lru_cache
 from typing import Iterable
 from urllib.parse import urlparse, urlunparse
 
 import phonenumbers
 
 # --- phones ----------------------------------------------------------------
-
-DEFAULT_REGION = "IN"
-
-# Matches things like "+91 98200 12345", "022-2345 6789", "9820012345".
-_PHONE_CANDIDATE = re.compile(r"(?:\+?91[\-\s.]?)?(?:\(?0?\d{2,5}\)?[\-\s.]?)?\d{3,5}[\-\s.]?\d{3,5}")
+#
+# Every parser takes the run's phone region (ISO 3166-1 alpha-2, from
+# `geography.country`). With no region only numbers written in international
+# form (+<country code>...) parse: nothing assumes a country.
 
 # Strings that look like phone numbers but never are.
 _PHONE_BLACKLIST = {
@@ -30,13 +30,24 @@ _PHONE_BLACKLIST = {
 }
 
 
-def normalize_phone(raw: str, region: str = DEFAULT_REGION) -> str | None:
+@lru_cache(maxsize=None)
+def _phone_candidate(region: str) -> re.Pattern[str]:
+    """Permissive regex for national-format numbers in `region`.
+
+    For India this is "+91 98200 12345", "022-2345 6789", "9820012345".
+    """
+    code = phonenumbers.country_code_for_region(region)
+    prefix = rf"(?:\+?{code}[\-\s.]?)?" if code else ""
+    return re.compile(prefix + r"(?:\(?0?\d{2,5}\)?[\-\s.]?)?\d{3,5}[\-\s.]?\d{3,5}")
+
+
+def normalize_phone(raw: str, region: str | None = None) -> str | None:
     """Return an E.164 phone number, or None if `raw` isn't a usable number."""
     if not raw:
         return None
     raw = str(raw).strip()
-    # phonenumbers chokes on stray unicode separators that Indian sites love.
-    cleaned = re.sub(r"[^\d+]", "", raw.replace(" ", " "))
+    # phonenumbers chokes on stray unicode separators that sites love.
+    cleaned = re.sub(r"[^\d+]", "", raw.replace("\u00a0", " "))
     if not cleaned:
         return None
     if cleaned.strip("+").lstrip("0") in _PHONE_BLACKLIST:
@@ -51,7 +62,7 @@ def normalize_phone(raw: str, region: str = DEFAULT_REGION) -> str | None:
     return None
 
 
-def extract_phones(text: str, region: str = DEFAULT_REGION) -> list[str]:
+def extract_phones(text: str, region: str | None = None) -> list[str]:
     """Pull every valid phone number out of a blob of text, in order, deduped.
 
     Uses phonenumbers' own matcher first (high precision) and falls back to a
@@ -69,10 +80,15 @@ def extract_phones(text: str, region: str = DEFAULT_REGION) -> list[str]:
                 seen.add(e164)
                 found.append(e164)
 
-    for candidate in _PHONE_CANDIDATE.findall(text):
+    if not region:
+        return found
+    from .country import country
+
+    low, high = country(region).phone_digits
+    for candidate in _phone_candidate(region).findall(text):
         digits = re.sub(r"\D", "", candidate)
-        # Indian mobiles are 10 digits; landlines with STD are 10-11.
-        if not (10 <= len(digits) <= 12):
+        # The country's national lengths, with or without its calling code.
+        if not (low <= len(digits) <= high):
             continue
         e164 = normalize_phone(candidate, region)
         if e164 and e164 not in seen:
@@ -84,7 +100,7 @@ def extract_phones(text: str, region: str = DEFAULT_REGION) -> list[str]:
 def phone_display(e164: str) -> str:
     """Human-friendly rendering for the spreadsheet."""
     try:
-        parsed = phonenumbers.parse(e164, DEFAULT_REGION)
+        parsed = phonenumbers.parse(e164, None)
         return phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.INTERNATIONAL)
     except phonenumbers.NumberParseException:
         return e164
@@ -144,16 +160,22 @@ def extract_emails(text: str) -> list[str]:
 
 # --- business names --------------------------------------------------------
 
-# Legal / marketing suffixes that shouldn't stop two records matching.
-_NAME_NOISE = re.compile(
-    r"\b(pvt\.?|private|ltd\.?|limited|llp|inc\.?|co\.?|company|"
-    r"and|&|the|mumbai|india|maharashtra|"
-    r"services?|service|solutions?|enterprises?|events?|"
-    r"studios?|studio|photography|caterers?|catering|decorators?|decoration)\b",
-    re.I,
+# Legal / marketing / category words that shouldn't stop two records matching.
+_GENERIC_NAME_NOISE = (
+    r"pvt\.?", "private", r"ltd\.?", "limited", "llp", r"inc\.?", r"co\.?", "company",
+    "and", "&", "the",
+    r"services?", "service", r"solutions?", r"enterprises?", r"events?",
+    r"studios?", "studio", "photography", r"caterers?", "catering", r"decorators?", "decoration",
 )
 _PUNCT = re.compile(r"[^\w\s]")
 _WS = re.compile(r"\s+")
+
+
+def _noise_pattern(alternatives: Iterable[str]) -> re.Pattern[str]:
+    return re.compile(r"\b(" + "|".join(alternatives) + r")\b", re.I)
+
+
+_NAME_NOISE = _noise_pattern(_GENERIC_NAME_NOISE)
 
 
 def normalize_name(raw: str) -> str:
@@ -166,21 +188,44 @@ def normalize_name(raw: str) -> str:
     return name
 
 
-# Run-specific noise on top of `_NAME_NOISE`: the configured city, and for a
-# venue run words like "villa" / "resort" that every listing carries. Set once
-# per run from config via `set_extra_name_noise`; empty means Mumbai behaviour.
+# Run-specific noise, set once per run from config (`Config.apply_name_noise`):
+#
+# * region words join the generic pass -- the country's own name and the
+#   state/province ("india", "maharashtra"), which say nothing about which
+#   business it is;
+# * extra words run as a second pass -- the city, and for a venue run words
+#   like "villa" / "resort" that every listing carries.
+#
+# Both empty means only the generic legal/category words are noise.
 _EXTRA_NAME_NOISE: re.Pattern[str] | None = None
 
 
-def set_extra_name_noise(words: Iterable[str]) -> None:
-    """Treat `words` as dedup noise in `name_key`, in addition to the defaults."""
-    global _EXTRA_NAME_NOISE
+def _escaped_words(words: Iterable[str]) -> list[str]:
     cleaned = sorted({normalize_name(w) for w in words if w and normalize_name(w)},
                      key=len, reverse=True)
-    _EXTRA_NAME_NOISE = (
-        re.compile(r"\b(" + "|".join(re.escape(w) for w in cleaned) + r")\b", re.I)
-        if cleaned else None
-    )
+    return [re.escape(w) for w in cleaned]
+
+
+def set_region_name_noise(words: Iterable[str]) -> None:
+    """Treat `words` (country/region names) as noise in the generic pass."""
+    global _NAME_NOISE
+    _NAME_NOISE = _noise_pattern([*_GENERIC_NAME_NOISE, *_escaped_words(words)])
+
+
+def set_extra_name_noise(words: Iterable[str]) -> None:
+    """Treat `words` as dedup noise in `name_key`, in a pass after the generic one."""
+    global _EXTRA_NAME_NOISE
+    escaped = _escaped_words(words)
+    _EXTRA_NAME_NOISE = _noise_pattern(escaped) if escaped else None
+
+
+def configure_name_noise(region_words: Iterable[str], extra_words: Iterable[str]) -> None:
+    set_region_name_noise(region_words)
+    set_extra_name_noise(extra_words)
+
+
+def reset_name_noise() -> None:
+    configure_name_noise([], [])
 
 
 def name_key(raw: str) -> str:
@@ -369,14 +414,16 @@ def extract_facebook(text: str | None) -> str | None:
 _WHATSAPP = re.compile(r"(?:wa\.me/|api\.whatsapp\.com/send\?phone=|web\.whatsapp\.com/send\?phone=)(\+?\d{8,15})", re.I)
 
 
-def extract_whatsapp(text: str | None) -> str | None:
+def extract_whatsapp(text: str | None, region: str | None = None) -> str | None:
     """Return a normalised wa.me link if the text contains a WhatsApp CTA."""
     if not text:
         return None
     match = _WHATSAPP.search(str(text))
     if not match:
         return None
-    phone = normalize_phone(match.group(1))
+    # wa.me numbers are international by definition; the region only rescues
+    # a malformed one written without its country code.
+    phone = normalize_phone(match.group(1), region)
     if not phone:
         return None
     return f"https://wa.me/{phone.lstrip('+')}"

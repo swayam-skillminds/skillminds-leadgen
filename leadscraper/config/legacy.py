@@ -11,25 +11,16 @@ from typing import Any
 import yaml
 from dotenv import load_dotenv
 
+from ..core import normalize
+from ..core.country import CountryInfo, country
+from ..core.geo import as_point
 from ..paths import PROJECT_ROOT
+from .importer import LEGACY_COUNTRY, apply_legacy_defaults, is_legacy
 
 DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config.yaml"
 
 
-def _as_point(value: Any) -> tuple[float, float] | None:
-    """[lat, lng] / {lat, lng} / "lat,lng" from YAML -> (lat, lng), else None."""
-    if not value:
-        return None
-    try:
-        if isinstance(value, dict):
-            return float(value["lat"]), float(value.get("lng", value.get("lon")))
-        if isinstance(value, str):
-            lat, lng = value.split(",")
-            return float(lat), float(lng)
-        lat, lng = value
-        return float(lat), float(lng)
-    except (KeyError, TypeError, ValueError):
-        return None
+_as_point = as_point
 
 
 @dataclass
@@ -37,7 +28,7 @@ class Locality:
     name: str
     aliases: list[str] = field(default_factory=list)
     #: The run's city, appended to the bare name as a last search phrasing.
-    city: str = "Mumbai"
+    city: str = ""
     #: Place names that put a listing in this locality when they appear in its
     #: name, URL or address (e.g. "ghoti", "vaitarna" for Igatpuri).
     keywords: list[str] = field(default_factory=list)
@@ -88,7 +79,7 @@ class Config:
         self.path = path
         # `areas` is the newer vocabulary for the same list; accept either so a
         # config written in one style loads under the other.
-        city = str(data.get("city") or "Mumbai")
+        city = str(data.get("city") or "")
         self.localities = [
             Locality(
                 name=item["name"],
@@ -120,7 +111,12 @@ class Config:
             raise FileNotFoundError(f"Config not found: {config_path}")
         with config_path.open("r", encoding="utf-8") as handle:
             data = yaml.safe_load(handle) or {}
-        return cls(data, config_path)
+        if is_legacy(data):
+            return cls(apply_legacy_defaults(data), config_path)
+        from .compile import compile_run_config
+        from .schema import RunConfig
+
+        return compile_run_config(RunConfig.model_validate(data), path=config_path)
 
     def get(self, dotted: str, default: Any = None) -> Any:
         """`cfg.get("sources.google_maps.min_delay", 2.0)`"""
@@ -141,10 +137,43 @@ class Config:
 
     @property
     def country(self) -> str:
-        # ISO 3166-1 alpha-2, driving the phone-normalisation region and later
-        # source-pack activation. Defaults to IN because every config written
-        # before this key existed was an India run.
-        return str(self.get("country", "IN") or "IN").upper()
+        """ISO 3166-1 alpha-2: phone region, currency, locale, and which packs apply.
+
+        A bare dict without one (tests, pre-schema code) gets the legacy
+        default; run configs and imported presets always state it.
+        """
+        return str(self.get("country") or LEGACY_COUNTRY).upper()
+
+    @property
+    def country_info(self) -> CountryInfo:
+        return country(self.country)
+
+    @property
+    def currency(self) -> str:
+        return str(self.get("currency") or self.country_info.currency)
+
+    @property
+    def admin_area(self) -> str:
+        """State / province the run is in ("Maharashtra"), when known."""
+        return str(self.get("geo.admin_area") or "")
+
+    @property
+    def place_words(self) -> list[str]:
+        """Words that only name the run's country or region, never a business."""
+        words = [*self.country_info.name_noise, self.admin_area,
+                 *(self.get("geo.place_noise") or [])]
+        return [str(w) for w in words if w]
+
+    def name_noise(self) -> tuple[list[str], list[str]]:
+        """(region words, extra words) that `name_key` ignores for this run."""
+        region = [*self.country_info.name_noise, self.admin_area]
+        extra = [self.city, *(self.get("geo.place_noise") or []),
+                 *(self.get("dedup.extra_name_noise") or [])]
+        return [w for w in region if w], [str(w) for w in extra if w]
+
+    def apply_name_noise(self) -> None:
+        """Install this run's name noise (process-global, as name_key is)."""
+        normalize.configure_name_noise(*self.name_noise())
 
     @property
     def areas(self) -> list[Locality]:
@@ -153,7 +182,7 @@ class Config:
 
     @property
     def city(self) -> str:
-        return str(self.get("city", "Mumbai") or "Mumbai")
+        return str(self.get("city") or "")
 
     @property
     def profile(self) -> str:
@@ -178,9 +207,9 @@ class Config:
         return ["hospitality", "events"] if self.is_venue_run else ["events"]
 
     @property
-    def geo_center(self) -> tuple[float, float]:
+    def geo_center(self) -> tuple[float, float] | None:
         """(lat, lng) the run is centred on: Maps viewport and browser geolocation."""
-        return _as_point(self.get("geo.center")) or (19.0760, 72.8777)  # Mumbai
+        return _as_point(self.get("geo.center"))
 
     @property
     def region_radius_km(self) -> float | None:

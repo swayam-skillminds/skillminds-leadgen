@@ -164,7 +164,7 @@ def test_airbnb_card():
            "url": "/rooms/1751221891817322618?check_in=2026-10-01",
            "text": "Guest favourite\nHome in Igatpuri\nThe Backyard Story | 3BHK Villa with Pool\n"
                    "3 bedrooms\n5 beds\n4 bathrooms\n4.92 (37)\n₹1,34,520 for 5 nights"}
-    card = AirbnbSource.parse_card(SimpleNamespace(base_url="https://www.airbnb.co.in"), raw)
+    card = AirbnbSource.parse_card(SimpleNamespace(base_url="https://www.airbnb.co.in", currency="INR"), raw)
     assert card["name"] == "The Backyard Story"
     assert card["url"] == "https://www.airbnb.co.in/rooms/1751221891817322618"
     assert (card["property_type"], card["address"]) == ("Home", "Igatpuri")
@@ -179,7 +179,7 @@ def test_booking_card_and_saturday_search():
            "url": "https://www.booking.com/hotel/in/ekostay-hercules-villa.en-gb.html?aid=1",
            "score": "Scored 9.2\n9.2\nSuperb\n10 reviews", "price": "₹ 46,575",
            "stars_label": "", "stars_count": 8, "distance": "1.5 km from centre", "text": "Pool"}
-    stub = SimpleNamespace(base_url="https://www.booking.com")
+    stub = SimpleNamespace(base_url="https://www.booking.com", currency="INR")
     card = BookingSource.parse_card(stub, raw, "Villa")
     assert card["name"] == "EKOSTAY Luxe - Hercules Villa"
     assert card["url"] == "https://www.booking.com/hotel/in/ekostay-hercules-villa.html"

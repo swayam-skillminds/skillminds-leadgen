@@ -105,7 +105,7 @@ def rating_from_node(node: dict[str, Any]) -> tuple[float | None, int | None]:
     return rating, count
 
 
-def business_from_jsonld(node: dict[str, Any]) -> dict[str, Any] | None:
+def business_from_jsonld(node: dict[str, Any], region: str | None = None) -> dict[str, Any] | None:
     """Normalise one JSON-LD business node into a plain dict of lead fields."""
     if not looks_like_business(node):
         return None
@@ -120,9 +120,10 @@ def business_from_jsonld(node: dict[str, Any]) -> dict[str, Any] | None:
             value = value.get("telephone")
         if isinstance(value, list):
             for item in value:
-                phones.extend(extract_phones(str(item.get("telephone") if isinstance(item, dict) else item)))
+                phones.extend(extract_phones(str(item.get("telephone") if isinstance(item, dict) else item),
+                                              region))
         elif value:
-            phones.extend(extract_phones(str(value)))
+            phones.extend(extract_phones(str(value), region))
 
     emails = extract_emails(str(node.get("email") or ""))
     rating, reviews = rating_from_node(node)
@@ -143,12 +144,12 @@ def business_from_jsonld(node: dict[str, Any]) -> dict[str, Any] | None:
     }
 
 
-def businesses_from_page(soup: BeautifulSoup) -> list[dict[str, Any]]:
+def businesses_from_page(soup: BeautifulSoup, region: str | None = None) -> list[dict[str, Any]]:
     """Every distinct business described by JSON-LD on this page."""
     out: list[dict[str, Any]] = []
     seen: set[str] = set()
     for node in iter_jsonld(soup):
-        record = business_from_jsonld(node)
+        record = business_from_jsonld(node, region)
         if not record:
             continue
         key = record["business_name"].lower()

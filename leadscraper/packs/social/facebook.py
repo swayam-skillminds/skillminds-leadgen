@@ -86,7 +86,7 @@ class FacebookSource(Source):
         if any(marker in lowered for marker in _LOGIN_WALL):
             # Still worth a lead from the SERP title alone -- we know the page exists.
             name = business_name_from_title(
-                serp_title, locality.name, tuple(category.queries)
+                serp_title, locality.name, tuple(category.queries), self.place_words
             )
             self.fail("login_wall", url=page_url, business=name or None,
                       locality=locality.name, category=category.name,
@@ -103,7 +103,7 @@ class FacebookSource(Source):
         text = visible_text(soup, limit=15_000)
 
         name = meta_content(soup, "og:title") or business_name_from_title(
-            serp_title, locality.name, tuple(category.queries)
+            serp_title, locality.name, tuple(category.queries), self.place_words
         )
         name = clean_text(re.split(r"\s+[\|\-–]\s+", name)[0]) if name else ""
         if not name:
@@ -118,7 +118,7 @@ class FacebookSource(Source):
             business_name=name,
             category=category.name,
             locality=locality.name,
-            phones=extract_phones(text)[:2],
+            phones=extract_phones(text, self.region)[:2],
             emails=extract_emails(text)[:2],
             website=website,
             facebook=page_url,

@@ -207,8 +207,11 @@ class HttpClient:
         backoff_base: float = 2.0,
         dead_domain_check: Callable[[str], bool] | None = None,
         on_dead_domain: Callable[[str, str], None] | None = None,
+        accept_language: str = "en-US,en;q=0.9",
     ):
         self.limiter = limiter
+        #: From the run's country, so sites answer in the local variant.
+        self.accept_language = accept_language
         self.timeout = timeout
         self.max_retries = max_retries
         self.backoff_base = backoff_base
@@ -225,12 +228,11 @@ class HttpClient:
         self._dead_hosts: set[str] = set()
         self._dead_lock = threading.Lock()
 
-    @staticmethod
-    def _base_headers() -> dict[str, str]:
+    def _base_headers(self) -> dict[str, str]:
         return {
             "User-Agent": random.choice(USER_AGENTS),
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
-            "Accept-Language": "en-IN,en-GB;q=0.9,en;q=0.8",
+            "Accept-Language": self.accept_language,
             "Accept-Encoding": ACCEPT_ENCODING,
             "Connection": "keep-alive",
             "Upgrade-Insecure-Requests": "1",

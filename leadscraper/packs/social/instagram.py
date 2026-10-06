@@ -92,15 +92,16 @@ class InstagramEnricher(Enricher):
 
         harvested = Lead(business_name=lead.business_name, instagram=handle)
         harvested.emails = extract_emails(blob)[:2]
-        harvested.phones = extract_phones(blob)[:2]
-        harvested.whatsapp = extract_whatsapp(body)
+        harvested.phones = extract_phones(blob, self.region)[:2]
+        harvested.whatsapp = extract_whatsapp(body, self.region)
 
         email_match = _BUSINESS_EMAIL.search(body)
         if email_match:
             harvested.emails.extend(extract_emails(_unescape_json_fragment(email_match.group(1))))
         phone_match = _BUSINESS_PHONE.search(body)
         if phone_match:
-            harvested.phones.extend(extract_phones(_unescape_json_fragment(phone_match.group(1))))
+            harvested.phones.extend(extract_phones(_unescape_json_fragment(phone_match.group(1)),
+                                                   self.region))
 
         link_match = _EXTERNAL_URL.search(body)
         if link_match:

@@ -216,7 +216,7 @@ def test_ai_extraction_results_are_revalidated_not_trusted(tmp_path):
     from leadscraper.leadtypes.local_business.pipeline import Pipeline
     record = {"id": "1", "business_name": "X", "phones": ["not-a-number", "9820012345"],
               "emails": ["nope", "real@vendor.in"], "address": "Road, Mumbai", "instagram": "@vend"}
-    partial = Pipeline._lead_from_ai_record(record)
+    partial = Pipeline._lead_from_ai_record(record, "IN")
     assert partial.phones == ["+919820012345"]      # junk dropped
     assert partial.emails == ["real@vendor.in"]     # junk dropped
     assert partial.instagram == "vend"

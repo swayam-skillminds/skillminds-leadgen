@@ -29,24 +29,24 @@ from leadscraper.db.store import LeadStore
     ("022 2345 6789", "+912223456789"),
 ])
 def test_normalize_phone_variants(raw, expected):
-    assert normalize_phone(raw) == expected
+    assert normalize_phone(raw, "IN") == expected
 
 
 @pytest.mark.parametrize("raw", ["", "abc", "12", "0000000000", "99"])
 def test_normalize_phone_rejects_junk(raw):
-    assert normalize_phone(raw) is None
+    assert normalize_phone(raw, "IN") is None
 
 
 def test_extract_phones_from_contact_blob():
     text = "Call us: +91 98200 12345 or 022-23456789. Fax 1234"
-    found = extract_phones(text)
+    found = extract_phones(text, "IN")
     assert "+919820012345" in found
     assert "+912223456789" in found
 
 
 def test_extract_phones_dedupes_same_number_written_differently():
     text = "Ring 9820012345 or +91 98200 12345"
-    assert extract_phones(text).count("+919820012345") == 1
+    assert extract_phones(text, "IN").count("+919820012345") == 1
 
 
 # --- emails ----------------------------------------------------------------
@@ -372,6 +372,10 @@ def test_title_parser_extracts_a_real_business_name():
     ) == "Studio Fine Arts"
 
 
+#: What a Mumbai run passes as its place words (country, state, city).
+MUMBAI_PLACE_WORDS = ("india", "maharashtra", "mumbai")
+
+
 def test_title_parser_rejects_pure_keyword_pages():
     """These are category pages, not businesses -- they must be rejected."""
     from leadscraper.sources.google_search import business_name_from_title
@@ -381,7 +385,20 @@ def test_title_parser_rejects_pure_keyword_pages():
                  "Corporate & Event Photographer Mumbai",
                  "Verified Corporate event Photographer Mumbai",
                  "Best Wedding Photographers in Powai - Contact Number"]:
-        assert business_name_from_title(junk, "Powai", terms) == "", junk
+        assert business_name_from_title(junk, "Powai", terms, MUMBAI_PLACE_WORDS) == "", junk
+
+
+def test_title_parser_place_words_come_from_the_run_not_the_code():
+    """Nothing about Mumbai is built in: another city's run brings its own words."""
+    from leadscraper.sources.google_search import business_name_from_title
+    terms = ("dentist",)
+    assert business_name_from_title("Dentist in Austin", "Austin", terms,
+                                    ("usa", "united states", "texas")) == ""
+    assert business_name_from_title("Dentist Texas", "Austin", terms,
+                                    ("usa", "united states", "texas")) == ""
+    # Without the run's place words "Mumbai" is just a word.
+    assert business_name_from_title("Event Photographer Mumbai", "Powai",
+                                    ("event photographer",)) == "Event Photographer Mumbai"
 
 
 def test_title_parser_keeps_a_brand_that_contains_category_words():

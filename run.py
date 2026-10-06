@@ -36,7 +36,6 @@ from leadscraper.leadtypes.local_business.pipeline import Pipeline
 from leadscraper.leadtypes.local_business.scoring import Scorer
 from leadscraper.export.sheets import SheetsWriter
 from leadscraper.sources import DISCOVERY_SOURCES, ENRICHMENT_SOURCES
-from leadscraper.core.normalize import set_extra_name_noise
 from leadscraper.db.store import DedupOptions, LeadStore
 
 
@@ -156,7 +155,7 @@ def apply_overrides(config: Config, args: argparse.Namespace) -> None:
 
 def export_only(config: Config) -> int:
     """Rescore and re-export whatever is already in the database."""
-    set_extra_name_noise([config.city, *(config.get("dedup.extra_name_noise") or [])])
+    config.apply_name_noise()
     scorer = Scorer(config)
     store = LeadStore(config.path_for("db_path", "data/leads.sqlite3"), scorer,
                       DedupOptions.from_config(config))

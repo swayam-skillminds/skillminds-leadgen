@@ -21,13 +21,14 @@ from ...config import Category, Config, Locality
 from ...export.csv_writer import write_csv, write_failures_csv
 from ...engine.failures import FailureLog
 from ...net.http import HttpClient
+from ...core.country import format_money
 from ...core.lead import Lead
 from ...net.ratelimit import RateLimiter
 from .scoring import Scorer
 from ...export.sheets import SheetsWriter
 from ...packs import inactive_reason
 from ...sources import DISCOVERY_SOURCES, ENRICHMENT_SOURCES, SourceContext
-from ...core.normalize import looks_like_seo_title, phone_display, set_extra_name_noise
+from ...core.normalize import looks_like_seo_title, phone_display
 from ...db.store import DedupOptions, LeadStore
 from ...packs.hospitality.venues import TIERS, VENUE_TYPES
 
@@ -104,7 +105,7 @@ class Pipeline:
         self.limiter = RateLimiter()
         # The city (and, for venue runs, words like "villa") must not stop
         # "Mokshah" and "Mokshah Villa Igatpuri" sharing a dedup key.
-        set_extra_name_noise([config.city, *(config.get("dedup.extra_name_noise") or [])])
+        config.apply_name_noise()
         self.scorer = Scorer(config)
         self.profile = config.profile
         # The store is built BEFORE the http client: it owns the dead-domain
@@ -120,6 +121,7 @@ class Pipeline:
             timeout=int(config.get("runtime.request_timeout", 30)),
             max_retries=int(config.get("runtime.max_retries", 3)),
             backoff_base=float(config.get("runtime.backoff_base", 2.0)),
+            accept_language=config.country_info.accept_language,
             **self._dead_domain_hooks(),
         )
         # Browser contexts come from config so the cap and any future worker
@@ -130,6 +132,9 @@ class Pipeline:
             timeout_ms=int(config.get("runtime.request_timeout", 30)) * 1000,
             max_contexts=int(config.get("runtime.browser_contexts", 3)),
             geolocation=config.geo_center,
+            locale=config.country_info.locale,
+            timezone_id=str(config.get("geo.timezone") or config.country_info.timezone),
+            accept_language=config.country_info.accept_language,
         )
         self.sheets = SheetsWriter(config, self.failures)
 
@@ -562,7 +567,9 @@ class Pipeline:
             if localities:
                 summary += f" ({', '.join(localities)})"
             if nightly:
-                summary += f"; ₹{nightly[0]:,.0f}–₹{nightly[-1]:,.0f}/night"
+                currency = self.config.currency
+                summary += (f"; {format_money(nightly[0], currency)}–"
+                            f"{format_money(nightly[-1], currency)}/night")
             stored = self.store.get(lead_id)
             if stored is None:
                 continue
@@ -655,7 +662,7 @@ class Pipeline:
             record = results.get(str(lead_id))
             if not record:
                 continue
-            partial = self._lead_from_ai_record(record)
+            partial = self._lead_from_ai_record(record, self.config.country)
             if partial is None:
                 continue
             if self.store.merge_into(lead_id, partial):
@@ -663,7 +670,7 @@ class Pipeline:
         self._ai_extract_queue = []
 
     @staticmethod
-    def _lead_from_ai_record(record: dict) -> Lead | None:
+    def _lead_from_ai_record(record: dict, region: str | None = None) -> Lead | None:
         """Turn an AI extraction result into a Lead, re-validating every field.
 
         Model output goes through the SAME normalisers as scraped data, so a
@@ -677,7 +684,7 @@ class Pipeline:
                 return " ".join(str(v) for v in value if v)
             return str(value) if value else ""
 
-        phones = extract_phones(as_text(record.get("phones")))
+        phones = extract_phones(as_text(record.get("phones")), region)
         emails = extract_emails(as_text(record.get("emails")))
         address = clean_text(record.get("address") or "")[:300]
         instagram = extract_instagram(as_text(record.get("instagram"))) or None
@@ -782,7 +789,7 @@ class Pipeline:
             print(f"  Sheet: not written -- {self.sheets.unavailable_reason}")
 
         if leads and self.config.is_venue_run:
-            self._report_venues(leads)
+            self._report_venues(leads, self.config.currency)
         elif leads:
             print("\n  Top 10 by legitimacy score:")
             for lead in sorted(leads, key=lambda l: -l.score)[:10]:
@@ -792,7 +799,7 @@ class Pipeline:
         print("=" * 68 + "\n")
 
     @staticmethod
-    def _report_venues(leads: list[Lead]) -> None:
+    def _report_venues(leads: list[Lead], currency: str) -> None:
         properties = [lead for lead in leads if lead.record_type != "Brand"]
         brands = [lead for lead in leads if lead.record_type == "Brand"]
         print(f"\n  Venues: {len(properties)} properties, {len(brands)} brands/operators")
@@ -810,7 +817,7 @@ class Pipeline:
         print(f"  With a price: {priced} ({priced / max(1, len(properties)):.0%})")
         print("\n  Top 10 venues:")
         for lead in properties[:10]:
-            price = (f"₹{lead.price_min:,.0f}/{lead.price_basis.replace('per ', '')}"
+            price = (f"{format_money(lead.price_min, currency)}/{lead.price_basis.replace('per ', '')}"
                      if lead.price_min else "no price")
             print(f"    {lead.venue_tier[:7]:<8}{lead.score:5.1f}  {lead.business_name[:32]:<32} "
                   f"{lead.locality[:14]:<14} {price}")

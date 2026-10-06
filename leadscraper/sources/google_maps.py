@@ -34,7 +34,9 @@ from .base import Source
 
 log = logging.getLogger(__name__)
 
-MAPS_SEARCH = "https://www.google.com/maps/search/{query}/@{lat},{lng},{zoom}z?hl=en&gl=IN"
+MAPS_SEARCH = "https://www.google.com/maps/search/{query}/@{lat},{lng},{zoom}z?hl=en&gl={gl}"
+#: Without a run centre Maps picks the viewport from the query's place name.
+MAPS_SEARCH_UNCENTRED = "https://www.google.com/maps/search/{query}?hl=en&gl={gl}"
 
 # Runs inside the place panel. Returns whatever it can find; missing keys are
 # handled on the Python side.
@@ -169,9 +171,15 @@ class GoogleMapsSource(Source):
 
     def _search(self, query: str, scroll_rounds: int, max_results: int) -> list[str]:
         """Return place URLs from the results feed for one query."""
-        lat, lng = self.ctx.config.geo_center
-        zoom = int(self.ctx.config.get("geo.maps_zoom", 12) or 12)
-        url = MAPS_SEARCH.format(query=quote_plus(query), lat=f"{lat:.4f}", lng=f"{lng:.4f}", zoom=zoom)
+        center = self.ctx.config.geo_center
+        gl = (self.ctx.config.country_info.google_gl or self.region).upper()
+        if center:
+            lat, lng = center
+            zoom = int(self.ctx.config.get("geo.maps_zoom", 12) or 12)
+            url = MAPS_SEARCH.format(query=quote_plus(query), lat=f"{lat:.4f}", lng=f"{lng:.4f}",
+                                     zoom=zoom, gl=gl)
+        else:
+            url = MAPS_SEARCH_UNCENTRED.format(query=quote_plus(query), gl=gl)
         with self.ctx.browser.page() as page:
             self.ctx.limiter.wait(self.pace_key)
             page.goto(url, wait_until="domcontentloaded")
@@ -245,9 +253,9 @@ class GoogleMapsSource(Source):
             return None
 
         body = data.get("bodyText") or ""
-        phones = extract_phones(data.get("phone") or "")
+        phones = extract_phones(data.get("phone") or "", self.region)
         if not phones:
-            phones = extract_phones(body)[:1]  # body text is noisier; take the first
+            phones = extract_phones(body, self.region)[:1]  # body text is noisier; take the first
 
         website = data.get("website")
         website = normalize_url(website) if website else None
@@ -289,7 +297,7 @@ class GoogleMapsSource(Source):
             lead.hotel_class = int(stars.group(1))
         # Hotel panels list booking-site prices ("₹7,450 ... per night"); the
         # panel text is short enough that the first clean one is this place's.
-        prices = nightly_prices(body)
+        prices = nightly_prices(body, self.currency)
         if prices:
             set_price(lead, min(prices), max(prices), "per night", "google_maps")
         lead.amenities = extract_amenities(body)

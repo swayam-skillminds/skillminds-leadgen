@@ -154,7 +154,7 @@ class DirectorySource(Source):
     # --- entry point ------------------------------------------------------
 
     def discover(self, locality: Locality, category: Category) -> Iterator[Lead]:
-        city = self.ctx.config.get("city", "Mumbai")
+        city = self.ctx.config.city
         city_slug = self.resolve_city_slug(city)
         if not city_slug:
             log.info("%s: no live city slug for %r; skipping %s/%s",
@@ -187,8 +187,10 @@ class DirectorySource(Source):
     # --- city and category slug resolution --------------------------------
 
     def city_slug(self, city: str) -> str:
-        """Config city -> URL segment. Overridden where a site disagrees."""
-        return _slugify(city)
+        """Config city -> URL segment: the pack's override for this site, else its slug."""
+        from .. import city_slug
+
+        return city_slug(type(self), city)
 
     def resolve_city_slug(self, city: str) -> str | None:
         key = (self.name, city)
@@ -409,7 +411,7 @@ class DirectorySource(Source):
             self.fail("no_name", url=url, locality=locality.name, category=category.name)
             return None
 
-        phones = (record.get("phones") if record else []) or extract_phones(text)[:3]
+        phones = (record.get("phones") if record else []) or extract_phones(text, self.region)[:3]
         emails = (record.get("emails") if record else []) or extract_emails(text)[:3]
         rating = record.get("rating") if record else None
         reviews = record.get("reviews") if record else None
@@ -439,7 +441,7 @@ class DirectorySource(Source):
             # A venue run only crawls a directory's venue category, so that is
             # the listing's type unless its name says hotel / resort / farm.
             lead.property_type = lead.property_type or "Wedding venue"
-            enrich_from_text(lead, text, price_source=self.name)
+            enrich_from_text(lead, text, price_source=self.name, currency=self.currency)
             lead.platforms.append(self.name)
             lead.listing_urls.append(url)
             # A city listing spills into neighbouring districts (WedMeGood's
@@ -470,7 +472,7 @@ class DirectorySource(Source):
         # The directory describes itself in JSON-LD too, and with more fields
         # filled in than any vendor -- it must never win "richest record".
         own = {self.name.lower(), (self.host or "").lower(), "wedmegood", "weddingwire"}
-        records = [r for r in businesses_from_page(soup)
+        records = [r for r in businesses_from_page(soup, self.region)
                    if r.get("business_name", "").lower().replace(" ", "") not in own]
         if not records:
             log.debug("%s: no JSON-LD business record; falling back to DOM parsing", self.name)

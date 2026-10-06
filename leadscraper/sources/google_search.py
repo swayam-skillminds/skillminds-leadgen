@@ -14,7 +14,7 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass
-from typing import Iterator
+from typing import Iterable, Iterator
 from urllib.parse import parse_qs, urlparse
 
 from ..config import Category, Locality
@@ -148,6 +148,21 @@ class SerpClient:
         self.ctx = ctx
         self.fallback = fallback
 
+    def _country(self):
+        config = getattr(self.ctx, "config", None)
+        return getattr(config, "country_info", None)
+
+    @property
+    def _gl(self) -> str:
+        """Google's results-country parameter, from the run's country."""
+        info = self._country()
+        return (info.google_gl or info.code.lower()) if info else ""
+
+    @property
+    def _ddg_region(self) -> str:
+        info = self._country()
+        return info.ddg_region if info else "wt-wt"
+
     def search(self, query: str, *, pages: int = 1, per_page: int = 20) -> list[SerpResult]:
         """Run `query` against Google, then a rendered Google, then DuckDuckGo.
 
@@ -215,7 +230,7 @@ class SerpClient:
             "q": query,
             "num": str(min(per_page, 20)),
             "hl": "en",
-            "gl": "in",
+            "gl": self._gl,
             "start": str(page_index * per_page),
             # `pws=0` disables personalisation, which makes results reproducible.
             "pws": "0",
@@ -234,7 +249,7 @@ class SerpClient:
         from urllib.parse import urlencode
 
         params = urlencode({
-            "q": query, "num": str(min(per_page, 20)), "hl": "en", "gl": "in",
+            "q": query, "num": str(min(per_page, 20)), "hl": "en", "gl": self._gl,
             "start": str(page_index * per_page), "pws": "0",
         })
         url = f"{GOOGLE_SEARCH}?{params}"
@@ -279,7 +294,7 @@ class SerpClient:
 
     def _duckduckgo(self, query: str) -> list[SerpResult]:
         response = self.ctx.http.get(
-            DDG_SEARCH, params={"q": query, "kl": "in-en"},
+            DDG_SEARCH, params={"q": query, "kl": self._ddg_region},
             rate_key="duckduckgo.com",
             headers={"Referer": "https://duckduckgo.com/"},
             # 202 + an empty body is how DDG says "slow down".
@@ -305,8 +320,9 @@ class SerpClient:
 
 
 # Generic words that never distinguish one vendor from another.
+# The run's country / region words are added per call (`place_words`).
 _GENERIC_TOKENS = {
-    "mumbai", "india", "maharashtra", "near", "me", "in", "the", "and", "for",
+    "near", "me", "in", "the", "and", "for",
     "of", "services", "service", "company", "co", "best", "top", "professional",
     "corporate", "verified", "affordable", "cheap", "hire", "book", "booking",
     "list", "price", "prices", "cost", "packages", "package", "contact",
@@ -315,7 +331,8 @@ _GENERIC_TOKENS = {
 
 
 def business_name_from_title(
-    title: str, locality: str = "", category_terms: tuple[str, ...] = ()
+    title: str, locality: str = "", category_terms: tuple[str, ...] = (),
+    place_words: Iterable[str] = (),
 ) -> str:
     """Turn a SERP title into a plausible business name, or "" if it isn't one.
 
@@ -337,14 +354,17 @@ def business_name_from_title(
     if len(first) < 3 or len(first.split()) > 9:
         return ""
 
-    if not _has_distinctive_token(first, locality, category_terms):
+    if not _has_distinctive_token(first, locality, category_terms, place_words):
         return ""
     return first
 
 
-def _has_distinctive_token(name: str, locality: str, category_terms: tuple[str, ...]) -> bool:
-    """True when `name` contains a word that isn't category/locality/filler."""
+def _has_distinctive_token(name: str, locality: str, category_terms: tuple[str, ...],
+                           place_words: Iterable[str] = ()) -> bool:
+    """True when `name` contains a word that isn't category/locality/place/filler."""
     noise = set(_GENERIC_TOKENS)
+    for phrase in place_words:
+        noise.update(w for w in re.split(r"\W+", (phrase or "").lower()) if w)
     for term in (*category_terms, locality):
         for word in re.split(r"\W+", (term or "").lower()):
             if word:
@@ -400,7 +420,8 @@ class GoogleSearchSource(Source):
     def _to_lead(self, result: SerpResult, locality: Locality, category: Category) -> Lead | None:
         city = self.ctx.config.city
         name = business_name_from_title(
-            result.title, locality.name, (*category.queries, city, *locality.aliases)
+            result.title, locality.name, (*category.queries, city, *locality.aliases),
+            self.place_words,
         )
         if not name:
             self.fail("generic_or_unparseable_title", url=result.url, locality=locality.name,
@@ -422,7 +443,7 @@ class GoogleSearchSource(Source):
         )
         # Snippets often carry a phone or email straight in the SERP text.
         blob = f"{result.title} {result.snippet}"
-        lead.phones = extract_phones(blob)[:2]
+        lead.phones = extract_phones(blob, self.region)[:2]
         lead.emails = extract_emails(blob)[:2]
 
         platform = next(

@@ -65,6 +65,22 @@ class Source(ABC):
         """Hostnames this source hits, for rate-limiter configuration."""
         return [self.name]
 
+    # --- the run's country, as every parser needs it ---------------------
+
+    @property
+    def region(self) -> str:
+        """Phone-parsing region: the run's country."""
+        return self.ctx.config.country
+
+    @property
+    def currency(self) -> str:
+        return self.ctx.config.currency
+
+    @property
+    def place_words(self) -> list[str]:
+        """Country / region words that never distinguish one business from another."""
+        return self.ctx.config.place_words
+
     @abstractmethod
     def discover(self, locality: Locality | None, category: Category | None) -> Iterator[Lead]:
         """Yield partial Leads for one unit of work (see `scope`)."""
@@ -98,10 +114,10 @@ class Source(ABC):
         Shahapur and Bhiwandi farm stays that carry no coordinates at all.
         """
         radius = self.ctx.config.region_radius_km
-        if radius and lead.latitude is not None and lead.longitude is not None:
+        center = self.ctx.config.geo_center
+        if radius and center and lead.latitude is not None and lead.longitude is not None:
             from ..core.geo import haversine_km
 
-            center = self.ctx.config.geo_center
             return haversine_km(lead.latitude, lead.longitude, *center) > radius
         excluded = [str(k).lower() for k in (self.ctx.config.get("geo.exclude_keywords") or [])]
         if not excluded:
@@ -143,6 +159,15 @@ class Enricher(ABC):
 
     def rate_keys(self) -> list[str]:
         return [self.name]
+
+    @property
+    def region(self) -> str:
+        """Phone-parsing region: the run's country."""
+        return self.ctx.config.country
+
+    @property
+    def currency(self) -> str:
+        return self.ctx.config.currency
 
     def targets(self, store) -> list[tuple[int, Lead]]:
         """Which stored leads this enricher wants, as (lead_id, Lead) pairs.

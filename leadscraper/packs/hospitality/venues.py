@@ -12,8 +12,10 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from functools import lru_cache
 from typing import TYPE_CHECKING, Any, Iterable
 
+from ...core.country import currency_pattern, format_money
 from ...core.geo import as_float, as_int, coords_from_maps_url, haversine_km  # noqa: F401
 from ...core.normalize import clean_text, dedupe_preserving_order
 from ...core.ratings import all_ratings, best_rating  # noqa: F401
@@ -22,18 +24,49 @@ if TYPE_CHECKING:  # pragma: no cover
     from ...core.lead import Lead
 
 # --- money -----------------------------------------------------------------
+#
+# Prices are read in the run's currency (from its country). The pack's default
+# thresholds below and in `VenueSettings` are rupee amounts -- the venue
+# vertical was built for Indian runs -- so INR is this pack's default; any
+# other currency needs its own `venue_tiers` bands in config.
 
-_INR = r"(?:₹|&#8377;|\bINR\b|\bRs\.?)\s?"
+DEFAULT_CURRENCY = "INR"
+
 _AMOUNT = r"(\d{1,3}(?:,\d{2,3})+|\d{3,7})(?:\.\d{1,2})?"
 
-# Night-priced offers. Group 1 is always the amount.
-_PER_NIGHT = re.compile(
-    _INR + _AMOUNT + r"\s*(?:\([^)]{0,30}\)\s*)?(?:/|per|a)\s*(?:room\s*(?:/|per)\s*)?night",
-    re.I,
-)
-_NIGHT_THEN_PRICE = re.compile(r"per\s+night\s*[:\-]?\s*" + _INR + _AMOUNT, re.I)
-_FOR_N_NIGHTS = re.compile(_INR + _AMOUNT + r"\s*(?:total\s*)?for\s+(\d{1,2})\s+nights?", re.I)
-_PER_PLATE = re.compile(_INR + _AMOUNT + r"\s*(?:/|per|a)\s*(?:plate|pax|person)\b", re.I)
+#: Plausible (night_min, night_max, plate_min, plate_max) per currency; a
+#: figure outside them is an add-on, a typo or a different unit.
+_PRICE_BOUNDS = {
+    "INR": (1_500.0, 1_500_000.0, 250.0, 20_000.0),
+}
+_DEFAULT_PRICE_BOUNDS = (20.0, 100_000.0, 5.0, 1_000.0)
+MIN_NIGHT_PRICE, MAX_NIGHT_PRICE, MIN_PLATE_PRICE, MAX_PLATE_PRICE = _PRICE_BOUNDS["INR"]
+
+
+@dataclass(frozen=True)
+class _PricePatterns:
+    per_night: re.Pattern[str]
+    night_then_price: re.Pattern[str]
+    for_n_nights: re.Pattern[str]
+    per_plate: re.Pattern[str]
+    bounds: tuple[float, float, float, float]
+
+
+@lru_cache(maxsize=None)
+def _patterns(currency: str) -> _PricePatterns:
+    """Night- and plate-price patterns for one currency. Group 1 is the amount."""
+    money = currency_pattern(currency)
+    amount = r"(\d{1,3}(?:,\d{3})+|\d{1,7})(?:\.\d{1,2})?" if currency != "INR" else _AMOUNT
+    return _PricePatterns(
+        per_night=re.compile(
+            money + amount + r"\s*(?:\([^)]{0,30}\)\s*)?(?:/|per|a)\s*(?:room\s*(?:/|per)\s*)?night",
+            re.I),
+        night_then_price=re.compile(r"per\s+night\s*[:\-]?\s*" + money + amount, re.I),
+        for_n_nights=re.compile(money + amount + r"\s*(?:total\s*)?for\s+(\d{1,2})\s+nights?", re.I),
+        per_plate=re.compile(money + amount + r"\s*(?:/|per|a)\s*(?:plate|pax|person)\b", re.I),
+        bounds=_PRICE_BOUNDS.get(currency, _DEFAULT_PRICE_BOUNDS),
+    )
+
 
 # If one of these sits just before a price, the price is an add-on, a discount
 # or a deposit -- not what a night at the venue costs.
@@ -46,16 +79,16 @@ _PRICE_NOISE = re.compile(
 )
 _PRICE_NOISE_WINDOW = 70
 
-MIN_NIGHT_PRICE, MAX_NIGHT_PRICE = 1_500.0, 1_500_000.0
-MIN_PLATE_PRICE, MAX_PLATE_PRICE = 250.0, 20_000.0
 
-
-def parse_inr(raw: str | None) -> float | None:
-    """'₹1,34,520' / 'INR 25000' / '46,575' -> float rupees."""
+def parse_amount(raw: str | None) -> float | None:
+    """'₹1,34,520' / 'INR 25000' / '46,575' / '$1,250' -> float."""
     if not raw:
         return None
-    match = re.search(_AMOUNT, str(raw).replace(" ", " "))
+    match = re.search(_AMOUNT, str(raw).replace("\u00a0", " "))
     return as_float(match.group(1)) if match else None
+
+
+parse_inr = parse_amount
 
 
 def _is_noise(text: str, start: int) -> bool:
@@ -68,46 +101,50 @@ def _is_noise(text: str, start: int) -> bool:
     return bool(_PRICE_NOISE.search(window))
 
 
-def nightly_prices(text: str | None) -> list[float]:
+def nightly_prices(text: str | None, currency: str = DEFAULT_CURRENCY) -> list[float]:
     """Per-night prices in document order, add-ons and discounts excluded."""
     if not text:
         return []
-    text = str(text).replace(" ", " ")
+    patterns = _patterns(currency)
+    low, high = patterns.bounds[0], patterns.bounds[1]
+    text = str(text).replace("\u00a0", " ")
     found: list[tuple[int, float]] = []
-    for match in _PER_NIGHT.finditer(text):
+    for match in patterns.per_night.finditer(text):
         if not _is_noise(text, match.start()):
             found.append((match.start(), as_float(match.group(1)) or 0))
-    for match in _NIGHT_THEN_PRICE.finditer(text):
+    for match in patterns.night_then_price.finditer(text):
         if not _is_noise(text, match.start()):
             found.append((match.start(), as_float(match.group(1)) or 0))
-    for match in _FOR_N_NIGHTS.finditer(text):
+    for match in patterns.for_n_nights.finditer(text):
         if _is_noise(text, match.start()):
             continue
         total, nights = as_float(match.group(1)) or 0, int(match.group(2))
         if nights > 0:
             found.append((match.start(), round(total / nights)))
     found.sort()
-    return [price for _, price in found if MIN_NIGHT_PRICE <= price <= MAX_NIGHT_PRICE]
+    return [price for _, price in found if low <= price <= high]
 
 
-def plate_prices(text: str | None) -> list[float]:
+def plate_prices(text: str | None, currency: str = DEFAULT_CURRENCY) -> list[float]:
     """Per-plate (per-guest) catering prices -- how banquets and lawns price."""
     if not text:
         return []
+    patterns = _patterns(currency)
+    low, high = patterns.bounds[2], patterns.bounds[3]
     out = []
-    for match in _PER_PLATE.finditer(str(text).replace(" ", " ")):
+    for match in patterns.per_plate.finditer(str(text).replace("\u00a0", " ")):
         price = as_float(match.group(1)) or 0
-        if MIN_PLATE_PRICE <= price <= MAX_PLATE_PRICE and not _is_noise(text, match.start()):
+        if low <= price <= high and not _is_noise(text, match.start()):
             out.append(price)
     return out
 
 
-def own_plate_prices(text: str | None) -> list[float]:
+def own_plate_prices(text: str | None, currency: str = DEFAULT_CURRENCY) -> list[float]:
     """The venue's own veg / non-veg pair: the first two plate prices on the page.
 
     Further plate prices on a directory profile are its "similar venues" cards.
     """
-    return plate_prices(text)[:2]
+    return plate_prices(text, currency)[:2]
 
 
 # --- size & capacity -------------------------------------------------------
@@ -231,7 +268,8 @@ def detect_pet_friendly(text: str | None) -> bool | None:
     return True if AMENITY_PATTERNS["Pet Friendly"].search(text) else None
 
 
-def enrich_from_text(lead: "Lead", text: str | None, *, price_source: str = "") -> "Lead":
+def enrich_from_text(lead: "Lead", text: str | None, *, price_source: str = "",
+                     currency: str = DEFAULT_CURRENCY) -> "Lead":
     """Fill EMPTY venue attributes on `lead` from free text. Never overwrites.
 
     Shared by every source that reads a venue's own description -- platform
@@ -259,8 +297,8 @@ def enrich_from_text(lead: "Lead", text: str | None, *, price_source: str = "") 
     if lead.pet_friendly is None:
         lead.pet_friendly = detect_pet_friendly(text)
     if lead.price_min is None:
-        nights = nightly_prices(text)
-        plates = own_plate_prices(text) if not nights else []
+        nights = nightly_prices(text, currency)
+        plates = own_plate_prices(text, currency) if not nights else []
         if nights:
             set_price(lead, nights[0], nights[0], "per night", price_source)
         elif plates:
@@ -366,6 +404,8 @@ class VenueSettings:
     plate_price_points: tuple[tuple[float, int], ...] = (
         (2_500, 4), (1_500, 3), (1_000, 2), (700, 1))
     points_saturation: float = 12.0
+    #: Currency of every price and price threshold above (the run's).
+    currency: str = DEFAULT_CURRENCY
 
     @classmethod
     def from_config(cls, config) -> "VenueSettings":
@@ -412,6 +452,7 @@ class VenueSettings:
             night_price_points=bands("night_price_points", cls.night_price_points),
             plate_price_points=bands("plate_price_points", cls.plate_price_points),
             points_saturation=float(tiers.get("points_saturation", cls.points_saturation)),
+            currency=(config.currency if config is not None else DEFAULT_CURRENCY),
         )
 
     def brand_by_name(self, name: str) -> Brand | None:
@@ -624,10 +665,10 @@ def compute_tier(lead: "Lead", settings: VenueSettings) -> TierResult:
     if night_price:
         earned = _band_points(night_price, settings.night_price_points)
         points += earned
-        reasons.append(f"₹{night_price:,.0f}/night")
+        reasons.append(f"{format_money(night_price, settings.currency)}/night")
     if plate_price:
         points += _band_points(plate_price, settings.plate_price_points)
-        reasons.append(f"₹{plate_price:,.0f}/plate")
+        reasons.append(f"{format_money(plate_price, settings.currency)}/plate")
 
     has_evidence = bool(rating is not None or lead.price_min or lead.platforms
                         or lead.bedrooms or lead.has_pool or lead.amenities)
@@ -638,7 +679,7 @@ def compute_tier(lead: "Lead", settings: VenueSettings) -> TierResult:
     if budget_brand or budget_price:
         tier = "Standard" if has_evidence else "Unverified"
         reasons.append("budget operator" if budget_brand else
-                       f"price under ₹{settings.budget_night_price:,.0f}/night")
+                       f"price under {format_money(settings.budget_night_price, settings.currency)}/night")
     elif qualifies:
         luxury = (
             (night_price and night_price >= settings.luxury_night_price)

@@ -89,12 +89,15 @@ class LocalDirectorySource(Source):
     def _listing_urls(self, locality: Locality, category: Category, max_pages: int) -> list[str]:
         urls: list[str] = []
         if self.listing_template:
-            for query in category.queries[:2]:
+            # A category slug configured for this directory wins over the
+            # search phrases, which are only a best guess at its taxonomy.
+            configured = category.directory_slugs.get(self.name)
+            for query in ([configured] if configured else category.queries[:2]):
                 urls.append(self.listing_template.format(
                     query=quote_plus(query.replace(" ", "-")),
                     locality=quote_plus(locality.primary_term.replace(" ", "-")),
-                    city=quote_plus(self.ctx.config.city.replace(" ", "-")),
-                    city_lower=quote_plus(self.ctx.config.city.lower().replace(" ", "-")),
+                    city=quote_plus(self.city_segment()),
+                    city_lower=quote_plus(self.city_segment().lower()),
                 ))
 
         if not self.cfg.get("serp_fallback", False):
@@ -121,7 +124,7 @@ class LocalDirectorySource(Source):
         soup = self.ctx.http.soup(html)
         emitted: set[str] = set()
 
-        for record in businesses_from_page(soup):
+        for record in businesses_from_page(soup, self.region):
             name = record.get("business_name", "")
             if not name or name.lower() in emitted:
                 continue
@@ -165,6 +168,19 @@ class LocalDirectorySource(Source):
         """This directory's listing-URL pattern for the run's city."""
         return self.listing_pattern
 
+    def city_segment(self) -> str:
+        """The run's city as this directory writes it in a URL.
+
+        The pack holds the exceptions (Justdial says "Bangalore" for
+        Bengaluru); otherwise the city name with dashes for spaces.
+        """
+        from .. import pack
+
+        city = self.ctx.config.city
+        owner = pack(self.pack or "")
+        override = (owner.city_slugs.get(self.name) or {}).get(city.strip().lower()) if owner else None
+        return override or city.replace(" ", "-")
+
     def _lead_from_card(self, card, page_url: str, locality: Locality, category: Category) -> Lead | None:
         name_el = card.select_one("h2 a, h3 a, h2, h3, [class*='name'] a, [class*='title']")
         name = clean_text(name_el.get_text(" ", strip=True)) if name_el else ""
@@ -172,7 +188,7 @@ class LocalDirectorySource(Source):
             return None
 
         text = clean_text(card.get_text(" ", strip=True))
-        phones = extract_phones(text)[:2]
+        phones = extract_phones(text, self.region)[:2]
         if not phones:
             phones = self._decode_obfuscated_phone(card)
 
@@ -217,8 +233,7 @@ class LocalDirectorySource(Source):
         el = card.select_one("[class*='address'], [class*='locality'], address")
         return clean_text(el.get_text(" ", strip=True))[:250] if el else ""
 
-    @staticmethod
-    def _decode_obfuscated_phone(card) -> list[str]:
+    def _decode_obfuscated_phone(self, card) -> list[str]:
         """Rebuild a number from Justdial-style per-digit sprite classes."""
         digits: list[str] = []
         for span in card.select("span[class*='icon-']"):
@@ -227,7 +242,7 @@ class LocalDirectorySource(Source):
                     digits.append(_JD_DIGIT_CLASSES[css_class])
                     break
         candidate = "".join(digits)
-        return extract_phones(candidate) if len(re.sub(r"\D", "", candidate)) >= 10 else []
+        return extract_phones(candidate, self.region) if len(re.sub(r"\D", "", candidate)) >= 10 else []
 
     def _render(self, url: str) -> str:
         with self.ctx.browser.page() as page:
@@ -260,10 +275,9 @@ class JustdialSource(LocalDirectorySource):
     base_url = "https://www.justdial.com"
     host = "www.justdial.com"
     listing_template = "https://www.justdial.com/{city}/{query}-in-{locality}"
-    listing_pattern = re.compile(r"justdial\.com/Mumbai/", re.I)
 
     def listing_pattern_for(self, city: str) -> re.Pattern[str]:
-        return re.compile(r"justdial\.com/" + re.escape(city.replace(" ", "-")) + "/", re.I)
+        return re.compile(r"justdial\.com/" + re.escape(self.city_segment()) + "/", re.I)
 
     def card_selectors(self) -> list[str]:
         return ["div.resultbox", "li.cntanr", "div[class*='resultbox']",
@@ -276,10 +290,9 @@ class SulekhaSource(LocalDirectorySource):
     base_url = "https://www.sulekha.com"
     host = "www.sulekha.com"
     listing_template = "https://www.sulekha.com/{query}/{city_lower}"
-    listing_pattern = re.compile(r"sulekha\.com/[\w\-]+/mumbai", re.I)
 
     def listing_pattern_for(self, city: str) -> re.Pattern[str]:
-        return re.compile(r"sulekha\.com/[\w\-]+/" + re.escape(city.lower().replace(" ", "-")), re.I)
+        return re.compile(r"sulekha\.com/[\w\-]+/" + re.escape(self.city_segment().lower()), re.I)
 
     def card_selectors(self) -> list[str]:
         return ["div.list-item", "div[class*='vendor-card']", "li[class*='listing']",

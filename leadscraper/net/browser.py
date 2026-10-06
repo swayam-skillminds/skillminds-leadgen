@@ -8,6 +8,7 @@ run instead of once per query.
 from __future__ import annotations
 
 import contextlib
+import json
 import logging
 import random
 import threading
@@ -22,7 +23,7 @@ log = logging.getLogger(__name__)
 # Applied before any page script runs; removes the most obvious automation tells.
 _STEALTH_INIT = """
 Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
-Object.defineProperty(navigator, 'languages', {get: () => ['en-IN', 'en-GB', 'en']});
+Object.defineProperty(navigator, 'languages', {get: () => __LANGUAGES__});
 Object.defineProperty(navigator, 'plugins', {get: () => [1, 2, 3, 4, 5]});
 window.chrome = window.chrome || {runtime: {}};
 const origQuery = window.navigator.permissions && window.navigator.permissions.query;
@@ -83,17 +84,19 @@ class BrowserSession:
         *,
         headless: bool = True,
         timeout_ms: int = 30_000,
-        locale: str = "en-IN",
+        locale: str = "en-US",
         max_contexts: int = 3,
         slot_timeout: float = 120.0,
-        timezone_id: str = "Asia/Kolkata",
-        geolocation: tuple[float, float] = (19.0760, 72.8777),  # Mumbai
+        timezone_id: str = "UTC",
+        geolocation: tuple[float, float] | None = None,
+        accept_language: str = "en-US,en;q=0.9",
     ):
         self.headless = headless
         self.timeout_ms = timeout_ms
         self.locale = locale
         self.timezone_id = timezone_id
         self.geolocation = geolocation
+        self.accept_language = accept_language
         self.max_contexts = max_contexts
         self.slot_timeout = slot_timeout
         self._slots = threading.Semaphore(max_contexts)
@@ -135,16 +138,22 @@ class BrowserSession:
                     "--disable-gpu",
                 ],
             )
+            # Locale, timezone and position follow the run's country and
+            # centre; with no centre the browser simply reports none.
+            located = ({"geolocation": {"latitude": self.geolocation[0],
+                                        "longitude": self.geolocation[1]},
+                        "permissions": ["geolocation"]} if self.geolocation else {})
             session.context = session.browser.new_context(
                 user_agent=random.choice(USER_AGENTS),
                 locale=self.locale,
                 timezone_id=self.timezone_id,
                 viewport={"width": random.randint(1440, 1680), "height": random.randint(820, 1000)},
-                geolocation={"latitude": self.geolocation[0], "longitude": self.geolocation[1]},
-                permissions=["geolocation"],
-                extra_http_headers={"Accept-Language": "en-IN,en-GB;q=0.9,en;q=0.8"},
+                extra_http_headers={"Accept-Language": self.accept_language},
+                **located,
             )
-            session.context.add_init_script(_STEALTH_INIT)
+            languages = [self.locale, *(["en-GB", "en"] if self.locale.startswith("en") else ["en"])]
+            session.context.add_init_script(
+                _STEALTH_INIT.replace("__LANGUAGES__", json.dumps(languages)))
             session.context.set_default_timeout(self.timeout_ms)
         except BaseException:
             # Nothing is registered yet, so unwind by hand and hand the slot back.

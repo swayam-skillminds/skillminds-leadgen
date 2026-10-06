@@ -92,7 +92,8 @@ class WebsiteEnricher(Enricher):
         if self.ctx.config.is_venue_run:
             # The venue's own site is the most honest description of it: rooms,
             # pool, event policy and, often, a tariff page.
-            enrich_from_text(harvested, " ".join(collected_text)[:40_000], price_source="website")
+            enrich_from_text(harvested, " ".join(collected_text)[:40_000], price_source="website",
+                             currency=self.currency)
             venue_found = bool(harvested.amenities or harvested.bedrooms or harvested.price_min
                                or harvested.event_friendly is not None)
         if not (harvested.emails or harvested.phones or harvested.instagram
@@ -122,19 +123,21 @@ class WebsiteEnricher(Enricher):
             if href.lower().startswith("mailto:"):
                 into.emails.extend(extract_emails(href[7:].split("?")[0]))
             elif href.lower().startswith("tel:"):
-                into.phones.extend(extract_phones(href[4:]))
+                into.phones.extend(extract_phones(href[4:], self.region))
 
         into.emails.extend(extract_emails(text))
-        into.phones.extend(extract_phones(text))
+        into.phones.extend(extract_phones(text, self.region))
 
         # Socials: check raw HTML so links inside scripts/attributes count too.
         into.instagram = into.instagram or extract_instagram(raw_html)
         into.facebook = into.facebook or extract_facebook(raw_html)
         into.linkedin = into.linkedin or extract_linkedin(raw_html)
-        into.whatsapp = into.whatsapp or extract_whatsapp(raw_html)
+        into.whatsapp = into.whatsapp or extract_whatsapp(raw_html, self.region)
 
         if not into.address:
-            into.address = self._address(soup, text, self.ctx.config.city)
+            config = self.ctx.config
+            into.address = self._address(soup, text, config.city, config.admin_area,
+                                         config.country_info.postal_code)
 
         into.emails = list(dict.fromkeys(into.emails))[:5]
         into.phones = list(dict.fromkeys(into.phones))[:5]
@@ -163,13 +166,18 @@ class WebsiteEnricher(Enricher):
         return [url for _, url in scored][:3]
 
     @staticmethod
-    def _address(soup: BeautifulSoup, text: str, city: str = "Mumbai") -> str:
+    def _address(soup: BeautifulSoup, text: str, city: str = "", admin_area: str = "",
+                 postal_code: str = r"\d{6}") -> str:
         tag = soup.find("address")
         if tag:
             value = " ".join(tag.get_text(" ", strip=True).split())
             if len(value) > 10:
                 return value[:300]
-        # Indian addresses reliably end in a 6-digit PIN.
-        places = "|".join(re.escape(p) for p in dict.fromkeys([city, "Maharashtra"]) if p)
-        match = re.search(r"([A-Z][^.\n]{15,150}?\b(?:" + places + r")\b[^.\n]{0,40}?\b\d{6}\b)", text)
+        # An address names the city or state and ends in the country's postal
+        # code (a 6-digit PIN in India, a ZIP in the US).
+        places = "|".join(re.escape(p) for p in dict.fromkeys([city, admin_area]) if p)
+        if not places:
+            return ""
+        match = re.search(r"([A-Z][^.\n]{15,150}?\b(?:" + places + r")\b[^.\n]{0,40}?\b(?:"
+                          + postal_code + r")\b)", text)
         return " ".join(match.group(1).split())[:300] if match else ""

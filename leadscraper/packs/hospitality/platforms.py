@@ -161,7 +161,7 @@ def lodging_record(soup: BeautifulSoup) -> dict[str, Any]:
     return out
 
 
-def organization_record(soup: BeautifulSoup) -> dict[str, Any] | None:
+def organization_record(soup: BeautifulSoup, region: str | None = None) -> dict[str, Any] | None:
     """The site operator's own Organization node: name, phones, socials."""
     for node in iter_jsonld(soup):
         if "organization" not in _types(node) or not node.get("name"):
@@ -170,7 +170,7 @@ def organization_record(soup: BeautifulSoup) -> dict[str, Any] | None:
         points = node.get("contactPoint") or []
         for point in points if isinstance(points, list) else [points]:
             if isinstance(point, dict) and point.get("telephone"):
-                phones.extend(extract_phones(str(point["telephone"])))
+                phones.extend(extract_phones(str(point["telephone"]), region))
         same_as = node.get("sameAs") or []
         same_as_text = " ".join(same_as) if isinstance(same_as, list) else str(same_as)
         return {
@@ -264,7 +264,8 @@ class PlatformSource(Source):
             business_name=name,
             category=category_name,
             address=clean_text(fields.get("address")),
-            phones=extract_phones(" ".join(str(p) for p in fields.get("phones", []) if p))[:3],
+            phones=extract_phones(" ".join(str(p) for p in fields.get("phones", []) if p),
+                                  self.region)[:3],
             emails=[e for e in fields.get("emails", []) if e][:2],
             source_urls=[url],
         )
@@ -298,7 +299,7 @@ class PlatformSource(Source):
         # Free text last: it only fills what the structured data left empty.
         enrich_from_text(lead, " ".join(filter(None, [name, lead.description,
                                                       fields.get("text", "")])),
-                         price_source=self.platform)
+                         price_source=self.platform, currency=self.currency)
         return lead
 
     def finish(self, lead: Lead, url: str, fallback: Locality | None = None) -> Lead | None:
@@ -413,7 +414,7 @@ class SitemapPlatformSource(PlatformSource):
 
         soup = self.ctx.http.soup(html)
         if self._org is None:
-            self._org = organization_record(soup)
+            self._org = organization_record(soup, self.region)
         fields = self.generic_fields(soup)
         try:
             fields.update({k: v for k, v in self.platform_fields(soup, url).items()
@@ -435,7 +436,7 @@ class SitemapPlatformSource(PlatformSource):
                 self.fail("render_failed", url=url, detail=repr(exc))
             # The booking widget comes before any "similar stays" strip, so the
             # first per-night price on the page is this property's.
-            prices = nightly_prices(rendered_text)
+            prices = nightly_prices(rendered_text, self.currency)
             if rendered_text:
                 fields.update({k: v for k, v in self.rendered_fields(rendered_text).items()
                                if v not in (None, "", [], {})})
@@ -795,7 +796,7 @@ class AirbnbSource(SearchPlatformSource):
                 rating, reviews = as_float(match.group(1)), as_int(match.group(2))
                 break
 
-        prices = nightly_prices(text)
+        prices = nightly_prices(text, self.currency)
         notes = []
         if re.search(r"guest favourite|guest favorite", text, re.I):
             notes.append("Airbnb Guest favourite")
