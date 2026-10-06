@@ -26,7 +26,7 @@ from .ratelimit import RateLimiter
 from .scoring import Scorer
 from .sheets import SheetsWriter
 from .sources import DISCOVERY_SOURCES, ENRICHMENT_SOURCES, SourceContext
-from .normalize import phone_display, set_extra_name_noise
+from .normalize import looks_like_seo_title, phone_display, set_extra_name_noise
 from .store import DedupOptions, LeadStore
 from .venues import TIERS, VENUE_TYPES
 
@@ -586,17 +586,20 @@ class Pipeline:
         return None
 
     def _ai_polish_names(self) -> None:
-        """Clean SERP-derived names and flag listings that aren't businesses."""
+        """Clean SERP-derived and keyword-stuffed names; flag non-businesses."""
         if not self.ai.uses("names"):
             return
 
         candidates = []
         for lead_id, lead in self.store.all_with_ids():
             sources = set(lead.sources)
-            # Maps and directory profiles already give clean names -- skip them.
-            if "google_maps" in sources or not (sources & self._TITLE_DERIVED_SOURCES):
-                continue
-            candidates.append((lead_id, lead))
+            # Maps and directory profiles usually give clean names...
+            title_derived = ("google_maps" not in sources
+                             and bool(sources & self._TITLE_DERIVED_SOURCES))
+            # ...but every SEO-titled name in the Mumbai DB (~100) came from
+            # Maps, where owners stuff keywords into the listing name itself.
+            if title_derived or looks_like_seo_title(lead.business_name):
+                candidates.append((lead_id, lead))
 
         if not candidates:
             return

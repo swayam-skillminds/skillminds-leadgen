@@ -15,6 +15,7 @@ from typing import Any
 from .normalize import (
     clean_text,
     dedupe_preserving_order,
+    looks_like_seo_title,
     name_key,
     normalize_name,
     normalize_url,
@@ -310,6 +311,10 @@ class Lead:
     def _is_extension_of(longer: str, shorter: str, max_len: int = 90) -> bool:
         """True when `longer` is `shorter` plus extra detail, not a different name."""
         if len(longer) > max_len:
+            return False
+        # "Royal Caterers | Best Caterers in Mumbai" contains the name too, but
+        # what it adds is keywords, not detail.
+        if looks_like_seo_title(longer) and not looks_like_seo_title(shorter):
             return False
         return normalize_name(shorter) in normalize_name(longer)
 

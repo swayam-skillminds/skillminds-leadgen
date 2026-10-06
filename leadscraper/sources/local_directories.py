@@ -1,8 +1,11 @@
 """Justdial and Sulekha -- local business directories.
 
 Both block aggressively, so they run at the slowest rates in config.yaml and
-are SERP-first: we ask a search engine which listing pages exist, then fetch a
-small number of them, rather than crawling their paginated search UI.
+fetch a small number of listing pages built from a URL template rather than
+crawling their paginated search UI. Asking a search engine for more listing
+pages (`site:` queries) is opt-in via `serp_fallback`: one SERP query per
+locality x category is what earned the Google CAPTCHA within ~2 minutes of
+every run start, after which every SERP-backed source went dark.
 
 Justdial caveat: phone numbers are frequently rendered behind a "Show Number"
 interaction and have historically been obfuscated with CSS sprite classes.
@@ -42,7 +45,7 @@ _JD_DIGIT_CLASSES = {
 
 
 class LocalDirectorySource(Source):
-    """SERP-first crawl of a local directory, with a direct-listing attempt."""
+    """Template-built listing pages of a local directory; SERP only when opted in."""
 
     uses_browser = True
 
@@ -93,6 +96,9 @@ class LocalDirectorySource(Source):
                     city=quote_plus(self.ctx.config.city.replace(" ", "-")),
                     city_lower=quote_plus(self.ctx.config.city.lower().replace(" ", "-")),
                 ))
+
+        if not self.cfg.get("serp_fallback", False):
+            return urls[: max(1, max_pages) * 8]
 
         serp_query = f'site:{self.host} {category.queries[0]} {locality.primary_term}'
         try:

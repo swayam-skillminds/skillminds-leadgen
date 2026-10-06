@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "leadscraper"
+description = "Failure-tolerant B2B lead generation from free public sources"
+readme = "README.md"
+requires-python = ">=3.12"
+dynamic = ["version"]
+dependencies = [
+    # Core HTTP + parsing
+    "requests>=2.31.0",
+    "beautifulsoup4>=4.12.0",
+    "brotli>=1.1.0",          # so we can honestly advertise 'br' to servers
+    "lxml>=5.1.0",
+    # Headless browser (Google Maps + JS-heavy directories)
+    "playwright>=1.44.0",
+    # Normalisation / matching
+    "phonenumbers>=8.13.0",
+    "rapidfuzz>=3.6.0",
+    # Resilience
+    "tenacity>=8.2.0",
+    # Config
+    "PyYAML>=6.0",
+    "python-dotenv>=1.0.0",
+    # Google Sheets (free tier of the Sheets API)
+    "gspread>=6.0.0",
+    "google-auth>=2.28.0",
+    # Excel workbooks (tools/build_*_workbook.py; the Phase 4 exporter)
+    "openpyxl>=3.1.0",
+]
+
+[project.optional-dependencies]
+# Pay-as-you-go API backend for the AI layer. The default backend is the
+# `claude` CLI, which needs no Python package.
+ai = ["anthropic>=0.40.0"]
+dev = ["pytest>=8.0.0"]
+
+[tool.setuptools.dynamic]
+version = { attr = "leadscraper.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["leadscraper*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "live: hits the real network; opt-in only (pytest -m live)",
+    "characterisation: pins current behaviour against frozen baselines",
+]
+addopts = "-m 'not live'"

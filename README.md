@@ -58,7 +58,7 @@ search engine has already indexed are recorded.
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+pip install -e ".[dev]"      # deps live in pyproject.toml; add ,ai for the Anthropic SDK backend
 playwright install chromium
 ```
 
@@ -147,10 +147,13 @@ In priority order:
 
 1. **Shared phone number** — conclusive, merges even across localities (a
    caterer listed in both Andheri and Dadar is one business).
-2. **Identical canonical name** — after stripping legal and category noise, so
+2. **Same Google Maps place** — Maps returns one place to searches run from
+   neighbouring localities; the place id (cid) in its URL identifies it.
+   Applied when the phones don't contradict.
+3. **Identical canonical name** — after stripping legal and category noise, so
    "Sharma Caterers Pvt. Ltd." matches "Sharma Catering Services". Applied only
    when the phones don't contradict and the locality agrees.
-3. **Fuzzy name ≥ 92%** within the same locality.
+4. **Fuzzy name ≥ 92%** within the same locality.
 
 On a match, fields are **merged into the existing row**: lists are unioned,
 empty fields filled, and conflicting ratings resolved in favour of whichever
@@ -170,7 +173,10 @@ is backed by more reviews. Nothing is overwritten with a blank.
 - DuckDuckGo answers `HTTP 202` with an empty page when it wants you to slow
   down. That's detected as throttling and backed off, not misread as
   "no results".
-- Directory scrapers fall back to `site:` search when their listing URLs break.
+- `site:` search for directory listings is **opt-in** (`serp_fallback: true`
+  per source). Left on, one query per locality × category earned a Google
+  CAPTCHA within minutes of every run start and took every SERP-backed source
+  down with it.
 - **Nothing crashes the run.** Every failure — a blocked host, a login wall, a
   listing whose phone number is hidden behind a click — is written to
   `logs/failures.jsonl` and `data/skipped.csv`, and to a `Skipped` tab in the

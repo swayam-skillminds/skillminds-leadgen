@@ -1,0 +1,74 @@
+{
+ "bare_one_source": {
+  "breakdown": {
+   "contact_completeness": 0.0,
+   "directory_signal": 0.0,
+   "maps_popularity": 0.0,
+   "premium_signal": 0.0,
+   "reputation": 0.0,
+   "source_corroboration": 0.4307,
+   "total": 10.77
+  },
+  "score": 10.77
+ },
+ "every_contact_channel": {
+  "breakdown": {
+   "contact_completeness": 1.0,
+   "directory_signal": 0.0,
+   "maps_popularity": 0.0,
+   "premium_signal": 0.0,
+   "reputation": 0.0,
+   "source_corroboration": 1.0,
+   "total": 40.0
+  },
+  "score": 40.0
+ },
+ "one_star_high_volume": {
+  "breakdown": {
+   "contact_completeness": 0.0,
+   "directory_signal": 0.0,
+   "maps_popularity": 0.0,
+   "premium_signal": 0.0,
+   "reputation": 0.0,
+   "source_corroboration": 0.4307,
+   "total": 10.77
+  },
+  "score": 10.77
+ },
+ "reviews_without_rating": {
+  "breakdown": {
+   "contact_completeness": 0.0,
+   "directory_signal": 0.0,
+   "maps_popularity": 0.328,
+   "premium_signal": 0.0,
+   "reputation": 0.0,
+   "source_corroboration": 0.4307,
+   "total": 23.89
+  },
+  "score": 23.89
+ },
+ "strong_maps_two_sources": {
+  "breakdown": {
+   "contact_completeness": 0.7,
+   "directory_signal": 0.0,
+   "maps_popularity": 0.8733,
+   "premium_signal": 0.0,
+   "reputation": 0.8733,
+   "source_corroboration": 0.6826,
+   "total": 62.5
+  },
+  "score": 62.5
+ },
+ "wedmegood_featured": {
+  "breakdown": {
+   "contact_completeness": 0.0,
+   "directory_signal": 1.0,
+   "maps_popularity": 0.6912,
+   "premium_signal": 0.0,
+   "reputation": 0.7351,
+   "source_corroboration": 0.6826,
+   "total": 64.71
+  },
+  "score": 64.71
+ }
+}
