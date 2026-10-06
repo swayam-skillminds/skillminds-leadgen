@@ -1,0 +1,192 @@
+{
+ "ai_not_a_venue": {
+  "breakdown": {
+   "contact_completeness": 0.0,
+   "directory_signal": 0.0,
+   "maps_popularity": 0.0,
+   "premium_signal": 0.0,
+   "reputation": 0.0,
+   "source_corroboration": 0.4307,
+   "total": 6.46
+  },
+  "distance_km": null,
+  "hotel_class": null,
+  "managed_by": "",
+  "record_type": "Not a venue",
+  "score": 6.46,
+  "tier": "Excluded",
+  "tier_points": 0,
+  "tier_reasons": [
+   "not a venue: ai"
+  ],
+  "venue_type": "Not a Venue",
+  "venue_type_source": "ai"
+ },
+ "banquet_lawn_per_plate": {
+  "breakdown": {
+   "contact_completeness": 0.0,
+   "directory_signal": 0.0,
+   "maps_popularity": 0.8,
+   "premium_signal": 0.3333,
+   "reputation": 0.8,
+   "source_corroboration": 0.6826,
+   "total": 43.57
+  },
+  "distance_km": null,
+  "hotel_class": null,
+  "managed_by": "",
+  "record_type": "Property",
+  "score": 43.57,
+  "tier": "Standard",
+  "tier_points": 4,
+  "tier_reasons": [
+   "event capacity 800",
+   "₹1,800/plate"
+  ],
+  "venue_type": "Banquet / Event Lawn",
+  "venue_type_source": "rules: banquet / lawn / event venue"
+ },
+ "brand_row": {
+  "breakdown": {
+   "contact_completeness": 0.0,
+   "directory_signal": 0.0,
+   "maps_popularity": 0.0,
+   "premium_signal": 0.0,
+   "reputation": 0.0,
+   "source_corroboration": 0.4307,
+   "total": 6.46
+  },
+  "distance_km": null,
+  "hotel_class": null,
+  "managed_by": "StayVista",
+  "record_type": "Brand",
+  "score": 6.46,
+  "tier": "Operator",
+  "tier_points": 0,
+  "tier_reasons": [
+   "brand / operator, not a single venue"
+  ],
+  "venue_type": "Brand / Operator",
+  "venue_type_source": "rules: record is a brand / operator"
+ },
+ "budget_price_capped": {
+  "breakdown": {
+   "contact_completeness": 0.0,
+   "directory_signal": 0.0,
+   "maps_popularity": 0.8216,
+   "premium_signal": 0.1667,
+   "reputation": 0.8216,
+   "source_corroboration": 0.4307,
+   "total": 33.67
+  },
+  "distance_km": null,
+  "hotel_class": null,
+  "managed_by": "",
+  "record_type": "Property",
+  "score": 33.67,
+  "tier": "Standard",
+  "tier_points": 2,
+  "tier_reasons": [
+   "rated 4.7 over 120 reviews",
+   "₹3,000/night",
+   "price under ₹4,000/night"
+  ],
+  "venue_type": "Boutique Stay / Homestay",
+  "venue_type_source": "rules: homestay / cottage / home"
+ },
+ "no_evidence_unverified": {
+  "breakdown": {
+   "contact_completeness": 0.0,
+   "directory_signal": 0.0,
+   "maps_popularity": 0.0,
+   "premium_signal": 0.0,
+   "reputation": 0.0,
+   "source_corroboration": 0.4307,
+   "total": 6.46
+  },
+  "distance_km": null,
+  "hotel_class": null,
+  "managed_by": "",
+  "record_type": "Property",
+  "score": 6.46,
+  "tier": "Unverified",
+  "tier_points": 0,
+  "tier_reasons": [],
+  "venue_type": "Unclassified",
+  "venue_type_source": "rules: no venue-type evidence"
+ },
+ "platform_pool_villa_luxury": {
+  "breakdown": {
+   "contact_completeness": 0.3,
+   "directory_signal": 0.0,
+   "maps_popularity": 0.0,
+   "premium_signal": 0.9167,
+   "reputation": 0.7243,
+   "source_corroboration": 0.6826,
+   "total": 71.01
+  },
+  "distance_km": 18.5,
+  "hotel_class": null,
+  "managed_by": "StayVista",
+  "record_type": "Property",
+  "score": 71.01,
+  "tier": "Luxury",
+  "tier_points": 11,
+  "tier_reasons": [
+   "premium platform/operator: stayvista",
+   "rated 4.9 over 36 reviews",
+   "private pool",
+   "5 bedrooms",
+   "₹30,000/night"
+  ],
+  "venue_type": "Private Pool Villa",
+  "venue_type_source": "rules: villa with a private pool"
+ },
+ "premium_hotel_chain": {
+  "breakdown": {
+   "contact_completeness": 0.0,
+   "directory_signal": 0.0,
+   "maps_popularity": 0.85,
+   "premium_signal": 0.3333,
+   "reputation": 0.85,
+   "source_corroboration": 0.6826,
+   "total": 44.82
+  },
+  "distance_km": null,
+  "hotel_class": 5,
+  "managed_by": "",
+  "record_type": "Property",
+  "score": 44.82,
+  "tier": "Premium",
+  "tier_points": 4,
+  "tier_reasons": [
+   "rated 4.4 over 2500 reviews",
+   "premium hotel"
+  ],
+  "venue_type": "Premium Hotel",
+  "venue_type_source": "rules: 5-star hotel"
+ },
+ "rated_farmhouse_premium": {
+  "breakdown": {
+   "contact_completeness": 0.0,
+   "directory_signal": 0.0,
+   "maps_popularity": 0.6845,
+   "premium_signal": 0.0833,
+   "reputation": 0.6845,
+   "source_corroboration": 0.4307,
+   "total": 26.91
+  },
+  "distance_km": 12.0,
+  "hotel_class": null,
+  "managed_by": "",
+  "record_type": "Property",
+  "score": 26.91,
+  "tier": "Premium",
+  "tier_points": 1,
+  "tier_reasons": [
+   "rated 4.5 over 50 reviews"
+  ],
+  "venue_type": "Farmhouse / Farm Stay",
+  "venue_type_source": "rules: farm / farmhouse"
+ }
+}

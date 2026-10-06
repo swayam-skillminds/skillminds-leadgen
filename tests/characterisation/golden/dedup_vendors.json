@@ -1,0 +1,262 @@
+{
+ "fuzzy_name_same_locality": {
+  "action": "new",
+  "changed": [
+   "*new*"
+  ],
+  "records": [
+   {
+    "business_name": "Shree Ganesh Decorators",
+    "category": "",
+    "emails": [],
+    "gmaps_rating": null,
+    "gmaps_reviews": null,
+    "locality": "Dadar",
+    "notes": [],
+    "phones": [],
+    "score": 10.77,
+    "sources": [
+     "google_maps"
+    ],
+    "website": null
+   },
+   {
+    "business_name": "Shri Ganesh Decorators",
+    "category": "",
+    "emails": [],
+    "gmaps_rating": null,
+    "gmaps_reviews": null,
+    "locality": "Dadar",
+    "notes": [],
+    "phones": [],
+    "score": 10.77,
+    "sources": [
+     "sulekha"
+    ],
+    "website": null
+   }
+  ],
+  "stored": 2
+ },
+ "name_extension_wins": {
+  "action": "merged",
+  "changed": [
+   "address",
+   "business_name"
+  ],
+  "records": [
+   {
+    "business_name": "Galaxy Caterers - St. Arnold's Lawns",
+    "category": "",
+    "emails": [],
+    "gmaps_rating": null,
+    "gmaps_reviews": null,
+    "locality": "Andheri",
+    "notes": [],
+    "phones": [
+     "+919820033333"
+    ],
+    "score": 6.0,
+    "sources": [],
+    "website": null
+   }
+  ],
+  "stored": 1
+ },
+ "same_maps_place_other_locality": {
+  "action": "merged",
+  "changed": [
+   "notes"
+  ],
+  "records": [
+   {
+    "business_name": "Flora Store",
+    "category": "",
+    "emails": [],
+    "gmaps_rating": null,
+    "gmaps_reviews": null,
+    "locality": "Andheri",
+    "notes": [
+     "also listed under locality: Powai"
+    ],
+    "phones": [],
+    "score": 10.77,
+    "sources": [
+     "google_maps"
+    ],
+    "website": null
+   }
+  ],
+  "stored": 1
+ },
+ "same_name_contradicting_phones": {
+  "action": "new",
+  "changed": [
+   "*new*"
+  ],
+  "records": [
+   {
+    "business_name": "Royal Banquets",
+    "category": "",
+    "emails": [],
+    "gmaps_rating": null,
+    "gmaps_reviews": null,
+    "locality": "Andheri",
+    "notes": [],
+    "phones": [
+     "+919820011111"
+    ],
+    "score": 4.5,
+    "sources": [],
+    "website": null
+   },
+   {
+    "business_name": "Royal Banquets",
+    "category": "",
+    "emails": [],
+    "gmaps_rating": null,
+    "gmaps_reviews": null,
+    "locality": "Andheri",
+    "notes": [],
+    "phones": [
+     "+919820022222"
+    ],
+    "score": 4.5,
+    "sources": [],
+    "website": null
+   }
+  ],
+  "stored": 2
+ },
+ "same_name_other_locality": {
+  "action": "new",
+  "changed": [
+   "*new*"
+  ],
+  "records": [
+   {
+    "business_name": "Royal Banquets",
+    "category": "",
+    "emails": [],
+    "gmaps_rating": null,
+    "gmaps_reviews": null,
+    "locality": "Andheri",
+    "notes": [],
+    "phones": [],
+    "score": 10.77,
+    "sources": [
+     "google_maps"
+    ],
+    "website": null
+   },
+   {
+    "business_name": "Royal Banquets",
+    "category": "",
+    "emails": [],
+    "gmaps_rating": null,
+    "gmaps_reviews": null,
+    "locality": "Dadar",
+    "notes": [],
+    "phones": [],
+    "score": 10.77,
+    "sources": [
+     "google_maps"
+    ],
+    "website": null
+   }
+  ],
+  "stored": 2
+ },
+ "same_name_same_locality": {
+  "action": "merged",
+  "changed": [
+   "emails",
+   "notes",
+   "sources"
+  ],
+  "records": [
+   {
+    "business_name": "Sharma Caterers Pvt Ltd",
+    "category": "",
+    "emails": [
+     "hello@sharma.in"
+    ],
+    "gmaps_rating": null,
+    "gmaps_reviews": null,
+    "locality": "Powai",
+    "notes": [
+     "also known as: Sharma Catering Services"
+    ],
+    "phones": [],
+    "score": 20.82,
+    "sources": [
+     "google_maps",
+     "sulekha"
+    ],
+    "website": null
+   }
+  ],
+  "stored": 1
+ },
+ "seo_title_kept_as_alias": {
+  "action": "merged",
+  "changed": [
+   "notes",
+   "sources"
+  ],
+  "records": [
+   {
+    "business_name": "Royal Caterers",
+    "category": "",
+    "emails": [],
+    "gmaps_rating": null,
+    "gmaps_reviews": null,
+    "locality": "Andheri",
+    "notes": [
+     "also known as: Royal Caterers | Best Caterers in Mumbai 2024"
+    ],
+    "phones": [
+     "+919820044444"
+    ],
+    "score": 15.27,
+    "sources": [
+     "google_search"
+    ],
+    "website": null
+   }
+  ],
+  "stored": 1
+ },
+ "shared_phone_across_localities": {
+  "action": "merged",
+  "changed": [
+   "gmaps_reviews",
+   "notes",
+   "sources"
+  ],
+  "records": [
+   {
+    "business_name": "Royal Caterers",
+    "category": "",
+    "emails": [],
+    "gmaps_rating": 4.6,
+    "gmaps_reviews": 310,
+    "locality": "Andheri",
+    "notes": [
+     "also known as: Royal Catering Co",
+     "also listed under locality: Dadar"
+    ],
+    "phones": [
+     "+919820012345"
+    ],
+    "score": 56.5,
+    "sources": [
+     "google_maps",
+     "justdial"
+    ],
+    "website": null
+   }
+  ],
+  "stored": 1
+ }
+}

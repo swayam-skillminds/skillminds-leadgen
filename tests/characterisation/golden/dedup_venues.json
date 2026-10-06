@@ -1,0 +1,194 @@
+{
+ "distinctive_name_other_locality": {
+  "action": "merged",
+  "changed": [
+   "notes",
+   "sources"
+  ],
+  "records": [
+   {
+    "business_name": "Bellissimo Panorama Hilltop",
+    "category": "",
+    "emails": [],
+    "gmaps_rating": null,
+    "gmaps_reviews": null,
+    "locality": "Igatpuri",
+    "notes": [
+     "also listed under locality: Nashik City"
+    ],
+    "phones": [],
+    "score": 10.24,
+    "sources": [
+     "airbnb",
+     "booking"
+    ],
+    "website": null
+   }
+  ],
+  "stored": 1
+ },
+ "generic_name_other_locality": {
+  "action": "new",
+  "changed": [
+   "*new*"
+  ],
+  "records": [
+   {
+    "business_name": "Green Villa",
+    "category": "",
+    "emails": [],
+    "gmaps_rating": null,
+    "gmaps_reviews": null,
+    "locality": "Igatpuri",
+    "notes": [],
+    "phones": [],
+    "score": 6.46,
+    "sources": [
+     "airbnb"
+    ],
+    "website": null
+   },
+   {
+    "business_name": "Green Villa",
+    "category": "",
+    "emails": [],
+    "gmaps_rating": null,
+    "gmaps_reviews": null,
+    "locality": "Nashik City",
+    "notes": [],
+    "phones": [],
+    "score": 6.46,
+    "sources": [
+     "booking"
+    ],
+    "website": null
+   }
+  ],
+  "stored": 2
+ },
+ "pins_far_apart_other_locality": {
+  "action": "new",
+  "changed": [
+   "*new*"
+  ],
+  "records": [
+   {
+    "business_name": "Mokshah",
+    "category": "",
+    "emails": [],
+    "gmaps_rating": null,
+    "gmaps_reviews": null,
+    "locality": "Igatpuri",
+    "notes": [],
+    "phones": [],
+    "score": 0.0,
+    "sources": [],
+    "website": null
+   },
+   {
+    "business_name": "Mokshah Retreat",
+    "category": "",
+    "emails": [],
+    "gmaps_rating": null,
+    "gmaps_reviews": null,
+    "locality": "Trimbakeshwar",
+    "notes": [],
+    "phones": [],
+    "score": 0.0,
+    "sources": [],
+    "website": null
+   }
+  ],
+  "stored": 2
+ },
+ "pins_within_radius_other_locality": {
+  "action": "merged",
+  "changed": [
+   "business_name",
+   "notes",
+   "sources"
+  ],
+  "records": [
+   {
+    "business_name": "Mokshah Villa Igatpuri",
+    "category": "",
+    "emails": [],
+    "gmaps_rating": null,
+    "gmaps_reviews": null,
+    "locality": "Igatpuri",
+    "notes": [
+     "also listed under locality: Nashik Region (unplaced)"
+    ],
+    "phones": [],
+    "score": 10.24,
+    "sources": [
+     "stayvista",
+     "google_maps"
+    ],
+    "website": null
+   }
+  ],
+  "stored": 1
+ },
+ "shared_phone_dissimilar_names": {
+  "action": "new",
+  "changed": [
+   "*new*"
+  ],
+  "records": [
+   {
+    "business_name": "StayVista at Mokshah",
+    "category": "",
+    "emails": [],
+    "gmaps_rating": null,
+    "gmaps_reviews": null,
+    "locality": "Igatpuri",
+    "notes": [],
+    "phones": [
+     "+918069160000"
+    ],
+    "score": 12.67,
+    "sources": [],
+    "website": null
+   },
+   {
+    "business_name": "StayVista at Casa Del Verde",
+    "category": "",
+    "emails": [],
+    "gmaps_rating": null,
+    "gmaps_reviews": null,
+    "locality": "Igatpuri",
+    "notes": [],
+    "phones": [
+     "+918069160000"
+    ],
+    "score": 12.67,
+    "sources": [],
+    "website": null
+   }
+  ],
+  "stored": 2
+ },
+ "shared_phone_similar_names": {
+  "action": "unchanged",
+  "changed": [],
+  "records": [
+   {
+    "business_name": "Riddhi Siddhi Family Guest House",
+    "category": "",
+    "emails": [],
+    "gmaps_rating": null,
+    "gmaps_reviews": null,
+    "locality": "Nashik City",
+    "notes": [],
+    "phones": [
+     "+917020681214"
+    ],
+    "score": 6.0,
+    "sources": [],
+    "website": null
+   }
+  ],
+  "stored": 1
+ }
+}
