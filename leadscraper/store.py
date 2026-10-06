@@ -2,11 +2,13 @@
 
 Dedup strategy, in priority order:
   1. Shared phone number      -> definitely the same business (strongest signal)
-  2. Identical canonical name -> same business, when phones don't contradict
-  3. Fuzzy name >= threshold within the same locality -> same business
+  2. Same Google Maps place   -> same business, when phones don't contradict
+  3. Identical canonical name -> same business, when phones don't contradict
+  4. Fuzzy name >= threshold within the same locality -> same business
 
-Rule 1 can merge across localities (a caterer listed in both Andheri and
-Dadar is one business). Rules 2 and 3 are deliberately more conservative
+Rules 1 and 2 can merge across localities (a caterer listed in both Andheri
+and Dadar is one business; Maps returns the same place to searches run from
+neighbouring suburbs). Rules 3 and 4 are deliberately more conservative
 because "Royal Banquets" in two suburbs may well be two companies.
 
 A venue run tightens and extends this through `DedupOptions`:
@@ -31,7 +33,7 @@ from rapidfuzz import fuzz
 
 from .errors import is_error_title
 from .models import Lead
-from .normalize import normalize_name
+from .normalize import maps_place_key, normalize_name
 from .scoring import Scorer
 from .venues import TIER_RANK, haversine_km
 
@@ -93,6 +95,11 @@ CREATE TABLE IF NOT EXISTS phone_index (
     lead_id INTEGER NOT NULL REFERENCES leads(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS place_index (
+    place   TEXT PRIMARY KEY,
+    lead_id INTEGER NOT NULL REFERENCES leads(id) ON DELETE CASCADE
+);
+
 CREATE TABLE IF NOT EXISTS seen_urls (
     url        TEXT PRIMARY KEY,
     source     TEXT NOT NULL,
@@ -139,8 +146,20 @@ class LeadStore:
         self._conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self._conn.row_factory = sqlite3.Row
         self._conn.executescript(_SCHEMA)
+        self._backfill_place_index()
         self._conn.commit()
         self.stats = {"new": 0, "merged": 0, "unchanged": 0}
+
+    def _backfill_place_index(self) -> None:
+        """Index Maps places for a store written before the index existed.
+
+        Runs once: an empty index over a non-empty store is the only state
+        this touches. Lowest id wins a contested place, as on a live write.
+        """
+        if self._conn.execute("SELECT 1 FROM place_index LIMIT 1").fetchone():
+            return
+        for row in self._conn.execute("SELECT id, data FROM leads ORDER BY id").fetchall():
+            self._index_place(row["id"], Lead.from_json(row["data"]).gmaps_url)
 
     # --- lookup -----------------------------------------------------------
     #
@@ -216,6 +235,20 @@ class LeadStore:
             return 100.0
         return float(max(fuzz.token_sort_ratio(key_a, key_b), fuzz.token_set_ratio(key_a, key_b)))
 
+    def _find_by_place(self, lead: Lead) -> int | None:
+        """Same Google Maps place, guarded against contradicting phones."""
+        place = maps_place_key(lead.gmaps_url)
+        if not place:
+            return None
+        with self._lock:
+            row = self._conn.execute(
+                "SELECT l.id, l.data FROM place_index p JOIN leads l ON l.id = p.lead_id"
+                " WHERE p.place = ?", (place,)
+            ).fetchone()
+        if row is None or self._phones_contradict(lead, Lead.from_json(row["data"])):
+            return None
+        return row["id"]
+
     def _find_by_name(self, lead: Lead) -> int | None:
         """Exact canonical-name match, guarded against contradicting phones."""
         key = lead.name_key
@@ -281,6 +314,7 @@ class LeadStore:
         with self._lock:
             return (
                 self._find_by_phone(lead.phones, lead)
+                or self._find_by_place(lead)
                 or self._find_by_name(lead)
                 or self._find_by_fuzzy_name(lead)
                 or self._find_by_location(lead)
@@ -310,8 +344,12 @@ class LeadStore:
                 "SELECT data FROM leads WHERE id = ?", (match_id,)
             ).fetchone()
             existing = Lead.from_json(row["data"])
+            # `merge` keeps the first gmaps_url, so a second place that turned
+            # out to be this business is indexed here or it would split later.
+            self._index_place(match_id, lead.gmaps_url)
             changed = existing.merge(lead)
             if not changed:
+                self._conn.commit()
                 self.stats["unchanged"] += 1
                 return match_id, "unchanged", []
             self._update(match_id, existing)
@@ -330,6 +368,7 @@ class LeadStore:
             )
             lead_id = int(cursor.lastrowid)
             self._index_phones(lead_id, lead.phones)
+            self._index_place(lead_id, lead.gmaps_url)
             self._conn.commit()
         return lead_id
 
@@ -343,6 +382,7 @@ class LeadStore:
                  lead.to_json(), time.time(), lead_id),
             )
             self._index_phones(lead_id, lead.phones)
+            self._index_place(lead_id, lead.gmaps_url)
             self._conn.commit()
 
     def _index_phones(self, lead_id: int, phones: Iterable[str]) -> None:
@@ -356,6 +396,17 @@ class LeadStore:
                     "INSERT OR IGNORE INTO phone_index (phone, lead_id) VALUES (?, ?)",
                     (phone, lead_id),
                 )
+
+    def _index_place(self, lead_id: int, gmaps_url: str | None) -> None:
+        place = maps_place_key(gmaps_url)
+        if not place:
+            return
+        with self._lock:
+            # First claim keeps the place, exactly like the phone index.
+            self._conn.execute(
+                "INSERT OR IGNORE INTO place_index (place, lead_id) VALUES (?, ?)",
+                (place, lead_id),
+            )
 
     # --- url memo (resume support) ---------------------------------------
 
@@ -560,10 +611,14 @@ class LeadStore:
             if row is None:
                 return []
             existing = Lead.from_json(row["data"])
-            changed = existing.merge(partial.normalized())
+            partial = partial.normalized()
+            self._index_place(lead_id, partial.gmaps_url)
+            changed = existing.merge(partial)
             if changed:
                 self._update(lead_id, existing)
                 self.stats["merged"] += 1
+            else:
+                self._conn.commit()
             return changed
 
     def update_fields(self, lead_id: int, **fields) -> list[str]:

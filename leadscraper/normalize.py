@@ -274,6 +274,30 @@ def is_vendor_website(url: str | None) -> bool:
     return not any(host == bad or host.endswith("." + bad) for bad in NON_VENDOR_DOMAINS)
 
 
+# A Maps place URL carries the feature id as "!1s0x<cell>:0x<cid>"; share links
+# and older exports carry the same place as "?cid=<decimal>". Both reduce to
+# the cid, so one place compares equal however its URL was written.
+_MAPS_FTID = re.compile(r"!1s0x[0-9a-f]+:(0x[0-9a-f]+)", re.I)
+_MAPS_CID = re.compile(r"[?&]cid=(\d+)")
+
+
+def maps_place_key(url: str | None) -> str | None:
+    """Stable identity of a Google Maps place ("cid:<decimal>"), or None.
+
+    Maps returns the same place for searches run from neighbouring localities,
+    so this is what tells two locality-tagged records they are one business.
+    """
+    if not url:
+        return None
+    match = _MAPS_FTID.search(url)
+    if match:
+        return f"cid:{int(match.group(1), 16)}"
+    match = _MAPS_CID.search(url)
+    if match:
+        return f"cid:{int(match.group(1))}"
+    return None
+
+
 _IG_HANDLE = re.compile(r"(?:instagram\.com|instagr\.am)/(?!p/|reel/|explore/|stories/)([A-Za-z0-9_.]{2,30})", re.I)
 _IG_BARE = re.compile(r"(?:^|\s)@([A-Za-z0-9_.]{3,30})(?=\s|$)")
 _IG_RESERVED = {"about", "legal", "explore", "developer", "accounts", "directory", "privacy", "help"}

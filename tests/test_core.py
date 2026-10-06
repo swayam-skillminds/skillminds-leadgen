@@ -11,7 +11,7 @@ import pytest
 from leadscraper.models import Lead
 from leadscraper.normalize import (
     extract_emails, extract_facebook, extract_instagram, extract_linkedin,
-    extract_phones, extract_whatsapp, is_vendor_website, name_key,
+    extract_phones, extract_whatsapp, is_vendor_website, maps_place_key, name_key,
     normalize_phone, normalize_url, parse_rating, parse_review_count,
 )
 from leadscraper.scoring import Scorer
@@ -169,6 +169,73 @@ def test_same_name_different_phones_stays_separate(store):
                                      phones=["+919820022222"], sources=["google_maps"]))
     assert action == "new"
     assert store.count() == 2
+
+
+# Same place, three spellings: a search-result URL, the feature id alone, a
+# share link. 0xd93628e9d1588bd3 == 15651742539677469651.
+PLACE_URL = ("https://www.google.com/maps/place/Aayoni+Banquet/data=!4m7!3m6"
+             "!1s0x3be7c83806155505:0xd93628e9d1588bd3!8m2!3d19.10!4d72.86?hl=en")
+OTHER_PLACE_URL = ("https://www.google.com/maps/place/Other/data=!4m7!3m6"
+                   "!1s0x3be7c83806155505:0x1111111111111111!8m2!3d19.10!4d72.86")
+
+
+def test_maps_place_key_reads_feature_id_and_cid():
+    assert maps_place_key(PLACE_URL) == "cid:15651742539677469651"
+    assert maps_place_key("https://maps.google.com/?cid=15651742539677469651") \
+        == "cid:15651742539677469651"
+    assert maps_place_key("https://www.google.com/maps/search/caterers") is None
+    assert maps_place_key(None) is None
+
+
+def test_same_maps_place_merges_across_localities(store):
+    """Regression (REBUILD Part 0.6): the Mumbai DB held 25 places stored once per
+    locality searched -- 'Flora Store' six times -- because nothing compared places."""
+    id1, _, _ = store.upsert(Lead(business_name="Flora Store - Flower Bouquets in Andheri",
+                                  locality="Andheri", gmaps_url=PLACE_URL,
+                                  sources=["google_maps"]))
+    id2, action, _ = store.upsert(Lead(business_name="Flora Store - Flower Bouquets in Andheri",
+                                       locality="Powai", gmaps_url=PLACE_URL,
+                                       sources=["google_maps"]))
+    assert action in ("merged", "unchanged") and id1 == id2
+    assert store.count() == 1
+
+
+def test_same_maps_place_with_contradicting_phones_stays_separate(store):
+    store.upsert(Lead(business_name="Aayoni Banquet", locality="Andheri",
+                      phones=["+919820011111"], gmaps_url=PLACE_URL))
+    _, action, _ = store.upsert(Lead(business_name="Aayoni Hall", locality="Powai",
+                                     phones=["+919820022222"], gmaps_url=PLACE_URL))
+    assert action == "new"
+    assert store.count() == 2
+
+
+def test_a_place_learned_through_a_merge_is_indexed(store):
+    """`merge` keeps the first gmaps_url; the second place must still identify the lead."""
+    store.upsert(Lead(business_name="Royal Caterers", locality="Andheri",
+                      phones=["+919820012345"], gmaps_url=PLACE_URL))
+    store.upsert(Lead(business_name="Royal Caterers", locality="Dadar",
+                      phones=["+919820012345"], gmaps_url=OTHER_PLACE_URL))
+    _, action, _ = store.upsert(Lead(business_name="Royal Catering Hall", locality="Worli",
+                                     gmaps_url=OTHER_PLACE_URL))
+    assert action == "merged"
+    assert store.count() == 1
+
+
+def test_place_index_is_backfilled_for_a_store_written_before_it(tmp_path):
+    path = tmp_path / "old.sqlite3"
+    old = LeadStore(path)
+    old.upsert(Lead(business_name="Aayoni Banquet", locality="Andheri", gmaps_url=PLACE_URL))
+    old._conn.execute("DELETE FROM place_index")       # as written by the old code
+    old.close()
+
+    reopened = LeadStore(path)
+    try:
+        _, action, _ = reopened.upsert(Lead(business_name="Aayoni Banquet", locality="Powai",
+                                            gmaps_url=PLACE_URL))
+        assert action in ("merged", "unchanged")
+        assert reopened.count() == 1
+    finally:
+        reopened.close()
 
 
 def test_upsert_rejects_nameless_lead(store):
