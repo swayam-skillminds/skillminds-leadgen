@@ -26,6 +26,7 @@ python -m pytest tests/test_pipeline.py::test_name -q         # one test
 python -m pytest -q -m "not characterisation" --deselect tests/test_engine.py   # fast loop (~6 s)
 LEADSCRAPER_TEST_POSTGRES_URL=postgresql+psycopg://USER@HOST:PORT/THROWAWAY_DB \
   python -m pytest -m postgres -q                             # server mode, incl. both real stores (drops app tables!)
+LEADSCRAPER_TEST_ENGINE_DB_URL=postgresql+psycopg://…/THROWAWAY_DB python -m pytest tests/test_engine.py -q   # engine suite on Postgres
 
 # Characterisation baseline (see below)
 python tests/characterisation/freeze.py                       # freeze DB copies + write real-data snapshots

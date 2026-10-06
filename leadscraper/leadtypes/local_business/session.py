@@ -91,6 +91,13 @@ class LocalBusinessSession(LeadTypeSession):
         """After each unit, on the engine's dispatcher thread: flush when due."""
         self.pipeline._maybe_flush()
 
+    def ai_spend(self) -> dict[str, Any] | None:
+        ai = self.pipeline.ai
+        if not ai.enabled:
+            return None
+        cap = None if ai.max_cost == float("inf") else ai.max_cost
+        return {"cost_usd": round(ai.stats.cost_usd, 4), "cap_usd": cap, "calls": ai.stats.calls}
+
     def post_discovery(self, control: Any) -> None:
         self.pipeline.post_discovery()
 

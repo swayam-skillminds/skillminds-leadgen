@@ -184,6 +184,10 @@ class LeadTypeSession(ABC):
     def checkpoint(self) -> None:
         """After every finished unit, on the engine's dispatcher thread (flush output)."""
 
+    def ai_spend(self) -> dict[str, Any] | None:
+        """{cost_usd, cap_usd, calls} spent on AI so far, when this lead type uses AI."""
+        return None
+
     def post_discovery(self, control: Any) -> None:
         """Enrichment, AI passes. Must watch ``control.stop_requested`` and not raise."""
 

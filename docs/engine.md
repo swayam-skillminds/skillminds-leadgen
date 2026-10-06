@@ -173,7 +173,7 @@ Replay with `read_events(engine, run_id, after=seq)`; the CLI's view is
 | `progress` | units done/total/skipped, new, merged, elapsed, ETA p50/p90, budget left |
 | `activity` | phase, text ("website enrichment: 40/310") |
 | `failure` | source, reason code, detail, URL |
-| `ai_spend` | cost, cap, calls (reserved; Phase 5 emits it from the usage ledger) |
+| `ai_spend` | cost so far, cap, calls (after each lead type's AI passes; Phase 5 adds the per-call ledger) |
 | `sleep_detected` | gap seconds |
 | `run_finished` | final status, summary (skipped units included), error |
 

@@ -424,6 +424,7 @@ class _Run:
                         log.exception("lead type %s failed after discovery", key)
                         failure_sink({"source": key, "reason": "post_discovery_failed",
                                       "detail": repr(exc)})
+                    self._publish_ai_spend(session)
         except KeyboardInterrupt:
             # The second Ctrl-C: stop now. The units in flight stay "running"
             # in the checkpoint and run again on resume.
@@ -619,6 +620,14 @@ class _Run:
         checkpoint = getattr(planned.session, "checkpoint", None)
         if callable(checkpoint):
             checkpoint()                               # periodic flush, on this thread
+
+    def _publish_ai_spend(self, session) -> None:
+        try:
+            spend = session.ai_spend()
+        except Exception:
+            spend = None
+        if spend:
+            self.bus.publish(ev.AISpend(**spend))
 
     def _skipped(self, planned: Planned, reason: str) -> None:
         self.units_skipped += 1

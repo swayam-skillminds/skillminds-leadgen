@@ -1062,3 +1062,27 @@ def test_resume_reruns_units_that_were_cut_or_skipped(synthetic, tmp_path):
     engine.dispose()
     counts = executions(tmp_path, "rerun")
     assert counts[done[0]["unit_key"]] == 2 and len(counts) == 6
+
+
+def test_ai_spend_is_reported_after_the_ai_passes(clocked_sources, monkeypatch):
+    from leadscraper.ai import AIAssistant
+    from leadscraper.leadtypes.local_business.session import LocalBusinessSession
+
+    registry_ = clocked_sources({"google_maps": clocked_source("google_maps", 10, 1,
+                                                               "www.google.com")})
+    config = local_business_config("lb-ai", registry_)
+    config.set("ai.enabled", True)
+    seen: list = []
+    original = LocalBusinessSession.__init__
+
+    def with_spend(self, context):
+        original(self, context)
+        self.pipeline.ai = AIAssistant(config, self.pipeline.failures, backend=None)
+        self.pipeline.ai.enabled = True
+        self.pipeline.ai.stats.cost_usd, self.pipeline.ai.stats.calls = 0.0123, 2
+
+    monkeypatch.setattr(LocalBusinessSession, "__init__", with_spend)
+    execute(RunRequest(config=config, install_signals=False, clock=CLOCK,
+                       discovery_workers=1, sinks=[seen.append]))
+    spend = [e for e in seen if e.type == "ai_spend"]
+    assert spend and spend[0].cost_usd == 0.0123 and spend[0].calls == 2
