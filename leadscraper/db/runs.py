@@ -65,15 +65,52 @@ def start_run(engine: Engine, workspace_id: int, project_id: int, *, kind: str =
             attempts=1 if running else 0)).inserted_primary_key[0])
 
 
+#: Lost: the run is no longer held by the executor asking.
+LOST = "lost"
+
+
 def finish_run(engine: Engine, run_id: int, *, status: str = "completed",
-               stats: dict[str, Any] | None = None, error: str = "") -> None:
-    values: dict[str, Any] = {"status": status, "stats": stats or {}, "error": error[:5000]}
-    if status in TERMINAL:
-        values["finished_at"] = utcnow()
-    if status not in ACTIVE:
-        values["worker_id"] = None
+               stats: dict[str, Any] | None = None, error: str = "",
+               worker_id: str | None = None, **extra: Any) -> str | None:
+    """Record how a run ended; returns the status written, or None if not written.
+
+    With ``worker_id`` the write is conditional: only while the run is still
+    held by that executor (another may have recovered it after a stall). A
+    cancel recorded meanwhile (``stopping``) wins over a pause or a requeue.
+    """
     with engine.begin() as conn:
-        conn.execute(update(RUNS).where(RUNS.c.id == run_id).values(**values))
+        if worker_id is not None:
+            row = conn.execute(select(RUNS.c.status, RUNS.c.worker_id)
+                               .where(RUNS.c.id == run_id)).first()
+            if row is None or row.worker_id != worker_id:
+                return None
+            if row.status == "stopping" and status in ("paused", "queued", "completed"):
+                status = "cancelled"
+        values: dict[str, Any] = {"status": status, "stats": stats or {},
+                                  "error": error[:5000], **extra}
+        if status in TERMINAL:
+            values["finished_at"] = utcnow()
+        if status not in ACTIVE:
+            values["worker_id"] = None
+        query = update(RUNS).where(RUNS.c.id == run_id)
+        if worker_id is not None:
+            query = query.where(RUNS.c.worker_id == worker_id)
+        if conn.execute(query.values(**values)).rowcount != 1:
+            return None
+    return status
+
+
+def settle_run(engine: Engine, run_id: int, *, from_status: str, to_status: str,
+               stale_before: datetime, error: str = "") -> bool:
+    """Move an orphaned run on, only if it is still in `from_status` and still stale."""
+    values: dict[str, Any] = {"status": to_status, "worker_id": None, "error": error[:5000]}
+    if to_status in TERMINAL:
+        values["finished_at"] = utcnow()
+    with engine.begin() as conn:
+        return conn.execute(update(RUNS).where(
+            RUNS.c.id == run_id, RUNS.c.status == from_status,
+            or_(RUNS.c.heartbeat_at.is_(None), RUNS.c.heartbeat_at < stale_before))
+            .values(**values)).rowcount == 1
 
 
 def update_run(engine: Engine, run_id: int, **values: Any) -> None:
@@ -147,11 +184,18 @@ def orphaned_runs(engine: Engine, *, stale_seconds: float,
     return out
 
 
-def heartbeat(engine: Engine, run_id: int, *, active_seconds: float) -> str | None:
-    """Record that the run is alive; returns its status (a pause/cancel request shows here)."""
+def heartbeat(engine: Engine, run_id: int, *, active_seconds: float,
+              worker_id: str | None = None) -> str | None:
+    """Record that the run is alive; returns its status (a pause/cancel request
+    shows here), or ``LOST`` when `worker_id` no longer holds it."""
+    query = update(RUNS).where(RUNS.c.id == run_id)
+    if worker_id is not None:
+        query = query.where(RUNS.c.worker_id == worker_id)
     with engine.begin() as conn:
-        conn.execute(update(RUNS).where(RUNS.c.id == run_id).values(
-            heartbeat_at=utcnow(), active_seconds=float(active_seconds)))
+        updated = conn.execute(query.values(heartbeat_at=utcnow(),
+                                            active_seconds=float(active_seconds))).rowcount
+        if worker_id is not None and updated != 1:
+            return LOST
         row = conn.execute(select(RUNS.c.status).where(RUNS.c.id == run_id)).first()
     return row[0] if row else None
 

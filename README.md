@@ -92,11 +92,17 @@ the path that actually works.
 ## Usage
 
 ```bash
-# See the plan and a time estimate without making any requests
+# See the plan and a time estimate (p50-p90) without making any requests
 python run.py --dry-run
 
 # Start small — one locality, one category, one source
 python run.py --locality Andheri --category Caterers --source google_maps
+
+# The best leads obtainable in a time budget (here 15 minutes, a fast skim)
+python run.py --time-budget 15 --depth quick
+
+# A ~2-minute sample (one area x one category x top sources) + full-run estimate
+python run.py --preview
 
 # A full run (long: budget 12+ hours at the default polite delays)
 python run.py
@@ -115,8 +121,58 @@ Useful flags: `--no-sheets`, `--no-headless` (watch the browser), `--fast`
 (halves every delay — raises your odds of being blocked), `-v` for debug logs.
 
 Run it repeatedly. The project's records persist between runs, so a second run
-merges into the first rather than duplicating, and `Ctrl-C` flushes everything
-gathered so far before exiting.
+merges into the first rather than duplicating, and enrichment skips leads it
+already went through (`--force-enrich` redoes them).
+
+`Ctrl-C` **pauses**: the work in flight finishes, everything is flushed, and the
+run can be resumed from where it stopped (`python run.py --resume <run id>`).
+A second `Ctrl-C` stops at once; at most the units in flight are redone on resume.
+
+### Time budget, depth, estimates
+
+- `--time-budget MINUTES` returns the best leads obtainable in that window, not
+  an arbitrary prefix: units with the best expected new-leads-per-second go
+  first, a unit that can't finish in the time left is never started, and the
+  last 90 s are reserved for flushing, scoring and export. The end-of-run report
+  lists every skipped unit and why.
+- `--depth quick | balanced | deep` scales per-unit thoroughness (results per
+  query, scroll rounds, pages; quick also skips enrichment and AI name polish;
+  deep adds Instagram). `balanced` is the config's own settings.
+- Estimates (`--dry-run`, `python -m leadscraper estimate --config …`) give
+  units per source, a p50–p90 range, what fits the budget and what would be
+  skipped, and the AI cost. They start from built-in priors and learn from
+  every unit you run, so they sharpen with use.
+- Units run in parallel across hosts (`--workers`, default 3), never two on the
+  same host; enrichment fetches up to 8 vendor sites at once
+  (`runtime.enrich_workers`).
+
+### Background runs: the worker
+
+```bash
+python run.py --config my-run.yaml --queue          # queue it
+python -m leadscraper worker                        # executes queued runs (leave it running)
+python -m leadscraper runs list                     # history and status
+python -m leadscraper runs events 42 --follow       # live progress (ETA, units, failures)
+python -m leadscraper runs pause 42                 # graceful; then: runs resume 42
+python -m leadscraper runs cancel 42
+python -m leadscraper worker stop                   # graceful; works on every OS
+```
+
+A worker that is killed (or a machine that reboots) loses at most the units
+that were in flight: restart the worker and it resumes the run from its last
+checkpoint.
+
+While a run is active the machine is kept awake (`wakepy`; set
+`LEADSCRAPER_KEEP_AWAKE=0` or `worker --no-keep-awake` to turn it off). The
+honest limits:
+
+- A sleeping machine runs nothing. The lock only prevents *idle* sleep.
+- On macOS, closing the lid on battery forces sleep regardless; so does
+  choosing Sleep from the menu, on every OS.
+- If the machine sleeps anyway, the run notices on wake, re-validates its
+  browsers and connections, doesn't count the gap against its time budget,
+  and carries on.
+- For truly unattended runs use server mode (an always-on machine; Phase 3).
 
 ### Projects, presets and run configs
 

@@ -950,3 +950,114 @@ def test_run_dry_run_prints_the_estimate(capsys):
                      "quick", "-q"]) == 0
     out = capsys.readouterr().out
     assert "DRY RUN" in out and "Time budget  : 30 min" in out and "Full run" in out
+
+
+# --- regressions from the Phase 2 review --------------------------------------------------
+
+def test_a_cancel_overrides_an_earlier_pause_or_shutdown():
+    control = RunControl()
+    assert control.request("pause")
+    assert not control.request("pause")
+    assert control.request("cancel")                    # upgrades the pause
+    assert control.final_status() == "cancelled"
+    assert not control.request("shutdown")              # nothing overrides a cancel
+    with control._lock:                                 # a signal handler on the same thread
+        assert not control.request("pause")             # re-entrant: no deadlock
+
+
+def test_a_cancel_recorded_while_the_run_finishes_wins(synthetic, tmp_path):
+    def cancel_then_pause(session, unit, index):
+        if index == 2:
+            engine = session.store.engine
+            request_control(engine, session.context.run_id, "pause")
+            session.control.request("pause")             # the heartbeat saw the pause...
+            update_run(engine, session.context.run_id, status="stopping")   # ...then a cancel
+    HOOKS["after_unit"] = cancel_then_pause
+    outcome = execute(RunRequest(config=lifecycle_config("late-cancel", tmp_path),
+                                 install_signals=False, discovery_workers=1,
+                                 heartbeat_seconds=60))
+    assert outcome.status == "cancelled"
+    engine = app_engine()
+    assert get_run(engine, outcome.run_id)["status"] == "cancelled"
+    engine.dispose()
+
+
+def test_resuming_a_run_a_live_executor_holds_is_refused(synthetic, tmp_path):
+    from leadscraper.engine.runner import RunBusyError
+
+    HOOKS["after_unit"] = request_after("pause", 1)
+    outcome = execute(RunRequest(config=lifecycle_config("busy", tmp_path, count=3),
+                                 install_signals=False, discovery_workers=1))
+    engine = app_engine()
+    from datetime import datetime, timezone
+    update_run(engine, outcome.run_id, status="running", worker_id="worker:alive",
+               heartbeat_at=datetime.now(timezone.utc))
+    HOOKS.clear()
+    with pytest.raises(RunBusyError):
+        execute(request_from_row(get_run(engine, outcome.run_id)))
+    assert get_run(engine, outcome.run_id)["worker_id"] == "worker:alive"
+    engine.dispose()
+
+
+def test_an_executor_that_lost_its_run_stops_without_writing(synthetic, tmp_path):
+    def taken_over(session, unit, index):
+        if index == 2:
+            update_run(session.store.engine, session.context.run_id, worker_id="worker:other")
+            time.sleep(0.2)                                # the heartbeat notices
+    HOOKS["after_unit"] = taken_over
+    outcome = execute(RunRequest(config=lifecycle_config("taken", tmp_path),
+                                 install_signals=False, discovery_workers=1))
+    assert outcome.status == "lost"
+    engine = app_engine()
+    row = get_run(engine, outcome.run_id)
+    engine.dispose()
+    assert row["status"] == "running" and row["worker_id"] == "worker:other"
+
+
+def test_an_engine_error_fails_the_run_instead_of_completing_it(synthetic, monkeypatch):
+    from leadscraper.engine import runner as runner_mod
+
+    def broken(*args, **kwargs):
+        raise RuntimeError("database went away")
+    monkeypatch.setattr(runner_mod, "plan_units", broken)
+    outcome = execute(RunRequest(config=compiled(synthetic_config("broken-db", units=units(2))),
+                                 install_signals=False, clock=FakeClock()))
+    assert outcome.status == "failed" and "database went away" in outcome.error
+    engine = app_engine()
+    assert get_run(engine, outcome.run_id)["status"] == "failed"
+    engine.dispose()
+
+
+def test_a_hung_unit_is_abandoned_after_the_grace_period():
+    release = threading.Event()
+    stop = threading.Event()
+
+    def work(item):
+        stop.set()
+        release.wait(10)                                    # hangs until released
+        return item
+
+    queue = HostQueue([("a", 0), ("b", 0)], lambda item: item[0])
+    started = time.monotonic()
+    abandoned = run_across_hosts(queue.next, queue.hosts_of, work,
+                                 lambda *_: None, workers=1, should_stop=stop.is_set,
+                                 grace_seconds=0.2, poll_seconds=0.05)
+    release.set()
+    assert abandoned == [("a", 0)]
+    assert time.monotonic() - started < 2
+
+
+def test_resume_reruns_units_that_were_cut_or_skipped(synthetic, tmp_path):
+    HOOKS["after_unit"] = request_after("pause", 3)
+    paused = execute(RunRequest(config=lifecycle_config("rerun", tmp_path, count=6),
+                                install_signals=False, discovery_workers=1))
+    engine = app_engine()
+    done = [r for r in unit_rows(engine, paused.run_id) if r["status"] == "done"]
+    from leadscraper.db.runs import mark_unit
+    mark_unit(engine, paused.run_id, done[0]["unit_key"], status="partial")
+    HOOKS.clear()
+    request_control(engine, paused.run_id, "resume")
+    execute(request_from_row(get_run(engine, paused.run_id)))
+    engine.dispose()
+    counts = executions(tmp_path, "rerun")
+    assert counts[done[0]["unit_key"]] == 2 and len(counts) == 6

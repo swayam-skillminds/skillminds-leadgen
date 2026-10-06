@@ -238,7 +238,7 @@ def resume(args: argparse.Namespace) -> int:
     """`--resume RUN_ID`: continue a stored run in this process."""
     from ..db.engine import open_database
     from ..db.runs import get_run
-    from ..engine.runner import execute, request_from_row
+    from ..engine.runner import RunBusyError, execute, request_from_row
     from ..paths import default_db_url
 
     engine = open_database(default_db_url())
@@ -253,16 +253,16 @@ def resume(args: argparse.Namespace) -> int:
         print(f"error: run {args.resume} is {row['status']}; only paused, interrupted or "
               "failed runs resume", file=sys.stderr)
         return 2
-    if row["status"] in ("running", "pausing", "stopping") and \
-            not str(row.get("worker_id") or "").startswith("cli:"):
-        print(f"error: run {args.resume} is {row['status']} on {row.get('worker_id')}",
-              file=sys.stderr)
-        return 2
     request = request_from_row(row, install_signals=True)
     setup_logging(request.config, verbose=args.verbose, quiet=args.quiet)
     print(f"Resuming run {args.resume} ({row['status']}) of project "
           f"'{request.config.get('project')}' from its checkpoint")
-    outcome = execute(request)
+    try:
+        # The claim is atomic: a run another live executor holds is refused.
+        outcome = execute(request)
+    except RunBusyError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
     report_outcome(outcome)
     return 0 if outcome.status in ("completed", "paused") else 1
 

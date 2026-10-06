@@ -87,6 +87,10 @@ class LocalBusinessSession(LeadTypeSession):
         return UnitOutcome(found=result.found, new=result.new, merged=result.merged,
                            status=result.status, error=result.error)
 
+    def checkpoint(self) -> None:
+        """After each unit, on the engine's dispatcher thread: flush when due."""
+        self.pipeline._maybe_flush()
+
     def post_discovery(self, control: Any) -> None:
         self.pipeline.post_discovery()
 

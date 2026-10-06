@@ -452,7 +452,10 @@ class Pipeline:
             self._note_unit(source, locality, category, started, result.found, result.new,
                             result.status, result.error)
         log.info("[%s] %s -> %d raw leads", source.name, where, result.found)
-        self._maybe_flush()
+        if not self._engine_driven:
+            # Driven by the engine, this runs on a unit thread; the engine
+            # flushes from its dispatcher instead (session.checkpoint()).
+            self._maybe_flush()
         return result
 
     def _note_unit(self, source, locality, category, started: float, found: int, new: int,
@@ -911,7 +914,8 @@ class Pipeline:
 
     def _flush(self) -> None:
         """Push the current sorted table to CSV and Sheets."""
-        self._since_flush = 0
+        with self._stats_lock:
+            self._since_flush = 0
         leads = self.store.sorted_leads()
         try:
             write_csv(leads, self.config.path_for("csv_export", "data/leads.csv"), self.profile,

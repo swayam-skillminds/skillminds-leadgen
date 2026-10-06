@@ -49,18 +49,26 @@ class RunControl:
         self._discounted = 0.0
         self._request: str | None = None
         self._deadline_hit = False
-        self._lock = threading.Lock()
+        # Re-entrant: a signal handler runs on the main thread, possibly while
+        # that thread is already inside this lock.
+        self._lock = threading.RLock()
         self._wake = threading.Event()
         self._listeners: list[Callable[[str], None]] = []
 
     # --- requests -----------------------------------------------------------------
 
     def request(self, what: str) -> bool:
-        """Ask the run to stop gracefully. The first request wins; True if it was new."""
+        """Ask the run to stop gracefully; True if this changed the request.
+
+        The first request wins, except that a cancel overrides an earlier
+        pause or shutdown: the user's "stop for good" must not end as a
+        resumable run.
+        """
         if what not in STOP_REQUESTS:
             raise ValueError(f"unknown stop request {what!r}")
         with self._lock:
-            if self._request is not None:
+            if self._request is not None and not (what == "cancel"
+                                                  and self._request != "cancel"):
                 return False
             self._request = what
             listeners = list(self._listeners)

@@ -30,13 +30,13 @@ import signal
 import socket
 import threading
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Any, Callable
 
 from ..config import Config
 from ..db.runs import (
-    finish_run, get_run, heartbeat, mark_unit, plan_units, record_failure, start_run,
-    unit_rows, update_run,
+    ACTIVE, LOST, claim_run, finish_run, get_run, heartbeat, mark_unit, plan_units,
+    record_failure, start_run, unit_rows, update_run,
 )
 from ..db.store import LeadStore, store_target
 from ..leadtypes import registry
@@ -57,6 +57,14 @@ DEFAULT_DISCOVERY_WORKERS = 3
 DEFAULT_TAIL_SECONDS = 90.0
 DEFAULT_ENRICHMENT_SHARE = 0.3
 DEFAULT_HEARTBEAT_SECONDS = 5.0
+#: A run whose heartbeat is older than this may be taken over (resume).
+DEFAULT_STALE_SECONDS = 60.0
+#: How long a stop waits for in-flight units before abandoning them.
+DEFAULT_STOP_GRACE_SECONDS = 120.0
+
+
+class RunBusyError(RuntimeError):
+    """The run is held by another live executor."""
 
 
 @dataclass
@@ -232,6 +240,9 @@ class _Run:
         self._hb_thread: threading.Thread | None = None
         self._old_handlers: dict[int, Any] = {}
         self._interrupts = 0
+        self.executor: str | None = None
+        #: Another executor took the run over (we stalled): write nothing more.
+        self.lost = False
         self.units_total = 0
         self.units_done = 0
         self.units_skipped = 0
@@ -277,19 +288,15 @@ class _Run:
             log.warning("Config: %s", note)
 
         executor = request.executor or default_executor()
+        self.executor = executor
         run_id, used_seconds, row = None, 0.0, None
         if not request.dry_run:
             if request.run_id is not None:
-                row = get_run(engine, request.run_id)
-                if row is None:
-                    store.close()
-                    raise ValueError(f"no run {request.run_id}")
+                row = self._claim(engine, request.run_id, executor)
                 run_id = int(row["id"])
                 used_seconds = float(row.get("active_seconds") or 0.0)
-                claimed_here = row.get("worker_id") == executor and row["status"] == "running"
-                update_run(engine, run_id, status="running", worker_id=executor,
-                           heartbeat_at=datetime.now(timezone.utc), finished_at=None,
-                           attempts=(row.get("attempts") or 0) + (0 if claimed_here else 1),
+                update_run(engine, run_id, finished_at=None,
+                           heartbeat_at=datetime.now(timezone.utc),
                            started_at=row.get("started_at") or datetime.now(timezone.utc))
             else:
                 run_id = start_run(engine, workspace_id, project_id, kind=request.kind,
@@ -306,8 +313,10 @@ class _Run:
             request.on_control(control)
 
         bus = ev.EventBus(run_id, start_seq=ev.last_seq(engine, run_id) if run_id else 0)
+        self.event_writer = None
         if run_id is not None:
-            bus.subscribe(ev.DbEventSink(engine, workspace_id))
+            self.event_writer = ev.DbEventSink(engine, workspace_id)
+            bus.subscribe(self.event_writer)
         for sink in request.sinks:
             bus.subscribe(sink)
         self.bus = bus
@@ -421,6 +430,12 @@ class _Run:
             log.warning("stopped immediately -- flushing what we have; "
                         "`leadscraper runs resume %s` continues it", run_id)
             status, error = "paused", "interrupted (hard stop); in-flight units re-run on resume"
+        except Exception as exc:
+            # The engine itself failed (the database went away, a bug): the run
+            # is recorded as failed -- never "completed" with units pending --
+            # and stays resumable from its checkpoint.
+            log.exception("run %s failed in the engine", run_id)
+            status, error = "failed", f"engine error: {exc!r}"
         finally:
             try:
                 status, error = self._finish(status, error)
@@ -429,9 +444,30 @@ class _Run:
                 self._restore_signals()
                 if holding:
                     keep_awake.release()
+                if self.event_writer is not None:
+                    self.event_writer.close()
                 store.close()
         outcome.status, outcome.error = status, error
         return outcome
+
+    def _claim(self, engine, run_id: int, executor: str) -> dict:
+        """Take the run for this executor, atomically, or refuse."""
+        row = get_run(engine, run_id)
+        if row is None:
+            self.store.close()
+            raise ValueError(f"no run {run_id}")
+        if row["status"] == "running" and row.get("worker_id") == executor:
+            return row                                  # a worker already claimed it
+        stale = datetime.now(timezone.utc) - timedelta(
+            seconds=_number(self.config, "runtime.stale_seconds", DEFAULT_STALE_SECONDS))
+        if not (claim_run(engine, run_id, executor, from_statuses=("queued", "paused", "failed"))
+                or claim_run(engine, run_id, executor, from_statuses=ACTIVE,
+                             stale_before=stale)):
+            self.store.close()
+            raise RunBusyError(f"run {run_id} is {row['status']} on {row.get('worker_id')}; "
+                               "it can only be resumed once that stops (or its heartbeat "
+                               "goes stale)")
+        return get_run(engine, run_id) or row
 
     # --- planning -----------------------------------------------------------------------
 
@@ -458,13 +494,20 @@ class _Run:
             return planned, []
 
         existing = {r["unit_key"]: r for r in unit_rows(self.engine, run_id) if r["unit_key"]}
+        # Only finished units are skipped on resume. Units cut mid-way
+        # (partial), skipped for a budget that has since been resumed, or in
+        # flight when the executor died (running) run again.
         done_rows = [r for k, r in existing.items()
-                     if r["status"] in ("done", "failed", "partial", "skipped")
-                     and k in self.by_key]
+                     if r["status"] in ("done", "failed") and k in self.by_key]
         lost = [k for k, r in existing.items() if r["status"] == "running"]
         if lost:
             log.warning("resuming: %d unit(s) were in flight when the run stopped and run "
                         "again: %s", len(lost), ", ".join(lost[:5]))
+        rerun = [k for k, r in existing.items() if r["status"] in ("partial", "skipped")]
+        if rerun:
+            update_units = [k for k in rerun if k in self.by_key]
+            for key in update_units:
+                mark_unit(self.engine, run_id, key, status="pending", skip_reason="")
         finished = {r["unit_key"] for r in done_rows}
         costs = CostModel(UnitStatsReader(self.engine, workspace_id), self._prior,
                           self._stats_key)
@@ -506,8 +549,11 @@ class _Run:
             item = scheduler.next_ready(busy)
             if isinstance(item, Planned):
                 cost = item.cost
-                mark_unit(engine, run_id, item.key, status="running",
-                          started_at=datetime.now(timezone.utc))
+                try:
+                    mark_unit(engine, run_id, item.key, status="running",
+                              started_at=datetime.now(timezone.utc))
+                except Exception as exc:  # a lost checkpoint write costs a re-run, no more
+                    log.warning("could not checkpoint the start of %s: %s", item.key, exc)
                 bus.publish(ev.UnitStarted(unit=item.key, lead_type=item.unit.lead_type,
                                            source=item.unit.source, area=item.unit.area,
                                            category=item.unit.category,
@@ -525,9 +571,23 @@ class _Run:
                 outcome = UnitOutcome(status="failed", error=repr(exc))
             return outcome, self.clock.now() - started
 
-        run_across_hosts(next_item, lambda p: p.hosts, work, self._unit_done,
-                         workers=workers, should_stop=lambda: self.control.stop_requested,
-                         thread_name="unit")
+        def done(planned: Planned, result, error) -> None:
+            try:
+                self._unit_done(planned, result, error)
+            except Exception as exc:
+                log.exception("bookkeeping for unit %s failed (the run continues): %s",
+                              planned.key, exc)
+
+        control = self.control
+        grace = _number(self.config, "runtime.stop_grace_seconds", DEFAULT_STOP_GRACE_SECONDS)
+        if control.budgeted:
+            grace = min(grace, control.tail_seconds / 2)
+        abandoned = run_across_hosts(next_item, lambda p: p.hosts, work, done,
+                                     workers=workers, should_stop=lambda: control.stop_requested,
+                                     thread_name="unit", grace_seconds=grace)
+        for planned in abandoned:
+            log.warning("unit %s did not finish within %.0fs of the stop; abandoned (it runs "
+                        "again on resume)", planned.key, grace)
 
     def _unit_done(self, planned: Planned, result, error) -> None:
         if error is not None or result is None:
@@ -556,6 +616,9 @@ class _Run:
                                          merged=outcome.merged, seconds=round(seconds, 2),
                                          error=(outcome.error or "")[:300]))
         self._progress()
+        checkpoint = getattr(planned.session, "checkpoint", None)
+        if callable(checkpoint):
+            checkpoint()                               # periodic flush, on this thread
 
     def _skipped(self, planned: Planned, reason: str) -> None:
         self.units_skipped += 1
@@ -588,7 +651,11 @@ class _Run:
         if control is not None and status == "completed":
             status = control.final_status("completed")
         complete = status == "completed"
-        if run_id is not None and self.sessions:
+        if control is not None:
+            # Measured before finalising: rescoring and export are not billed
+            # to the budget again every time a run is paused and resumed.
+            outcome.elapsed_seconds = round(control.elapsed(), 1)
+        if run_id is not None and self.sessions and not self.lost:
             update_run(self.engine, run_id,
                        checkpoint={"phase": "finalise" if complete else "discovery"})
         for key, session in self.sessions.items():
@@ -620,17 +687,29 @@ class _Run:
                 and status == "completed":
             status = "failed"
             error = "; ".join(f"{k}: {r.error}" for k, r in outcome.results.items())
-        if control is not None:
-            outcome.elapsed_seconds = round(control.elapsed(), 1)
         if run_id is not None and not self.request.dry_run:
+            if self.lost:
+                log.warning("run %s was taken over by another executor; this one stops "
+                            "without recording an outcome", run_id)
+                return "lost", "taken over by another executor"
             summary = self._summary(status)
             stats = {key: {"new": r.new, "merged": r.merged, "units_done": r.units_done,
                            "units_planned": r.units_planned, "failed": r.failed,
                            "error": r.error, **r.stats}
                      for key, r in outcome.results.items()}
             stats["engine"] = summary
-            update_run(self.engine, run_id, active_seconds=outcome.elapsed_seconds)
-            finish_run(self.engine, run_id, status=status, error=error, stats=stats)
+            written = finish_run(self.engine, run_id, status=status, error=error, stats=stats,
+                                 worker_id=self.executor,
+                                 active_seconds=outcome.elapsed_seconds)
+            if written is None:
+                log.warning("run %s is no longer held by %s; its outcome was not recorded",
+                            run_id, self.executor)
+                return "lost", "taken over by another executor"
+            if written != status:
+                log.warning("run %s: %s requested while it was finishing; ending as %s",
+                            run_id, "cancel", written)
+                status = written
+                summary["status"] = status
             self.bus.publish(ev.RunFinished(status=status, summary=summary, error=error[:500]))
             self.bus.publish(ev.RunState(status=status, reason=error[:200]))
         return status, error
@@ -668,10 +747,17 @@ class _Run:
         def beat() -> None:
             while not self._hb_stop.wait(interval):
                 try:
-                    status = heartbeat(self.engine, run_id, active_seconds=self.control.elapsed())
+                    status = heartbeat(self.engine, run_id, active_seconds=self.control.elapsed(),
+                                       worker_id=self.executor)
                 except Exception as exc:
                     log.debug("heartbeat failed (ignored): %s", exc)
                     continue
+                if status == LOST:
+                    log.error("run %s was taken over by another executor (this one stalled); "
+                              "stopping without writing", run_id)
+                    self.lost = True
+                    self.control.request("shutdown")
+                    return
                 if status == "pausing":
                     if self.control.request("pause"):
                         log.warning("pause requested: finishing in-flight work, then flushing")

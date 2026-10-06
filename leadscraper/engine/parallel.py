@@ -8,9 +8,9 @@ unit and a Justdial unit run side by side.
 
 The dispatcher runs in the calling thread and owns all bookkeeping (``on_done``
 is always called there), so checkpoints and events stay in order. Work runs
-in daemon threads: a hard Ctrl-C ends the process without waiting for them.
-With one worker everything runs inline, in plan order -- exactly the old
-sequential behaviour.
+in daemon threads: a hard Ctrl-C ends the process without waiting for them,
+and a unit that hangs past a stop's grace period is abandoned. With one
+worker, items run one at a time in order -- the old sequential behaviour.
 """
 
 from __future__ import annotations
@@ -39,25 +39,24 @@ def run_across_hosts(next_item: NextItem, hosts_of: Callable[[Any], Iterable[str
                      work: Callable[[Any], Any],
                      on_done: Callable[[Any, Any, BaseException | None], None], *,
                      workers: int = 1, should_stop: Callable[[], bool] = lambda: False,
-                     poll_seconds: float = 0.25, thread_name: str = "work") -> None:
+                     poll_seconds: float = 0.25, thread_name: str = "work",
+                     grace_seconds: float | None = None) -> list[Any]:
     """Run items until ``next_item`` is exhausted or ``should_stop()``.
 
     ``next_item(busy_hosts)`` returns an item whose hosts are all free, None
     when nothing can start until a host frees up, or ``EXHAUSTED``. A stop
-    lets work in flight finish (graceful); nothing new starts.
-    """
-    if workers <= 1:
-        while not should_stop():
-            item = next_item(set())
-            if item is EXHAUSTED or item is None:
-                return
-            try:
-                result, error = work(item), None
-            except Exception as exc:  # work() is expected to contain its own failures
-                result, error = None, exc
-            on_done(item, result, error)
-        return
+    lets work in flight finish (graceful); nothing new starts. If in-flight
+    work is still running ``grace_seconds`` after the stop, it is abandoned
+    (its daemon thread is left behind) and returned, so a hung page load can't
+    hold a pause, a cancel or the deadline hostage.
 
+    Work always runs on worker threads -- one thread with ``workers=1``, so
+    items still run one at a time, in order -- which is what makes a hung
+    item abandonable at all.
+    """
+    import time
+
+    workers = max(1, workers)
     tasks: queue.Queue = queue.Queue()
     results: queue.Queue = queue.Queue()
 
@@ -77,12 +76,12 @@ def run_across_hosts(next_item: NextItem, hosts_of: Callable[[Any], Iterable[str
         thread.start()
 
     busy: set[str] = set()
-    held: dict[int, frozenset[str]] = {}
-    in_flight = 0
+    held: dict[int, tuple[Any, frozenset[str]]] = {}
     exhausted = False
+    stopped_at: float | None = None
     try:
         while True:
-            while not exhausted and in_flight < workers and not should_stop():
+            while not exhausted and len(held) < workers and not should_stop():
                 item = next_item(set(busy))
                 if item is EXHAUSTED:
                     exhausted = True
@@ -91,17 +90,24 @@ def run_across_hosts(next_item: NextItem, hosts_of: Callable[[Any], Iterable[str
                     break
                 hosts = frozenset(hosts_of(item))
                 busy |= hosts
-                held[id(item)] = hosts
-                in_flight += 1
+                held[id(item)] = (item, hosts)
                 tasks.put(item)
-            if in_flight == 0:
-                return
+            if not held:
+                return []
+            if stopped_at is None and should_stop():
+                stopped_at = time.monotonic()
+            if (stopped_at is not None and grace_seconds is not None
+                    and time.monotonic() - stopped_at > grace_seconds):
+                abandoned = [item for item, _ in held.values()]
+                log.warning("%d item(s) still running %.0fs after the stop; abandoning them",
+                            len(abandoned), grace_seconds)
+                return abandoned
             try:
                 item, result, error = results.get(timeout=poll_seconds)
             except queue.Empty:
                 continue
-            in_flight -= 1
-            busy -= held.pop(id(item), frozenset())
+            _, hosts = held.pop(id(item), (item, frozenset()))
+            busy -= hosts
             on_done(item, result, error)
     finally:
         for _ in threads:

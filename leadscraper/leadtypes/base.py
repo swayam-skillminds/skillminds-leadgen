@@ -181,6 +181,9 @@ class LeadTypeSession(ABC):
         """Expected AI calls and cost, when this lead type uses AI this run."""
         return None
 
+    def checkpoint(self) -> None:
+        """After every finished unit, on the engine's dispatcher thread (flush output)."""
+
     def post_discovery(self, control: Any) -> None:
         """Enrichment, AI passes. Must watch ``control.stop_requested`` and not raise."""
 

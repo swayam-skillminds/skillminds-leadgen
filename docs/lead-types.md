@@ -25,6 +25,22 @@ class LeadType(ABC):
     def columns(self, cfg) -> list[ColumnSpec]   # Records-tab columns, with kind and fields toggle
     def score(self, org, signals, cfg) -> ScoreParts   # fit / intent / reach, 0..1, with reasons
     def run(self, context) -> LeadTypeResult     # execute its units; must not raise
+    # Phase 2: how the engine drives it
+    def open(self, context) -> LeadTypeSession   # default: run() as a single unit
+    def apply_depth(self, cfg, depth) -> list[str]   # scale its own knobs for quick/deep
+
+class LeadTypeSession(ABC):                    # one lead type's share of one run
+    def units(self) -> list[WorkUnit]          # discovery units, plan order
+    def run_unit(self, unit) -> UnitOutcome    # never raises; may run on a worker thread
+    def hosts(self, unit) -> frozenset[str]    # units sharing a host never run at once
+    def stats_key(self, unit) -> (source, area, category)   # its unit_stats row
+    def prior(self, unit) -> UnitCost          # cold-start seconds and new organisations
+    def post_estimate(self, expected_new) -> (mean, sd)     # enrichment / AI seconds
+    def ai_estimate(self, expected_new) -> dict | None
+    def post_discovery(self, control) -> None  # enrichment, AI; watch control.stop_requested
+    def finalize(self, *, complete) -> None    # always called, even after pause/cancel
+    def close(self) -> None
+    def result(self) -> LeadTypeResult
 ```
 
 | Type | Fields |
@@ -34,6 +50,8 @@ class LeadType(ABC):
 | `ColumnSpec` | `key`, `header`, `kind` (`text` `number` `url` `phone` `email` `date` `score` `flag` `money`), `description`, `field` (the `fields.include` toggle, or None) |
 | `ScoreParts` (`core/scoring.py`) | `lead_type`, `fit`, `intent`, `reach` (each 0..1 or None = "not my concern"), `reasons` |
 | `LeadTypeResult` | `units_planned`, `units_done`, `new`, `merged`, `failed`, `error`, `stats` |
+| `UnitOutcome` | `found`, `new`, `merged`, `status` (`done` / `partial` / `failed`), `error` |
+| `UnitCost` (`engine/costs.py`) | `seconds`, `new`, `sd`, `basis` (`prior` / `source` / `learned`), `runs`; `priority` = new per second |
 
 `cfg` is whatever the lead type reads its settings from. For `local_business`
 that's the compiled `Config` view (see below). A new lead type would normally
@@ -60,12 +78,24 @@ take its own `config_model` instance.
 ```
 RunConfig ──validate──► lead_types.<key> checked against registry.config_model(key)
           ──compile───► Config (the runtime view)
-engine/runner.py: one project store, one Run row
-   for each enabled lead type:
-       store.lead_type = key
-       lead_type.run(LeadTypeContext(config, store, run_id, …, failure_sink, unit_sink))
-   finish_run(stats per lead type)
+engine/runner.py: one project store, one Run row (or a resumed one)
+   for each enabled lead type:  apply_depth(cfg, depth); session = open(context)
+   planned = every session's units()  ──► work_units rows (pending) = the checkpoint
+   estimate (engine/estimator.py)     ──► runs.estimate, the "plan" event
+   scheduler + dispatcher: run_unit() per unit, in parallel across hosts
+       each finished unit: work_units row, unit_stats, cost model, events
+   post_discovery(control) per session, unless stopping
+   finalize(complete=…) and close() per session, always
+   finish_run(status, stats per lead type + "engine" summary)
 ```
+
+`context` carries the run's `control` (`engine/control.py`: pause, cancel,
+shutdown and the time-budget deadline as one stop path) and `events` (the
+run's `EventBus`). A lead type that only implements `run()` still works: its
+whole run is one unit (`MonolithicSession`). Extra lead types can be loaded
+into any process, a separately started worker included, with
+`LEADSCRAPER_PLUGINS=module.path` (the module exposes `LEAD_TYPES` or
+`LEAD_TYPE`).
 
 Scoring combines every lead type's `ScoreParts` with the run's weights
 (`scoring.weights: {fit, intent, reach}`), see `core/scoring.py`:
@@ -86,7 +116,8 @@ Businesses by category and location. This is the original scraper, wrapped:
 | Plugin object | `leadtypes/local_business/plugin.py` (`LOCAL_BUSINESS`) |
 | Config model | `leadtypes/local_business/config.py` (`LocalBusinessConfig`), plus `DEFAULT_SOURCES` for configs that leave `sources` out |
 | Source selection and unit order | `leadtypes/local_business/planning.py`, shared by `plan()` and the pipeline, so what's reported is what runs (`test_plan_lists_the_units_the_pipeline_executes_in_order`). A source whose `fills` the run's `fields.include` leaves out is skipped as "not needed" |
-| Execution | `leadtypes/local_business/pipeline.py` (`Pipeline`): discovery → (venues: AI classification and brand roll-up) → name polish → enrichment → AI extraction → finalise |
+| Execution | `leadtypes/local_business/pipeline.py` (`Pipeline`): discovery → (venues: AI classification and brand roll-up) → name polish → enrichment → AI extraction → finalise. `session.py` (`LocalBusinessSession`) exposes it to the engine unit by unit; `Pipeline.run()` still runs the whole thing sequentially for direct use |
+| Costs and depth | `leadtypes/local_business/estimates.py`: cold-start priors per source (requests × configured delays; yields that put Maps before directories before SERP), enrichment and AI estimates, and the depth presets |
 | Scoring | `leadtypes/local_business/scoring.py` (`Scorer`) |
 | Hospitality vertical | `packs/hospitality/venues.py`: venue types, tiers, prices |
 

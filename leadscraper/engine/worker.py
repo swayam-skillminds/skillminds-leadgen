@@ -37,7 +37,7 @@ from sqlalchemy.engine import Engine
 from ..db.engine import open_database
 from ..db.models import Worker as WorkerRow
 from ..db.runs import (
-    ACTIVE, claim_run, finish_run, get_run, next_queued, orphaned_runs, update_run,
+    ACTIVE, claim_run, finish_run, get_run, next_queued, orphaned_runs, settle_run, update_run,
 )
 from ..paths import default_db_url
 from .control import RunControl
@@ -70,7 +70,7 @@ class Worker:
         self.install_signals = install_signals
         self._stop = threading.Event()
         self._control: RunControl | None = None
-        self._control_lock = threading.Lock()
+        self._control_lock = threading.RLock()   # taken in signal handlers
         self._beat_thread: threading.Thread | None = None
         self.runs_executed: list[int] = []
 
@@ -153,13 +153,12 @@ class Worker:
             row = get_run(self.engine, run_id)
             if row is None:
                 continue
-            if row["status"] == "pausing":
-                finish_run(self.engine, run_id, status="paused", stats=row.get("stats") or {},
-                           error="its worker died while pausing; resume to continue")
-                continue
-            if row["status"] == "stopping":
-                finish_run(self.engine, run_id, status="cancelled",
-                           stats=row.get("stats") or {}, error="its worker died while stopping")
+            if row["status"] in ("pausing", "stopping"):
+                target = "paused" if row["status"] == "pausing" else "cancelled"
+                settle_run(self.engine, run_id, from_status=row["status"], to_status=target,
+                           stale_before=stale_before,
+                           error=f"its executor died while {row['status']}"
+                                 + ("; resume to continue" if target == "paused" else ""))
                 continue
             if claim_run(self.engine, run_id, self.executor, from_statuses=ACTIVE,
                          stale_before=stale_before):
@@ -204,7 +203,8 @@ class Worker:
         except Exception as exc:  # a run that cannot even start fails; the worker lives on
             log.exception("worker %s: run %s failed to execute", self.name, run_id)
             finish_run(self.engine, run_id, status="failed", stats=row.get("stats") or {},
-                       error=f"worker could not execute the run: {exc!r}")
+                       error=f"worker could not execute the run: {exc!r}",
+                       worker_id=self.executor)
             status = "failed"
         finally:
             with self._control_lock:

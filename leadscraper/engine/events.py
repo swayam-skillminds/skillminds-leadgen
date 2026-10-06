@@ -189,23 +189,59 @@ class EventBus:
 
 
 class DbEventSink:
-    """Persists events into ``run_events``."""
+    """Persists events into ``run_events`` from one writer thread.
+
+    Publishing only enqueues, so no unit, enrichment task or heartbeat waits on
+    a database write (a locked SQLite file can take seconds); the single writer
+    keeps them in ``seq`` order. ``close()`` drains the queue.
+    """
 
     def __init__(self, engine: Engine, workspace_id: int):
+        import queue
+
         from ..db.models import RunEvent as RunEventRow
 
         self.engine = engine
         self.workspace_id = workspace_id
         self.table = RunEventRow.__table__
+        self._queue: queue.Queue = queue.Queue()
+        self._thread = threading.Thread(target=self._write, name="event-writer", daemon=True)
+        self._thread.start()
 
     def __call__(self, event: _Event) -> None:
         if event.run_id is None:
             return
         payload = event.model_dump(mode="json", exclude={"run_id", "seq", "at", "type"})
-        with self.engine.begin() as conn:
-            conn.execute(self.table.insert().values(
-                workspace_id=self.workspace_id, run_id=event.run_id, seq=event.seq,
-                type=event.type, payload=payload, created_at=event.at))
+        self._queue.put({"workspace_id": self.workspace_id, "run_id": event.run_id,
+                         "seq": event.seq, "type": event.type, "payload": payload,
+                         "created_at": event.at})
+
+    def _write(self) -> None:
+        import queue
+
+        while True:
+            row = self._queue.get()
+            if row is None:
+                return
+            batch = [row]
+            try:                                   # whatever else is waiting, in one go
+                while len(batch) < 200:
+                    more = self._queue.get_nowait()
+                    if more is None:
+                        self._queue.put(None)
+                        break
+                    batch.append(more)
+            except queue.Empty:
+                pass
+            try:
+                with self.engine.begin() as conn:
+                    conn.execute(self.table.insert(), batch)
+            except Exception as exc:
+                log.warning("could not persist %d event(s): %s", len(batch), exc)
+
+    def close(self, timeout: float = 30.0) -> None:
+        self._queue.put(None)
+        self._thread.join(timeout=timeout)
 
 
 def last_seq(engine: Engine, run_id: int) -> int:
