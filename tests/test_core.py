@@ -332,6 +332,15 @@ def test_merge_rejects_seo_title_and_keeps_it_as_an_alias():
     assert any("also known as" in note for note in a.notes)
 
 
+
+def test_merge_rejects_an_seo_title_that_starts_with_our_name():
+    """Regression (found by characterisation): the length/containment check let
+    'Royal Caterers | Best Caterers in Mumbai 2024' overwrite a clean name."""
+    a = Lead(business_name="Royal Caterers")
+    a.merge(Lead(business_name="Royal Caterers | Best Caterers in Mumbai 2024"))
+    assert a.business_name == "Royal Caterers"
+    assert "also known as: Royal Caterers | Best Caterers in Mumbai 2024" in a.notes
+
 # --- rate limiter -----------------------------------------------------------
 
 def test_shared_host_keeps_the_most_cautious_delay():
