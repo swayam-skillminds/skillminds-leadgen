@@ -229,12 +229,16 @@ class LeadStore:
                     exclude: frozenset[int]) -> list[tuple[int, str, Any]]:
         # (category, score desc, id): the order the original store's
         # (locality, category, score DESC) index handed rows back in, which
-        # decides ties between equally good fuzzy matches.
+        # decides ties between equally good fuzzy matches. Categories compare
+        # bytewise, as in SQLite; a Postgres locale collation ("Decorators"
+        # before "DJs") would break those ties differently on a server.
+        category = (ORGS.c.category.collate("C")
+                    if self.engine.dialect.name == "postgresql" else ORGS.c.category)
         with self._lock:
             rows = self._conn.execute(
                 select(ORGS.c.id, ORGS.c.name_key)
                 .where(self._org_filter(), ORGS.c.locality == locality)
-                .order_by(ORGS.c.category, ORGS.c.score.desc(), ORGS.c.id)).all()
+                .order_by(category, ORGS.c.score.desc(), ORGS.c.id)).all()
         return [(int(r.id), r.name_key, _LazyRecord(self, int(r.id)))
                 for r in rows if r.id not in exclude]
 

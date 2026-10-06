@@ -74,17 +74,18 @@ def open_store(path: Path, config: Config) -> LeadStore:
                      project="characterisation", country=config.country)
 
 
-def migrate(baseline: Path, config: Config, scratch: Path, mode: str):
+def migrate(baseline: Path, config: Config, scratch: Path, mode: str, opener=None):
     """Phase 1 acceptance: import a copy of the legacy store into a project.
 
     Returns (open store, ImportReport). The baseline itself is only ever
-    copied, read-only.
+    copied, read-only. ``opener(path, config)`` builds the empty target store
+    (default: a SQLite file at ``path``; the Postgres check passes its own).
     """
     legacy_copy = copy_db(baseline, scratch / f"legacy-{mode}.sqlite3")
     target = scratch / f"app-{mode}.sqlite3"
     if target.exists():
         target.unlink()
-    store = open_store(target, config)
+    store = (opener or open_store)(target, config)
     report = import_legacy_store(legacy_copy, store, mode=mode, record_run=False)
     return store, report
 
@@ -160,14 +161,15 @@ def copy_db(source: Path, dest: Path) -> Path:
     return dest
 
 
-def export_snapshot(baseline: Path, config: Config, scratch: Path) -> dict[str, Any]:
+def export_snapshot(baseline: Path, config: Config, scratch: Path,
+                    opener=None) -> dict[str, Any]:
     """What `--export-only` produces after a verbatim migration of the baseline.
 
     Keys are the legacy row ids, so the snapshot compares with one taken
     before the migration existed.
     """
     apply_name_noise(config)
-    store, report = migrate(baseline, config, scratch, "verbatim")
+    store, report = migrate(baseline, config, scratch, "verbatim", opener)
     legacy_id = {new: ids[0] for new, ids in report.clusters.items()}
     try:
         store.rescore_all()
@@ -193,14 +195,15 @@ def export_snapshot(baseline: Path, config: Config, scratch: Path) -> dict[str, 
     return snapshot
 
 
-def dedup_snapshot(baseline: Path, config: Config, scratch: Path) -> dict[str, Any]:
+def dedup_snapshot(baseline: Path, config: Config, scratch: Path,
+                   opener=None) -> dict[str, Any]:
     """Replay every stored lead, in id order, into an empty project (a replay migration).
 
     Pins today's dedup decisions on real data: which records the current
     rules would fold together, and which they refuse to store at all.
     """
     apply_name_noise(config)
-    store, report = migrate(baseline, config, scratch, "replay")
+    store, report = migrate(baseline, config, scratch, "replay", opener)
     store.close()
     return {
         "replayed": report.legacy_rows,
@@ -211,10 +214,11 @@ def dedup_snapshot(baseline: Path, config: Config, scratch: Path) -> dict[str, A
     }
 
 
-def real_snapshot(profile: str, baseline: Path, scratch: Path) -> dict[str, Any]:
+def real_snapshot(profile: str, baseline: Path, scratch: Path,
+                  opener=None) -> dict[str, Any]:
     config = load_config(profile)
     return {
         "baseline_fingerprint": fingerprint(baseline),
-        "export": export_snapshot(baseline, config, scratch),
-        "dedup": dedup_snapshot(baseline, config, scratch),
+        "export": export_snapshot(baseline, config, scratch, opener),
+        "dedup": dedup_snapshot(baseline, config, scratch, opener),
     }

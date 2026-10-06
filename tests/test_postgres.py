@@ -75,3 +75,21 @@ def test_migrations_and_store_round_trip_on_postgres(engine):
     store.rescore_all()
     assert store.sorted_leads()[0].business_name == "Royal Caterers"
     store.close()
+
+
+def test_locality_scan_orders_categories_bytewise_on_postgres(engine):
+    # The fuzzy-name rule breaks ties by the locality scan's order, which the
+    # original SQLite store gave bytewise ("DJs" < "Decorators"). A Postgres
+    # database with a locale collation would sort them the other way round.
+    from leadscraper.db.store import LeadStore
+
+    store = LeadStore(engine, project="Collation check", country="IN")
+    for name, category in (("Asha Lights", "Decorators"), ("Bharat Sound", "DJs"),
+                           ("Chandra Foods", "caterers"), ("Devi Events", "Event Planners")):
+        store.upsert(Lead(business_name=name, locality="Andheri", category=category,
+                          sources=["sulekha"]))
+    scanned = [store.get(org_id).category
+               for org_id, _, _ in store.in_locality("Andheri", frozenset())]
+    assert scanned == sorted(scanned, key=lambda c: c.encode()) == [
+        "DJs", "Decorators", "Event Planners", "caterers"]
+    store.close()
