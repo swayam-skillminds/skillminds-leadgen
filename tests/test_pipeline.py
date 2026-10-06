@@ -348,6 +348,50 @@ def test_ai_phases_run_through_the_pipeline(tmp_path, monkeypatch):
     assert pipe.stats.ai_updates > 0
 
 
+class KeywordStuffedMapsSource(Source):
+    """Two Maps listings: one owner stuffed keywords into the name, one didn't."""
+
+    name = "stub"
+
+    def discover(self, locality, category):
+        yield self.make_lead(
+            business_name="Events Aura – Event Management Company in Mumbai",
+            category=category.name, locality=locality.name, sources=["google_maps"],
+        )
+        yield self.make_lead(
+            business_name="Galaxy Caterers - St. Arnold's Lawns",
+            category=category.name, locality=locality.name, sources=["google_maps"],
+        )
+
+
+def test_keyword_stuffed_maps_names_reach_ai_name_polish(tmp_path, monkeypatch):
+    """Regression (REBUILD Part 0.6): name polish skipped every google_maps lead,
+    but all ~100 SEO-titled names in the Mumbai DB came from Maps."""
+    monkeypatch.setattr(pipeline_mod, "DISCOVERY_SOURCES", {"stub": KeywordStuffedMapsSource})
+    monkeypatch.setattr(pipeline_mod, "ENRICHMENT_SOURCES", {})
+    sent: list[str] = []
+
+    class NameCleaner(AIBackend):
+        name = "names"
+
+        def complete(self, system, user, *, model, max_tokens=4000):
+            records = _json.loads(user)
+            sent.extend(record["title"] for record in records)
+            payload = [{"id": record["id"], "business_name": record["title"].split(" – ")[0],
+                        "is_business": True, "matches_category": True} for record in records]
+            return AIResult(text=_json.dumps(payload), cost_usd=0.001, model=model)
+
+    config = ai_config(tmp_path)
+    pipe = Pipeline(config, localities=config.localities, categories=config.categories,
+                    source_names=["stub"], enricher_names=[])
+    pipe.ai = AIAssistant(config, pipe.failures, backend=NameCleaner())
+    pipe.run()
+
+    assert sent == ["Events Aura – Event Management Company in Mumbai"]
+    names = sorted(lead.business_name for lead in pipe.leads)
+    assert names == ["Events Aura", "Galaxy Caterers - St. Arnold's Lawns"]
+
+
 def test_ai_off_leaves_the_messy_name_untouched(tmp_path, monkeypatch):
     """Control case: without AI the pipeline behaves exactly as before."""
     monkeypatch.setattr(pipeline_mod, "DISCOVERY_SOURCES", {"stub": SerpishSource})

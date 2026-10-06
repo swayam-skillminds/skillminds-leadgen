@@ -274,6 +274,25 @@ def is_vendor_website(url: str | None) -> bool:
     return not any(host == bad or host.endswith("." + bad) for bad in NON_VENDOR_DOMAINS)
 
 
+# Business names don't contain " | "; page titles do. After a dash or colon,
+# the tail has to read like a keyword phrase ("... in Andheri", "Best ...",
+# "... Services") -- "Galaxy Caterers - St. Arnold's Lawns" is a real name.
+_SEO_SPLIT = re.compile(r"\s+[-–—:]\s+")
+_SEO_TAIL = re.compile(
+    r"\b(?:in|near|best|top|no\.?\s?1|services?|company|agency|delivery|online|"
+    r"affordable|cheap|on\s+rent|book(?:ing)?)\b", re.I)
+
+
+def looks_like_seo_title(name: str | None) -> bool:
+    """True for a name stuffed with keywords ("X – Event Planner in Mumbai | Y")."""
+    if not name:
+        return False
+    if "|" in name:
+        return True
+    parts = _SEO_SPLIT.split(name, maxsplit=1)
+    return len(parts) == 2 and bool(_SEO_TAIL.search(parts[1]))
+
+
 # A Maps place URL carries the feature id as "!1s0x<cell>:0x<cid>"; share links
 # and older exports carry the same place as "?cid=<decimal>". Both reduce to
 # the cid, so one place compares equal however its URL was written.

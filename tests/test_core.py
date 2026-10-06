@@ -11,7 +11,8 @@ import pytest
 from leadscraper.models import Lead
 from leadscraper.normalize import (
     extract_emails, extract_facebook, extract_instagram, extract_linkedin,
-    extract_phones, extract_whatsapp, is_vendor_website, maps_place_key, name_key,
+    extract_phones, extract_whatsapp, is_vendor_website, looks_like_seo_title,
+    maps_place_key, name_key,
     normalize_phone, normalize_url, parse_rating, parse_review_count,
 )
 from leadscraper.scoring import Scorer
@@ -169,6 +170,19 @@ def test_same_name_different_phones_stays_separate(store):
                                      phones=["+919820022222"], sources=["google_maps"]))
     assert action == "new"
     assert store.count() == 2
+
+
+@pytest.mark.parametrize("name,expected", [
+    ("Vaviya Events – Event Management Company in Mumbai | Corporate Event Planner", True),
+    ("Galaxy Banquet Hall | Wedding Party Hall", True),
+    ("Homefood Kravings - Best Tiffin Service in Andheri", True),
+    ("Galaxy Caterers - St. Arnold's Lawns", False),
+    ("Zen Haven - Igatpuri", False),
+    ("Royal Caterers", False),
+    ("", False),
+])
+def test_looks_like_seo_title(name, expected):
+    assert looks_like_seo_title(name) is expected
 
 
 # Same place, three spellings: a search-result URL, the feature id alone, a
