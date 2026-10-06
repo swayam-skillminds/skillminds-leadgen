@@ -11,7 +11,7 @@ from contextlib import redirect_stdout
 from pathlib import Path
 
 import pytest
-from sqlalchemy import create_engine, inspect, select, text
+from sqlalchemy import select, text
 from sqlalchemy.schema import CreateIndex, CreateTable
 
 from leadscraper.core.lead import Lead

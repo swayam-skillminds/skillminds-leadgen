@@ -13,7 +13,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from functools import lru_cache
-from typing import TYPE_CHECKING, Any, Iterable
+from typing import TYPE_CHECKING, Iterable
 
 from ...core.country import currency_pattern, format_money
 from ...core.geo import as_float, as_int, coords_from_maps_url, haversine_km  # noqa: F401
