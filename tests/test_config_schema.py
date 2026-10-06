@@ -110,6 +110,20 @@ def test_country_place_and_one_category_are_enough():
     assert config.get("score_weights") == {"fit": 0.4, "intent": 0.4, "reach": 0.2}
 
 
+
+def test_settings_this_build_does_not_apply_are_named():
+    quiet = RunConfig.model_validate(minimal(output={"excel": False, "csv": True}))
+    assert quiet.unapplied() == []
+    loud = RunConfig.model_validate(minimal(
+        filters={"min_rating": 4.0, "suppression_lists": ["clients"]},
+        icp={"industries": ["dental"]}, depth="deep", time_budget_minutes=30,
+        output={"excel": True, "csv": False, "json": True}))
+    notes = loud.unapplied()
+    assert len(notes) == 8
+    assert any(n.startswith("filters.min_rating") for n in notes)
+    assert any("Phase 2" in n and "time_budget_minutes" in n for n in notes)
+    assert any(n.startswith("output.csv is off") for n in notes)
+
 def test_a_new_project_never_writes_over_the_legacy_csv(tmp_path, monkeypatch):
     monkeypatch.setenv("LEADSCRAPER_DATA_DIR", str(tmp_path))
     config = Config(compile_dict(RunConfig.model_validate(minimal())))

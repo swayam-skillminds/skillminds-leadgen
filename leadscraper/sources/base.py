@@ -53,6 +53,10 @@ class Source(ABC):
     pack: str | None = None
     #: Narrows where this class applies, on top of its pack's own reach.
     applicable_countries: frozenset[str] | None = None
+    #: The run-config fields (``fields.include``) this class exists to fill.
+    #: When a run asks for none of them it is not built (A.8). None: it finds
+    #: businesses, so every run needs it.
+    fills: frozenset[str] | None = None
 
     def __init__(self, ctx: SourceContext):
         self.ctx = ctx
@@ -149,6 +153,10 @@ class Enricher(ABC):
     pack: str | None = None
     #: Narrows where this class applies, on top of its pack's own reach.
     applicable_countries: frozenset[str] | None = None
+    #: The run-config fields (``fields.include``) this class exists to fill.
+    #: When a run asks for none of them it is not built (A.8). None: it finds
+    #: businesses, so every run needs it.
+    fills: frozenset[str] | None = None
 
     def __init__(self, ctx: SourceContext):
         self.ctx = ctx

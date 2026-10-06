@@ -100,6 +100,8 @@ def _cmd_config(args: argparse.Namespace) -> int:
             return 1
         print(f"{args.file}: valid run config '{rc.name}' (project '{rc.project}', "
               f"lead types: {', '.join(rc.enabled_lead_types())})")
+        for note in rc.unapplied():
+            print(f"  not applied yet: {note}")
         return 0
     if args.config_cmd == "schema":
         text = json.dumps(run_config_json_schema(), indent=2)

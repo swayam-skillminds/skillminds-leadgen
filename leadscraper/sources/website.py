@@ -36,6 +36,7 @@ _CONTACT_HINTS = re.compile(
 class WebsiteEnricher(Enricher):
     name = "website"
     priority = 20
+    fills = frozenset({"emails", "phones", "socials", "address", "prices"})
 
     def rate_keys(self) -> list[str]:
         return ["website"]

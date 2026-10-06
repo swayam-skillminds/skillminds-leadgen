@@ -193,6 +193,37 @@ class RunConfig(_Strict):
         return [key for key, section in self.lead_types.items()
                 if getattr(section, "enabled", True)]
 
+    def unapplied(self) -> list[str]:
+        """Settings this build accepts but does not act on yet, one note each.
+
+        The schema is the whole A.8 shape so a saved config never has to
+        change; the runner logs these at run start and ``config validate``
+        prints them, rather than letting a filter or a budget pass silently.
+        """
+        notes: list[str] = []
+        f = self.filters
+        if f.min_rating is not None or f.must_have or f.exclude_chains:
+            notes.append("filters.min_rating / must_have / exclude_chains are not applied yet: "
+                         "every lead is kept and exported")
+        if f.suppression_lists:
+            notes.append("filters.suppression_lists: suppression lists arrive in Phase 3")
+        if self.icp != ICP():
+            notes.append("icp is recorded with the run but does not steer it yet")
+        if self.depth != "balanced":
+            notes.append(f"depth {self.depth!r}: depth presets arrive in Phase 2; "
+                         "each source runs at its own settings")
+        if self.time_budget_minutes is not None:
+            notes.append("time_budget_minutes is not enforced until Phase 2: "
+                         "the run goes to completion")
+        if self.output.excel:
+            notes.append("output.excel: the Overview + Records workbook is Phase 4 "
+                         "(tools/build_*_workbook.py meanwhile)")
+        if self.output.json_:
+            notes.append("output.json: the JSON export is Phase 4")
+        if not self.output.csv:
+            notes.append("output.csv is off, but the CSV is still written until Phase 4")
+        return notes
+
     def to_document(self) -> dict[str, Any]:
         """A plain dict, every set field kept, ready for YAML.
 

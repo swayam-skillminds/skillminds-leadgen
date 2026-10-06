@@ -100,6 +100,10 @@ def execute(request: RunRequest) -> RunOutcome:
     outcome = RunOutcome(run_id=None, project=store.project_name)
     engine, workspace_id, project_id = store.engine, store.workspace_id, store.project_id
 
+    run_config = getattr(config, "run_config", None)
+    for note in (run_config.unapplied() if run_config is not None else []):
+        log.warning("Config: %s", note)
+
     run_id = None
     if not request.dry_run:
         run_id = start_run(engine, workspace_id, project_id, config_snapshot=_snapshot(config))

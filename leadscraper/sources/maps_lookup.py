@@ -73,6 +73,7 @@ def distinctive_words(name: str, stop_words: frozenset[str] | set[str] | None = 
 class MapsLookupEnricher(Enricher):
     name = "maps_lookup"
     priority = 10
+    fills = frozenset({"phones", "website", "address", "ratings"})
 
     def __init__(self, ctx):
         super().__init__(ctx)

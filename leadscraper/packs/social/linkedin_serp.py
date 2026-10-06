@@ -31,6 +31,8 @@ _TITLE = re.compile(
 class LinkedInSerpSource(Source):
     name = "linkedin_serp"
     priority = 51
+    # Its records are a person and their employer: decision-makers.
+    fills = frozenset({"decision_makers"})
 
     def rate_keys(self) -> list[str]:
         return ["linkedin_serp", "www.google.com", "duckduckgo.com"]

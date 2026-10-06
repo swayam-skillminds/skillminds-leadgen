@@ -69,10 +69,26 @@ def select_sources(kind: str, registry: dict[str, type], requested: list[str] | 
             # A pack that does not apply is inactive, not failing: it is
             # reported here and never reaches the failure log.
             plan.skipped[name] = f"not applicable -- {reason}"
+        elif (reason := unneeded_reason(cls, config.included_fields)):
+            plan.skipped[name] = f"not needed -- {reason}"
         else:
             chosen.append(cls)
             plan.built.append(name)
     return chosen, plan
+
+
+def unneeded_reason(source_cls: type, included: set[str]) -> str | None:
+    """Why a source has nothing to do for this run's fields, or None (A.8).
+
+    A source that only exists to fill certain fields -- an enricher, or the
+    decision-maker search -- is not built when ``fields.include`` leaves all of
+    them out. Sources that find businesses always run.
+    """
+    fills = getattr(source_cls, "fills", None)
+    if fills is None or fills & included:
+        return None
+    return (f"it only fills {', '.join(sorted(fills))}, "
+            f"and fields.include asks for {', '.join(sorted(included)) or 'none'}")
 
 
 # --- discovery order ---------------------------------------------------------

@@ -45,6 +45,7 @@ def _unescape_json_fragment(raw: str) -> str:
 class InstagramEnricher(Enricher):
     name = "instagram"
     priority = 30
+    fills = frozenset({"phones", "emails", "website"})
 
     def __init__(self, ctx):
         super().__init__(ctx)

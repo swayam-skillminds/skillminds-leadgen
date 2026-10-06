@@ -12,7 +12,7 @@ from sqlalchemy import select
 
 from leadscraper.config import Config
 from leadscraper.config.compile import compile_run_config
-from leadscraper.config.schema import RunConfig
+from leadscraper.config.schema import ALL_FIELDS, RunConfig
 from leadscraper.core.lead import Lead
 from leadscraper.db.models import Contact, Evidence, FailureRow, Organization, Run, RunOrganization
 from leadscraper.db.store import LeadStore, store_target
@@ -20,6 +20,7 @@ from leadscraper.engine.runner import RunRequest, execute
 from leadscraper.leadtypes import registry
 from leadscraper.leadtypes.base import LeadType, LeadTypeResult
 from leadscraper.leadtypes.local_business import pipeline as pipeline_mod
+from leadscraper.leadtypes.local_business.planning import select_sources
 from leadscraper.leadtypes.local_business.plugin import LOCAL_BUSINESS
 from leadscraper.sources import registry as source_registry
 from leadscraper.sources.base import Source
@@ -56,6 +57,33 @@ def test_us_run_activates_only_core_and_social_sources():
     planned = {unit.source for unit in LOCAL_BUSINESS.plan(config)}
     assert planned == CORE_AND_SOCIAL
     assert not planned & INDIA_AND_VERTICAL_PACK_SOURCES
+
+
+
+def test_unchecked_fields_switch_off_the_sources_that_only_fill_them():
+    # A.8: a run that wants no decision-makers skips the LinkedIn search; the
+    # enrichers that also fill phones keep running.
+    phones_only = compiled({**austin(), "fields": {"include": ["phones"]}})
+    chosen = LOCAL_BUSINESS.sources(phones_only)
+    assert set(chosen["discovery"]) == CORE_AND_SOCIAL - {"linkedin_serp"}
+    assert set(chosen["enrichment"]) == {"website", "instagram"}
+    assert "linkedin_serp" not in {unit.source for unit in LOCAL_BUSINESS.plan(phones_only)}
+
+    # Only decision-makers: every enricher is idle, businesses are still found.
+    people_only = compiled({**austin(), "fields": {"include": ["decision_makers"]}})
+    chosen = LOCAL_BUSINESS.sources(people_only)
+    assert set(chosen["discovery"]) == CORE_AND_SOCIAL
+    assert chosen["enrichment"] == []
+    _, plan = select_sources("enricher", source_registry.ENRICHMENT_SOURCES, None, people_only)
+    assert plan.skipped["website"].startswith("not needed -- it only fills address, emails,")
+    assert plan.skipped["website"].endswith("fields.include asks for decision_makers")
+
+
+def test_a_run_config_without_fields_keeps_every_source():
+    config = compiled(austin())
+    assert config.included_fields == set(ALL_FIELDS)
+    legacy = Config.load("presets/mumbai-event-vendors.yaml")
+    assert legacy.included_fields == set(ALL_FIELDS)
 
 
 GOOGLE_SERP = """

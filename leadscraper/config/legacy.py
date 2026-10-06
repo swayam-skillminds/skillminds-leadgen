@@ -270,6 +270,14 @@ class Config:
             return keyword_loc
         return nearest
 
+    @property
+    def included_fields(self) -> set[str]:
+        """Fields the run asked for (run config ``fields.include``); all when unset."""
+        from .schema import ALL_FIELDS
+
+        include = self.get("fields.include")
+        return set(ALL_FIELDS if include is None else include)
+
     def source_enabled(self, source: str) -> bool:
         return bool(self.get(f"sources.{source}.enabled", False))
 

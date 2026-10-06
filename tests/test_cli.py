@@ -48,7 +48,9 @@ def test_config_schema_and_validate(tmp_path, capsys):
     assert main(["config", "schema", "-o", str(out)]) == 0
     assert json.loads(out.read_text())["title"] == "Run config"
     assert main(["config", "validate", str(PROJECT_ROOT / "presets" / "nashik-venues.yaml")]) == 0
-    assert "valid run config 'Nashik venues'" in capsys.readouterr().out
+    printed = capsys.readouterr().out
+    assert "valid run config 'Nashik venues'" in printed
+    assert "not applied yet: output.excel" in printed
 
 
 def test_config_import_legacy_writes_the_preset(tmp_path):
