@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A failure-tolerant Python lead generator. It discovers businesses from free public sources (Playwright + `requests`, no paid APIs), merges them into one deduplicated **organisation** per business inside a **project**, scores and ranks them, and exports to CSV and Google Sheets. It is being turned into a backend application (`APP-BUILD-PROMPT.md`; Phases 0 and 1 are done, see `docs/phase-0-report.md` and `docs/phase-1-report.md`). Despite the directory name it does **not** use LangGraph; orchestration is plain Python (`engine/runner.py` → each lead type's `run()`).
+A failure-tolerant Python lead generator. It discovers businesses from free public sources (Playwright + `requests`, no paid APIs), merges them into one deduplicated **organisation** per business inside a **project**, scores and ranks them, and exports to CSV and Google Sheets. It is being turned into a backend application (`APP-BUILD-PROMPT.md`; Phases 0–2 are done, see `docs/phase-*-report.md`). Despite the directory name it does **not** use LangGraph; orchestration is plain Python (`engine/runner.py` drives each lead type's session unit by unit; `docs/engine.md`).
 
 Runs are described by **run configs** (`config/schema.py`, `schema_version: 1`). Two presets reproduce the original runs:
 - `presets/mumbai-event-vendors.yaml` (Mumbai event vendors), imported from `config.yaml`.
@@ -21,9 +21,9 @@ pip install -e ".[dev]"          # pyproject.toml is the only dependency list; e
 playwright install chromium
 
 # Tests (all offline; `live` deselected, `postgres` skipped without LEADSCRAPER_TEST_POSTGRES_URL)
-python -m pytest tests/ -q                                    # ~12 s
+python -m pytest tests/ -q                                    # ~35 s (incl. a real worker kill/resume)
 python -m pytest tests/test_pipeline.py::test_name -q         # one test
-python -m pytest -q -m "not characterisation"                 # fast loop (~3 s)
+python -m pytest -q -m "not characterisation" --deselect tests/test_engine.py   # fast loop (~6 s)
 LEADSCRAPER_TEST_POSTGRES_URL=postgresql+psycopg://USER@HOST:PORT/THROWAWAY_DB \
   python -m pytest -m postgres -q                             # server mode, incl. both real stores (drops app tables!)
 
@@ -37,6 +37,14 @@ python run.py --locality Andheri --category Caterers --source google_maps   # sm
 python run.py --export-only                                   # rescore + re-export the project, no scraping
 python run.py --enrich-only | --no-enrich | --no-sheets | --no-headless | -v
 python run.py --config presets/nashik-venues.yaml --dry-run   # any preset / run config / legacy YAML
+python run.py --time-budget 15 --depth quick                  # best units first; skipped units reported
+python run.py --preview                                       # ~2-min sample + full-run estimate
+python run.py --resume RUN_ID | --queue | --force-enrich | --workers N
+
+# Engine: estimate, worker, run control (Phase 2)
+python -m leadscraper estimate --config FILE [--time-budget M] [--json]
+python -m leadscraper worker [--once] | worker stop | worker list
+python -m leadscraper runs list | show ID | pause ID | resume ID | cancel ID | events ID [--follow]
 
 # Application database and configs
 python -m leadscraper migrate-legacy --config config.yaml     # import data/leads.sqlite3 (a COPY) -> project
@@ -49,7 +57,7 @@ python -m leadscraper presets
 .venv/bin/python tools/build_nashik_workbook.py
 ```
 
-Full runs take many hours at the default polite delays. Don't run several copies in parallel, and don't lower delays casually (Justdial, Instagram and Google SERP block quickly). Tests isolate app state via `LEADSCRAPER_DATA_DIR` (`tests/conftest.py`); when you smoke-test by hand, point it at a scratch directory so you never touch the real per-user database.
+Full runs take many hours at the default polite delays (`--dry-run` estimates them). Don't run several copies in parallel, and don't lower delays casually (Justdial, Instagram and Google SERP block quickly). Tests isolate app state via `LEADSCRAPER_DATA_DIR` (`tests/conftest.py`); when you smoke-test by hand, point it at a scratch directory so you never touch the real per-user database.
 
 ## Architecture
 
@@ -62,8 +70,11 @@ db/          models.py (SQLAlchemy, A.6), engine.py (SQLite WAL / Postgres, sche
              store.py (LeadStore = one project's organisations), legacy_import.py, runs.py (run history)
 config/      schema.py (RunConfig), importer.py (legacy YAML -> run config), compile.py (-> Config), legacy.py (Config),
              geography.py (fill centre/state by geocoding)
-engine/      runner.py (one project, one Run row, every enabled lead type), failures.py (FailureLog)
-leadtypes/   base.py (the A.7 contract), registry.py, local_business/ (config, plugin, planning, pipeline, scoring)
+engine/      runner.py (one project, one Run row; plan -> discover -> post -> finalise), scheduler.py (budget),
+             costs.py (priors + learned unit_stats), estimator.py (p50/p90, budget fit), parallel.py (across hosts),
+             control.py (pause/cancel/deadline: one stop path), events.py (typed, persisted), worker.py (DB queue),
+             keepawake.py (wakepy + sleep detection), preview.py, clock.py, failures.py (FailureLog)
+leadtypes/   base.py (the A.7 contract), registry.py, local_business/ (config, plugin, planning, pipeline, session, estimates, scoring)
 packs/       in/ (justdial, sulekha, indiamart), events/ (wedmegood, weddingwire),
              hospitality/ (stay platforms + venues.py), social/ (facebook, instagram, linkedin_serp)
 sources/     base.py (Source/Enricher contract), registry.py, core sources: google_maps, google_search, website, maps_lookup
@@ -72,14 +83,24 @@ export/      csv_writer.py, sheets.py            ai/  assistant.py (Phase 5 spli
 cli/         python -m leadscraper …; run.py is a shim over cli/run_cmd.py
 ```
 
-**Flow:** `cli/run_cmd.py` → `engine/runner.execute` → `LOCAL_BUSINESS.run()` → `Pipeline.run`:
-- discovery, in the unit order from `planning.plan_discovery`, which `plan()` shares;
+**Flow:** `cli/run_cmd.py` (or `engine/worker.py`) → `engine/runner.execute` → each lead type's session (`LOCAL_BUSINESS.open()` → `LocalBusinessSession` over `Pipeline`):
+- discovery: the engine schedules the session's units (`planning.plan_discovery` order; by priority under a time budget), in parallel across hosts, checkpointing each in `work_units`;
 - for venue runs, AI venue classification and the brand roll-up;
 - name polish (AI, or the rule fallback when AI is off);
 - enrichment, then AI fallback extraction;
 - finalise: rescore, write the CSV, sync Sheets, report.
 
-Output is flushed periodically and on exit, including Ctrl-C.
+Output is flushed periodically and on exit. Ctrl-C pauses (in-flight units finish, then flush; resumable); a second Ctrl-C stops at once.
+
+**Engine (Phase 2, `docs/engine.md`):**
+- Lead types expose a `LeadTypeSession` (`leadtypes/base.py`): `units()`, `run_unit()` (may run on a worker thread; never raises), `hosts()`, `prior()`, `post_discovery(control)`, `finalize(complete=)`. A lead type with only `run()` is one unit.
+- Without a time budget units run in plan order (legacy presets unchanged); with one, by expected new orgs per second, never starting a unit that can't finish, keeping a 90 s tail and a share for enrichment. Skipped units are reported.
+- Units sharing a host never run at once (`Source.hosts()`; directories drop Google/DDG unless `serp_fallback`). `runtime.discovery_workers` (3), `runtime.enrich_workers` (8).
+- Enrichment marks leads done per enricher and skips them later unless `--force-enrich`; transient failures (`blocked`, `fetch_failed`, …) aren't marked.
+- Lifecycle: queued → running → pausing/paused, stopping/cancelled, completed/failed. Requests go through `runs.status`; the runner heartbeats, claims runs atomically, and only writes while it owns the run. Workers recover runs with a stale heartbeat from their checkpoint.
+- Depth presets live in each lead type's `apply_depth`; `balanced` changes nothing. Learned `unit_stats` keys carry `@quick`/`@deep`.
+- Store writes are tagged per thread (`LeadStore.tag_thread`), because units of different lead types can run side by side.
+- `LEADSCRAPER_PLUGINS=module` loads extra lead types in any process (used by the worker-kill test).
 
 **Core invariant: nothing crashes the run.**
 - `Source.discover` yields partial `Lead`s and must never raise; problems go to `ctx.failures` with a reason code (`login_wall`, `phone_hidden`, `no_businesses_parsed`, …). That's the JSONL, `skipped.csv`, the Sheet's Skipped tab and, inside a run, the `failures` table.
@@ -141,7 +162,7 @@ Keep this property when you add or modify sources.
 - `Config` (`config/legacy.py`) is the compiled runtime view: dotted `get`/`set` (CLI flags mutate it and are recorded in the run's snapshot).
 - Localities (areas) have aliases, keywords and centres; categories have queries and directory slugs. Anything added there flows through every source.
 - A run config leaving out `lead_types.local_business.sources` gets every applicable source at polite defaults (`DEFAULT_SOURCES`).
-- The schema holds the whole A.8 shape, but `filters`, `icp`, `depth`, `time_budget_minutes` and `output.excel/json` aren't acted on yet. `RunConfig.unapplied()` names each one a config sets; the runner logs them and `config validate` prints them. Drop a note there when you implement one.
+- The schema holds the whole A.8 shape, but `filters`, `icp` and `output.excel/json` aren't acted on yet (`depth` and `time_budget_minutes` are, since Phase 2). `RunConfig.unapplied()` names each one a config sets; the runner logs them and `config validate` prints them. Drop a note there when you implement one.
 
 ## Credentials
 
@@ -161,6 +182,6 @@ The Google service-account key is looked up as: `GOOGLE_SERVICE_ACCOUNT_JSON` (i
 
 ## Scope notes
 
-`APP-BUILD-PROMPT.md` is the build plan (Section A context + Phases 0–8, one phase per session; Phases 0 and 1 are done). It supersedes `REBUILD-PROMPT.md`, of which only Parts 0, 2 and 3 still apply. Follow them only when asked to do that work.
+`APP-BUILD-PROMPT.md` is the build plan (Section A context + Phases 0–8, one phase per session; Phases 0–2 are done). It supersedes `REBUILD-PROMPT.md`, of which only Parts 0, 2 and 3 still apply. Follow them only when asked to do that work.
 
 The hard boundary applies to the project generally: this tool **generates** leads and must not grow outreach/CRM features (contact status, email sending, sequences, and so on). LinkedIn is never logged into or crawled; only search-indexed public profile URLs are recorded. `docs/sources.md` lists every external endpoint with its terms note and last live check; several inherited sources are flagged for review against A.2.4.

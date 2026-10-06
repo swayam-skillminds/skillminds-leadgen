@@ -230,8 +230,9 @@ def test_live_eta_measures_the_parallelism_achieved():
 
 def test_progress_events_carry_a_live_eta_that_learns(synthetic):
     seen: list = []
-    config = compiled(synthetic_config("eta", units=units(4, seconds=100.0),
-                                       priors={"src": [10.0, 1.0]}))
+    # Its own source name: no other test's learned unit_stats apply.
+    config = compiled(synthetic_config("eta", units=units(4, seconds=100.0, source="eta"),
+                                       priors={"eta": [10.0, 1.0]}))
     outcome = execute(RunRequest(config=config, install_signals=False, clock=FakeClock(),
                                  discovery_workers=1, sinks=[seen.append]))
     progress = [e for e in seen if e.type == "progress"]
