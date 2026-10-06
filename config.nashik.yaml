@@ -1,0 +1,408 @@
+# ---------------------------------------------------------------------------
+# Nashik high-end VENUE scraper -- run configuration
+#
+#   python run.py --config config.nashik.yaml --dry-run
+#   python run.py --config config.nashik.yaml
+#
+# Separate from config.yaml (the Mumbai vendor run) in everything that holds
+# state: its own database, CSV, logs, and its own two tabs in the shared Sheet.
+# The Mumbai tabs ("Leads", "Skipped") are never written by this config.
+# ---------------------------------------------------------------------------
+
+city: "Nashik"
+country: "IN"
+
+# "venues" switches on the venue columns, venue-type classification, tiering,
+# the venue scoring weights below and the tier-first sort.
+profile: "venues"
+
+geo:
+  center: [19.9975, 73.7898]     # Nashik city
+  maps_zoom: 10                  # district-wide viewport for Maps searches
+  # Anything pinned farther out than this is out of region and skipped (it is
+  # still logged). Covers the district plus Bhandardara, Saputara and Jawhar.
+  radius_km: 125
+  # Listings that no keyword or pin places land here.
+  default_locality: "Nashik Region (unplaced)"
+  # Extra place names that mark a platform listing as regional, on top of
+  # every locality's own keywords below.
+  keywords: ["nashik", "nasik"]
+  # A listing with no pin whose name/address names one of these is out of
+  # region -- platform searches spill into neighbouring districts. Kept to
+  # place names only: "Mumbai"/"Pune" appear in genuine Nashik listings ("2 hrs
+  # from Mumbai") and "wada" also means a heritage mansion.
+  exclude_keywords: ["shahapur", "bhiwandi", "kalyan", "thane", "vasind", "asangaon", "khardi",
+                     "murbad", "lonavala", "khandala", "karjat", "vikramgad", "aurangabad",
+                     "dhule", "silvassa", "daman", "vapi", "valsad", "dahanu", "surat"]
+
+# Localities. `keywords` place a listing by its name / URL / address (the
+# longest match wins); `center` places it by pin when no keyword matches.
+localities:
+  - name: "Nashik City"
+    aliases: ["Nashik", "Gangapur Road Nashik", "Panchavati Nashik"]
+    center: [19.9975, 73.7898]
+    keywords: ["nashik", "nasik", "gangapur road", "college road", "panchavati", "pathardi",
+               "indira nagar", "indiranagar", "nashik road", "satpur", "trimbak road",
+               "makhmalabad", "adgaon", "cidco", "ambad", "deolali", "mhasrul", "anandvalli",
+               "pathardi phata", "dwarka nashik"]
+  - name: "Gangapur Dam Belt"
+    aliases: ["Gangapur Dam Nashik", "Sula Vineyards Nashik", "Savargaon Nashik"]
+    center: [20.0300, 73.6700]
+    keywords: ["gangapur dam", "gangapur", "girnare", "gangavhare", "gangawhare", "savargaon",
+               "govardhan", "dugaon", "kashyapi", "sula"]
+  - name: "Igatpuri"
+    aliases: ["Igatpuri", "Ghoti Igatpuri", "Vaitarna Igatpuri"]
+    center: [19.6950, 73.5626]
+    keywords: ["igatpuri", "igtpuri", "ghoti", "kasara", "vaitarna", "bhavli", "bhavali",
+               "waki", "mundhegaon", "wadivarhe", "talegaon", "kavnai", "darna"]
+  - name: "Trimbakeshwar"
+    aliases: ["Trimbakeshwar", "Anjaneri Nashik"]
+    center: [19.9322, 73.5306]
+    keywords: ["trimbakeshwar", "trimbak", "anjaneri", "harsul", "waldevi", "beze",
+               "brahmagiri", "pahine", "vaghera"]
+  - name: "Wine Country (Dindori / Ozar / Niphad)"
+    aliases: ["Dindori Nashik", "Ozar Nashik", "Niphad Nashik"]
+    center: [20.1300, 73.9300]
+    keywords: ["dindori", "ozar", "ozhar", "niphad", "pimpalgaon baswant", "janori", "mohadi",
+               "kadwa"]
+  - name: "Sinnar"
+    aliases: ["Sinnar Nashik"]
+    center: [19.8500, 74.0000]
+    keywords: ["sinnar", "nandur madhyameshwar", "musalgaon", "wavi", "gonde"]
+  - name: "North & East District"
+    aliases: ["Kalwan Nashik", "Chandwad Nashik", "Malegaon", "Satana Nashik", "Peth Nashik"]
+    center: [20.4000, 74.1000]
+    keywords: ["kalwan", "chandwad", "malegaon", "satana", "baglan", "yeola", "nandgaon",
+               "deola", "surgana"]
+  - name: "Bhandardara (adjacent)"
+    aliases: ["Bhandardara", "Bhandardara Ahmednagar"]
+    center: [19.5456, 73.7536]
+    keywords: ["bhandardara", "randha", "arthur lake", "wilson dam", "akole", "ratangad",
+               "shendi", "ghatghar", "samrad"]
+  - name: "Saputara (adjacent)"
+    aliases: ["Saputara Gujarat"]
+    center: [20.5760, 73.7490]
+    keywords: ["saputara", "waghai"]
+  - name: "Jawhar / Mokhada (adjacent)"
+    aliases: ["Jawhar Palghar", "Mokhada Palghar"]
+    center: [19.9100, 73.2300]
+    keywords: ["jawhar", "mokhada"]
+
+# Discovery buckets. These decide what gets SEARCHED; every venue's final
+# "Venue Type" column is classified from what was found, not from its bucket.
+# `sources` limits a bucket to the sources worth running for it, and
+# `only_localities` to where it exists -- Google SERP is slow and CAPTCHA-prone,
+# so it only runs where it earns its keep.
+categories:
+  - name: "Luxury & Pool Villas"
+    queries: ["luxury villa", "private pool villa", "villa on rent", "holiday home"]
+    sources: ["google_maps", "google_search", "facebook"]
+  - name: "Farmhouses & Estates"
+    queries: ["farmhouse", "farm stay", "farmhouse for party"]
+    sources: ["google_maps", "google_search"]
+  - name: "Vineyard & Winery Resorts"
+    queries: ["vineyard resort", "winery"]
+    sources: ["google_maps", "google_search"]
+    only_localities: ["Nashik City", "Gangapur Dam Belt", "Wine Country (Dindori / Ozar / Niphad)"]
+  - name: "Resorts"
+    queries: ["luxury resort", "resort"]
+    sources: ["google_maps", "google_search", "facebook"]
+  - name: "Glamping & Nature Stays"
+    queries: ["glamping", "luxury camping", "tent stay"]
+    sources: ["google_maps"]
+  - name: "Premium Hotels"
+    queries: ["5 star hotel", "luxury hotel"]
+    sources: ["google_maps"]
+    only_localities: ["Nashik City", "Igatpuri", "Trimbakeshwar", "Saputara (adjacent)"]
+  - name: "Banquets & Event Lawns"
+    queries: ["wedding lawn", "banquet hall", "destination wedding venue"]
+    sources: ["google_maps", "wedmegood", "justdial", "google_search"]
+    directory_slugs:
+      wedmegood: "wedding-venues"
+  - name: "Villa Rental Operators"
+    queries: ["villa rental agency", "holiday homes rental company"]
+    sources: ["google_maps", "google_search", "linkedin_serp"]
+    only_localities: ["Nashik City", "Igatpuri"]
+
+# Where Airbnb / Booking.com should search for each locality. Explicit on
+# purpose: their geocoders don't know "Gangapur Dam Belt", and a guessed place
+# name silently searches somewhere else. Localities left out are covered by a
+# neighbour's search (Nashik's covers the dam belt and the wine country).
+platform_searches:
+  "Nashik City": "Nashik, Maharashtra"
+  "Igatpuri": "Igatpuri, Maharashtra"
+  "Trimbakeshwar": "Trimbakeshwar, Maharashtra"
+  "Bhandardara (adjacent)": "Bhandardara, Maharashtra"
+  "Saputara (adjacent)": "Saputara, Gujarat"
+  "Jawhar / Mokhada (adjacent)": "Jawhar, Maharashtra"
+
+# ---------------------------------------------------------------------------
+# Sources
+# ---------------------------------------------------------------------------
+sources:
+  # --- the backbone: every venue type, contacts, ratings, pins -------------
+  google_maps:
+    enabled: true
+    min_delay: 2.5
+    max_delay: 6.0
+    max_results_per_query: 20
+    scroll_rounds: 6
+    locality_phrasings: 1
+    # Pace on Maps' own delays, not the google.com budget Google Search uses
+    # (12-28s plus CAPTCHA penalties) -- sharing it made every Maps page wait
+    # ~2.5 minutes after the first SERP block.
+    rate_key: "google_maps"
+  google_search:
+    enabled: true
+    min_delay: 12.0
+    max_delay: 28.0
+    results_per_query: 20
+    pages: 1
+    fallback_to_duckduckgo: true
+    query_suffix: "contact number"
+
+  # --- villa / stay platforms ----------------------------------------------
+  # Sitemap platforms run once per run and read the whole region.
+  stayvista:
+    enabled: true
+    min_delay: 2.0
+    max_delay: 5.0
+    max_properties: 120
+    render_for_price: true       # tariffs only appear once the page renders
+    category: "Platform Listings"
+  saffronstays:
+    enabled: true
+    min_delay: 2.0
+    max_delay: 5.0
+    max_properties: 120
+    render_for_price: false      # per-night charge is in the page data
+    category: "Platform Listings"
+  elivaas:
+    enabled: true
+    min_delay: 2.0
+    max_delay: 5.0
+    max_properties: 80
+    render_for_price: true
+    category: "Platform Listings"
+  # Search platforms run once per locality in `platform_searches`.
+  airbnb:
+    enabled: true
+    min_delay: 8.0
+    max_delay: 16.0
+    max_pages: 2
+    entire_homes_only: true
+    category: "Platform Listings"
+  booking:
+    enabled: true
+    min_delay: 8.0
+    max_delay: 16.0
+    max_pages: 1
+    days_ahead: 21               # price a Saturday night three weeks out
+    category: "Platform Listings"
+    property_types:              # Booking.com ht_id -> recorded type
+      "213": "Villa"
+      "220": "Holiday home"
+      "206": "Resort"
+      "204": "Hotel"
+      "210": "Farm stay"
+      "224": "Luxury tent"
+
+  # --- directories -----------------------------------------------------------
+  wedmegood:
+    enabled: true
+    min_delay: 4.0
+    max_delay: 9.0
+    max_pages: 4
+    serp_fallback: false
+    # WedMeGood lists the whole city on one listing, so it runs once per
+    # category instead of once per locality.
+    city_level: true
+    # Its pages are server-rendered for plain clients while headless Chromium
+    # gets a Cloudflare block page.
+    plain_http_first: true
+  justdial:
+    enabled: true
+    min_delay: 10.0
+    max_delay: 22.0
+    max_pages: 1
+  facebook:
+    enabled: true
+    min_delay: 6.0
+    max_delay: 14.0
+  linkedin_serp:
+    enabled: true
+    min_delay: 15.0
+    max_delay: 30.0
+
+  # --- not useful for venues -------------------------------------------------
+  indiamart:
+    enabled: false
+  sulekha:
+    enabled: false
+  weddingwire:
+    enabled: false
+
+  # --- enrichment --------------------------------------------------------------
+  # Searches Maps by name for venues that have no phone (mostly Airbnb /
+  # Booking finds). Takes a result only when the name AND location match.
+  maps_lookup:
+    enabled: true
+    min_delay: 2.5
+    max_delay: 6.0
+    min_name_similarity: 85
+    max_distance_km: 20
+    candidates: 3
+  website:
+    enabled: true
+    min_delay: 1.5
+    max_delay: 4.0
+    max_pages_per_site: 5
+  instagram:
+    enabled: true
+    min_delay: 8.0
+    max_delay: 20.0
+    max_profiles_per_run: 150
+
+# ---------------------------------------------------------------------------
+# Operators. A property whose name or platform names one gets it in
+# "Managed By", and every operator gets its own Brand row. `tier: premium`
+# qualifies its properties as high-end; `tier: budget` caps them at Standard.
+# Contact details are the operators' published customer lines.
+# ---------------------------------------------------------------------------
+brands:
+  - name: "StayVista"
+    aliases: ["stay vista", "vista rooms", "vistarooms"]
+    tier: premium
+    website: "https://www.stayvista.com"
+    phones: ["+918104954254"]
+    emails: ["villas@stayvista.com"]
+    instagram: "stayvista_official"
+  - name: "SaffronStays"
+    aliases: ["saffron stays"]
+    tier: premium
+    website: "https://www.saffronstays.com"
+    phones: ["+918069160000"]
+    instagram: "saffronstays"
+  - name: "Elivaas"
+    tier: premium
+    website: "https://www.elivaas.com"
+    phones: ["+917969469950"]
+    instagram: "stay.elivaas"
+  - name: "EKOSTAY"
+    aliases: ["ekostay luxe", "eko stay"]
+    tier: premium
+  - name: "Lohono Stays"
+    aliases: ["lohono"]
+    tier: premium
+  - name: "Isprava"
+    tier: premium
+  - name: "LuxUnlock"
+    aliases: ["lux unlock"]
+    tier: premium
+  - name: "OYO"
+    aliases: ["oyo rooms", "oyo flagship", "capital o", "collection o", "townhouse oak"]
+    tier: budget
+  - name: "Treebo"
+    tier: budget
+  - name: "FabHotels"
+    aliases: ["fabhotel", "fab hotel"]
+    tier: budget
+  - name: "Zostel"
+    tier: budget
+
+# ---------------------------------------------------------------------------
+# Venue tiers -- a property of the VENUE, not of the lead.
+#   Luxury    qualifies AND (price >= luxury price, or enough premium points)
+#   Premium   meets ANY ONE high-end criterion: a premium platform/operator,
+#             rated >= rating_min over >= rating_min_reviews reviews, a private
+#             pool or >= bedrooms_min bedrooms, or a premium hotel / winery resort
+#   Standard  evidence, but no criterion met -- or a known budget price/operator
+#   Unverified almost nothing known yet
+# Price is not a criterion; it ranks, via the points bands and the Luxury bar.
+# ---------------------------------------------------------------------------
+venue_tiers:
+  rating_min: 4.3
+  rating_min_reviews: 20
+  bedrooms_min: 3
+  luxury_night_price: 25000
+  luxury_plate_price: 2000
+  luxury_points: 8
+  budget_night_price: 4000       # a KNOWN price below this caps at Standard; null disables
+  points_saturation: 12
+  night_price_points: {50000: 5, 25000: 4, 15000: 3, 8000: 2, 4000: 1}
+  plate_price_points: {2500: 4, 1500: 3, 1000: 2, 700: 1}
+
+premium_platforms: ["stayvista", "saffronstays", "elivaas", "lohono", "isprava", "luxunlock",
+                    "airbnb_luxe"]
+
+# ---------------------------------------------------------------------------
+# Ranking within a tier. Premium signal is price-led (see venue_tiers).
+# ---------------------------------------------------------------------------
+scoring:
+  weights:
+    premium_signal: 0.40        # how upscale: price first, then platform, pool, size
+    reputation: 0.25            # best rating x total reviews across every source
+    contact_completeness: 0.20  # can we actually reach them
+    source_corroboration: 0.15  # listed by several independent sources
+  reviews_saturation: 300
+  sources_saturation: 4
+  completeness_fields:
+    phones: 0.30
+    emails: 0.25
+    website: 0.15
+    instagram: 0.12
+    whatsapp: 0.06
+    address: 0.06
+    facebook: 0.04
+    linkedin: 0.02
+
+dedup:
+  # One reservations number fronts dozens of villas, so a shared phone only
+  # merges records whose names are also this similar (0-100).
+  phone_match_min_similarity: 60
+  # Records pinned within this radius merge when names are this similar.
+  geo_match_radius_m: 250
+  geo_match_min_similarity: 70
+  # Words every listing carries; ignored when comparing names.
+  extra_name_noise: ["villa", "villas", "resort", "resorts", "farmhouse", "farm house",
+                     "farm stay", "homestay", "home stay", "stays", "bhk", "luxury",
+                     "private pool", "pool", "igatpuri", "trimbakeshwar", "trimbak",
+                     "nashik", "by stayvista", "stayvista", "saffronstays", "elivaas",
+                     "bungalow", "cottage"]
+
+runtime:
+  max_retries: 3
+  backoff_base: 2.0
+  request_timeout: 30
+  headless: true
+  db_path: "data/nashik/venues.sqlite3"
+  failure_log: "logs/nashik/failures.jsonl"
+  run_log: "logs/nashik/run.log"
+  csv_export: "data/nashik/venues.csv"
+  ai_cache: "data/ai_cache.sqlite3"
+  sheets_flush_every: 25
+  enrich_workers: 8
+  browser_contexts: 3
+  skip_enriched: true
+
+ai:
+  enabled: true
+  backend: "claude_cli"
+  allow_billed_api: false
+  model: "claude-haiku-4-5"
+  judge_model: "claude-opus-5"
+  batch_size: 12
+  max_cost_usd: 5.00
+  failure_limit: 4
+  timeout: 180
+  #   venues  -> type listings the rules can't, flag non-venues
+  features: ["extract", "names", "venues"]
+
+sheets:
+  enabled: true
+  # The same spreadsheet as the Mumbai run -- only these two tabs are written.
+  spreadsheet_id: "1AIPg53vGw4iKzrvon0M3tlD8ILkJGGgnoAuxN83lLpA"
+  spreadsheet_name: "Mumbai Event Industry Leads"
+  worksheet_name: "Nashik Venues"
+  failures_worksheet_name: "Nashik Skipped"
+  share_with: ""

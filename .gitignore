@@ -1,0 +1,39 @@
+# Secrets -- never commit these
+.env
+.env.*
+!.env.example
+credentials.json
+credentials*.json
+*service-account*.json
+
+# Data and run artefacts (real leads live here -- see APP-BUILD-PROMPT.md A.2.6)
+data/
+logs/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+*.sqlite3-journal
+
+# Generated workbooks contain real leads. Phase 4 commits fixture-only
+# samples under docs/samples/ and will add an explicit exception for them.
+*.xlsx
+*.xls
+*.csv
+!tests/**/*.csv
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+.coverage
+htmlcov/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

@@ -1,0 +1,26 @@
+# Core HTTP + parsing
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+brotli>=1.1.0          # so we can honestly advertise 'br' to servers
+lxml>=5.1.0
+
+# Headless browser (Google Maps + JS-heavy directories)
+playwright>=1.44.0
+
+# Normalisation / matching
+phonenumbers>=8.13.0
+rapidfuzz>=3.6.0
+
+# Resilience
+tenacity>=8.2.0
+
+# Config
+PyYAML>=6.0
+python-dotenv>=1.0.0
+
+# Google Sheets (free tier of the Sheets API)
+gspread>=6.0.0
+google-auth>=2.28.0
+
+# Tests
+pytest>=8.0.0

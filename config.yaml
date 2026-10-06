@@ -1,0 +1,289 @@
+# ---------------------------------------------------------------------------
+# Mumbai event-industry lead scraper -- run configuration
+# Everything here is overridable from the CLI (see `python run.py --help`).
+# ---------------------------------------------------------------------------
+
+city: "Mumbai"
+
+# ISO 3166-1 alpha-2. Drives the phone-normalisation region (so numbers parse
+# as local, not just +91) and, later, which source packs activate -- Justdial,
+# Sulekha and IndiaMART only make sense inside India.
+country: "IN"
+
+# Search geography. `aliases` are extra strings fed to the search engines so a
+# locality that people spell several ways still gets full coverage.
+# `areas:` is accepted as a synonym for this key, so a config written in the
+# newer city/areas vocabulary loads without changes here.
+localities:
+  - name: "Andheri"
+    aliases: ["Andheri East Mumbai", "Andheri Mumbai"]
+  - name: "Andheri West"
+    aliases: ["Andheri West Mumbai", "Lokhandwala Andheri West"]
+  - name: "Powai"
+    aliases: ["Powai Mumbai", "Hiranandani Powai"]
+  - name: "Marine Lines & Fort"
+    aliases: ["Marine Lines Mumbai", "Fort Mumbai", "Churchgate Mumbai"]
+  - name: "Ghatkopar"
+    aliases: ["Ghatkopar East Mumbai", "Ghatkopar West Mumbai"]
+  - name: "Dadar"
+    aliases: ["Dadar East Mumbai", "Dadar West Mumbai"]
+  - name: "Goregaon"
+    aliases: ["Goregaon East Mumbai", "Goregaon West Mumbai", "NESCO Goregaon"]
+  - name: "WEH / Airport Road Corridor"
+    aliases:
+      - "Western Express Highway Mumbai"
+      - "Airport Road Mumbai"
+      - "Marol Naka Mumbai"
+      - "Saki Naka Mumbai"
+      - "Asalpha Mumbai"
+      - "Jogeshwari Mumbai"
+  - name: "Kanjur Marg"
+    aliases: ["Kanjurmarg East Mumbai", "Kanjurmarg West Mumbai"]
+
+# Vendor categories. `queries` are the literal search phrases; `directory_slug`
+# maps the category onto each wedding directory's own URL taxonomy.
+#
+# The slugs below are a HINT, not the truth. Hardcoding them is exactly what
+# broke: half the WedMeGood slugs here 404'd for months, every listing fell
+# through to SERP search, and the run degraded into a Maps-only scraper. The
+# scraper now reads the live slug list off the directory's own listing HTML and
+# fuzzy-matches these against it, so a renamed category self-heals; a slug that
+# has no live counterpart at all (Florists on WedMeGood) is null and that
+# directory is simply skipped for the category.
+categories:
+  - name: "Venues"
+    queries: ["banquet hall", "wedding venue", "event venue", "party hall", "convention centre"]
+    directory_slugs:
+      wedmegood: "wedding-venues"
+      weddingwire: "wedding-venues"
+    indiamart: false
+  - name: "Caterers"
+    queries: ["catering services", "wedding caterers", "event catering"]
+    directory_slugs:
+      wedmegood: "wedding-catering"
+      weddingwire: "wedding-caterers"
+    indiamart: true
+    indiamart_queries: ["catering services", "wedding catering services"]
+  - name: "Decorators"
+    queries: ["event decorators", "wedding decorators", "balloon decoration", "stage decoration"]
+    directory_slugs:
+      wedmegood: "wedding-decorators"
+      weddingwire: "wedding-decorators"
+    indiamart: true
+    indiamart_queries: ["event decoration services", "wedding decoration"]
+  - name: "Photographers"
+    queries: ["wedding photographer", "event photographer", "photography studio"]
+    directory_slugs:
+      wedmegood: "wedding-photographers"
+      weddingwire: "wedding-photographers"
+    indiamart: false
+  - name: "DJs / Sound & Lighting"
+    queries: ["dj services", "sound and lighting", "event sound system rental", "dj for wedding"]
+    directory_slugs:
+      wedmegood: "djs"
+      weddingwire: "wedding-dj"
+    indiamart: true
+    indiamart_queries: ["sound system on rent", "dj light rental", "event lighting services"]
+  - name: "Event Planners"
+    queries: ["event management company", "wedding planner", "event planner"]
+    directory_slugs:
+      wedmegood: "wedding-planners"
+      weddingwire: "wedding-planners"
+    indiamart: true
+    indiamart_queries: ["event management services"]
+  - name: "Florists"
+    queries: ["florist", "flower decoration", "wedding flowers"]
+    directory_slugs:
+      wedmegood: null          # WedMeGood has no florist category at all
+      weddingwire: "wedding-florists"
+    indiamart: true
+    indiamart_queries: ["decorative flowers", "artificial flower decoration"]
+  - name: "Entertainment / Performers"
+    queries: ["event entertainment", "live band for events", "anchor for events", "dance troupe"]
+    directory_slugs:
+      wedmegood: "wedding-entertainment"
+      weddingwire: "wedding-entertainment"
+    indiamart: false
+
+# ---------------------------------------------------------------------------
+# Which discovery sources run, and how hard they are allowed to push.
+# `min_delay`/`max_delay` are seconds; a uniform random value in that range is
+# slept between every request to that source's domain.
+# ---------------------------------------------------------------------------
+sources:
+  google_maps:
+    enabled: true
+    min_delay: 2.5
+    max_delay: 6.0
+    max_results_per_query: 25
+    scroll_rounds: 8
+  google_search:
+    enabled: true
+    min_delay: 12.0          # Google SERP is the easiest place to earn a CAPTCHA
+    max_delay: 28.0
+    results_per_query: 20
+    pages: 2
+    fallback_to_duckduckgo: true
+  # `serp_fallback` is opt-in on purpose. When a listing page fails, falling
+  # back to `site:` search sounds free -- it is not. With the listing URLs
+  # broken, every category fell through to search, Google answered with a
+  # CAPTCHA inside ~120s of every run start, DuckDuckGo then throttled, and the
+  # run collapsed into a Maps-only scraper (1260 of 1333 leads). Fix the
+  # listing path instead; only turn this on knowing it costs the SERP budget.
+  wedmegood:
+    enabled: true
+    min_delay: 4.0
+    max_delay: 9.0
+    max_pages: 3
+    serp_fallback: false
+  weddingwire:
+    enabled: true
+    min_delay: 4.0
+    max_delay: 9.0
+    max_pages: 3
+    serp_fallback: false
+  indiamart:
+    enabled: true
+    min_delay: 5.0
+    max_delay: 11.0
+    max_pages: 2
+    serp_fallback: false
+  justdial:
+    enabled: true
+    min_delay: 10.0          # deliberately slow: Justdial blocks aggressively
+    max_delay: 22.0
+    max_pages: 1
+  sulekha:
+    enabled: true
+    min_delay: 8.0
+    max_delay: 18.0
+    max_pages: 1
+  facebook:
+    enabled: true
+    min_delay: 6.0
+    max_delay: 14.0
+  linkedin_serp:
+    enabled: true
+    min_delay: 15.0          # rides on Google SERP, so inherit its caution
+    max_delay: 30.0
+  instagram:
+    enabled: true
+    min_delay: 8.0
+    max_delay: 20.0
+    max_profiles_per_run: 150   # hard cap: IG rate-limits hard and fast
+  website:
+    enabled: true
+    min_delay: 1.5
+    max_delay: 4.0
+    max_pages_per_site: 4
+
+# ---------------------------------------------------------------------------
+# Legitimacy / quality scoring. Weights are relative and get normalised, so
+# you can tune them freely without keeping them summed to 1.0.
+# ---------------------------------------------------------------------------
+scoring:
+  weights:
+    maps_popularity: 0.40     # Google rating x review volume
+    source_corroboration: 0.25 # how many independent sources listed them
+    directory_signal: 0.20     # WedMeGood rating / reviews / Featured
+    contact_completeness: 0.15 # how reachable the lead actually is
+  # A listing needs this many reviews to reach full popularity credit.
+  reviews_saturation: 400
+  # Number of distinct sources that counts as full corroboration.
+  sources_saturation: 4
+  wedmegood_featured_bonus: 0.25   # added to the directory sub-score (capped at 1)
+  # Fields that count toward "can I actually contact this lead?"
+  completeness_fields:
+    phones: 0.30
+    emails: 0.25
+    website: 0.15
+    address: 0.10
+    instagram: 0.08
+    whatsapp: 0.05
+    facebook: 0.04
+    linkedin: 0.03
+
+# ---------------------------------------------------------------------------
+# Reliability
+# ---------------------------------------------------------------------------
+runtime:
+  max_retries: 3
+  backoff_base: 2.0          # seconds; exponential
+  request_timeout: 30
+  headless: true
+  db_path: "data/leads.sqlite3"
+  failure_log: "logs/failures.jsonl"
+  run_log: "logs/run.log"
+  csv_export: "data/leads.csv"
+  ai_cache: "data/ai_cache.sqlite3"
+  # Push the running table to Sheets every N new/updated leads.
+  sheets_flush_every: 25
+  # Thread pool for per-lead enrichment. Each task still takes its own host's
+  # rate-limit slot, so the parallelism is ACROSS hosts only -- one slow domain
+  # never gets hit by more than one worker at a time.
+  enrich_workers: 8
+  # Concurrent Playwright browser contexts, one per worker thread that needs a
+  # browser. Contexts are expensive in RAM, hence the small default.
+  browser_contexts: 3
+  # On re-runs, leave leads that were already enriched alone. Re-enriching 1300
+  # unchanged leads is hours of work for nothing.
+  skip_enriched: true
+
+# ---------------------------------------------------------------------------
+# Optional AI layer. ON by default -- it is what turns SEO page titles into
+# business names, and 86 of 1333 stored names were page titles without it.
+# Safe to leave on for everyone: when the `claude` CLI is missing the layer
+# warns once and degrades to non-AI mode rather than failing, so a teammate
+# without it still gets a full run, just with rawer names. When on, AI only
+# ever ADDS information; it never deletes a lead.
+#
+# backend "auto" prefers the Anthropic API (fast, cheap per call) when
+# ANTHROPIC_API_KEY is set, and otherwise shells out to the Claude Code CLI,
+# which uses your Claude Code subscription and needs no API key.
+# ---------------------------------------------------------------------------
+ai:
+  enabled: true
+  # claude_cli  -> uses your Claude Code SUBSCRIPTION. No API key, no extra bill.
+  # anthropic_api -> pay-as-you-go API billing, SEPARATE from the subscription.
+  # This is pinned to claude_cli on purpose: with "auto", a stray
+  # ANTHROPIC_API_KEY in your environment would silently start billing you.
+  backend: "claude_cli"        # claude_cli | anthropic_api | auto
+  # Safety catch. While this is false, no backend that bills separately from
+  # your subscription will ever be selected -- even if a key is present and
+  # even if backend is set to anthropic_api.
+  allow_billed_api: false
+  # Fable/Mythos model families are BLOCKED in code regardless of what is set
+  # here -- they bill as external credits rather than subscription allowance.
+  model: "claude-haiku-4-5"    # bulk extraction/classification worker
+  judge_model: "claude-opus-5" # only for duplicate adjudication
+  batch_size: 12               # records per call -- the CLI backend costs ~10s
+                               # per call, so batching is what makes it viable
+  # Caps AI token usage, measured in list-price USD equivalent. On the
+  # claude_cli backend this is a METER, not a charge -- it throttles how much
+  # of your subscription allowance the scraper consumes.
+  # Set to null (or pass --ai-unlimited) for no cap: AI then runs until the
+  # allowance itself is exhausted, at which point the scraper detects it and
+  # continues in non-AI mode rather than failing.
+  max_cost_usd: 5.00
+  # Give up on AI after this many consecutive failures, so a broken backend
+  # can't burn hours spawning processes.
+  failure_limit: 4
+  timeout: 180
+  # Which features to run. Empty list = all of them.
+  #   extract -> read contacts off pages the scrapers couldn't parse
+  #   names   -> clean SERP-derived business names, flag non-businesses
+  #   dedup   -> adjudicate ambiguous duplicate pairs
+  features: ["extract", "names"]
+
+sheets:
+  enabled: true
+  spreadsheet_name: "Mumbai Event Industry Leads"
+  # If set, takes priority over spreadsheet_name.
+  spreadsheet_id: "1AIPg53vGw4iKzrvon0M3tlD8ILkJGGgnoAuxN83lLpA"
+  worksheet_name: "Leads"
+  failures_worksheet_name: "Skipped"
+  # Only used when the tool has to CREATE a spreadsheet. A service account's
+  # Drive isn't visible to you, so put your own Google address here or the new
+  # sheet will exist but be unreachable. Sharing an existing sheet with the
+  # service account (see README) is the more reliable path.
+  share_with: ""
