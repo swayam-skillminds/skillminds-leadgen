@@ -235,21 +235,9 @@ def test_a_place_learned_through_a_merge_is_indexed(store):
     assert store.count() == 1
 
 
-def test_place_index_is_backfilled_for_a_store_written_before_it(tmp_path):
-    path = tmp_path / "old.sqlite3"
-    old = LeadStore(path)
-    old.upsert(Lead(business_name="Aayoni Banquet", locality="Andheri", gmaps_url=PLACE_URL))
-    old._conn.execute("DELETE FROM place_index")       # as written by the old code
-    old.close()
-
-    reopened = LeadStore(path)
-    try:
-        _, action, _ = reopened.upsert(Lead(business_name="Aayoni Banquet", locality="Powai",
-                                            gmaps_url=PLACE_URL))
-        assert action in ("merged", "unchanged")
-        assert reopened.count() == 1
-    finally:
-        reopened.close()
+# test_place_index_is_backfilled_for_a_store_written_before_it moved to test_db.py
+# (test_place_is_indexed_for_a_store_written_before_place_index): stores in the
+# original format are now imported, not opened.
 
 
 def test_upsert_rejects_nameless_lead(store):

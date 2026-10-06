@@ -11,7 +11,7 @@ import logging
 import threading
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 log = logging.getLogger(__name__)
 
@@ -19,11 +19,13 @@ log = logging.getLogger(__name__)
 class FailureLog:
     """Append-only JSONL log of everything we couldn't fetch or parse."""
 
-    def __init__(self, path: str | Path):
+    def __init__(self, path: str | Path, sink: Callable[[dict[str, Any]], None] | None = None):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._lock = threading.Lock()
         self._records: list[dict[str, Any]] = []
+        #: Also hand each record to this (the run history's failures table).
+        self.sink = sink
 
     def record(
         self,
@@ -55,6 +57,11 @@ class FailureLog:
                     handle.write(json.dumps(entry, ensure_ascii=False) + "\n")
             except OSError as exc:  # never let logging break the run
                 log.warning("Could not write failure log: %s", exc)
+        if self.sink is not None:
+            try:
+                self.sink(entry)
+            except Exception as exc:  # the history is a bonus; the JSONL is the record
+                log.warning("Could not record failure in run history: %s", exc)
         log.debug("skipped [%s] %s (%s)", source, business or url or query, reason)
 
     @property

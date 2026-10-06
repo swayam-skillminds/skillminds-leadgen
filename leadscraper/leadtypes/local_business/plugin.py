@@ -107,6 +107,8 @@ class LocalBusinessLeadType(LeadType):
                 dry_run=bool(getattr(context, "dry_run", False)),
                 store=getattr(context, "store", None),
                 install_signals=bool(getattr(context, "install_signals", True)),
+                failure_sink=getattr(context, "failure_sink", None),
+                unit_sink=getattr(context, "unit_sink", None),
             )
             result.units_planned = len(plan_discovery(
                 config, pipeline.sources, pipeline.localities, pipeline.categories).units())

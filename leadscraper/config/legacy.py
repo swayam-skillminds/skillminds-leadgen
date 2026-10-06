@@ -15,7 +15,7 @@ from ..core import normalize
 from ..core.country import CountryInfo, country
 from ..core.geo import as_point
 from ..paths import PROJECT_ROOT
-from .importer import LEGACY_COUNTRY, apply_legacy_defaults, is_legacy
+from .importer import LEGACY_COUNTRY, is_legacy
 
 DEFAULT_CONFIG_PATH = PROJECT_ROOT / "config.yaml"
 
@@ -79,6 +79,8 @@ class Config:
         self.path = path
         #: The validated run config this view was compiled from, if any.
         self.run_config = None
+        #: Dotted paths changed after loading (CLI flags), for the run's snapshot.
+        self.overrides: dict[str, Any] = {}
         # `areas` is the newer vocabulary for the same list; accept either so a
         # config written in one style loads under the other.
         city = str(data.get("city") or "")
@@ -113,11 +115,15 @@ class Config:
             raise FileNotFoundError(f"Config not found: {config_path}")
         with config_path.open("r", encoding="utf-8") as handle:
             data = yaml.safe_load(handle) or {}
-        if is_legacy(data):
-            return cls(apply_legacy_defaults(data), config_path)
         from .compile import compile_run_config
         from .schema import RunConfig
 
+        if is_legacy(data):
+            # A legacy file runs as the preset it imports to: same behaviour
+            # (the compiled view equals the file key for key), plus a project.
+            from .importer import legacy_to_document
+
+            data = legacy_to_document(data, source=config_path.name)
         return compile_run_config(RunConfig.model_validate(data), path=config_path)
 
     def get(self, dotted: str, default: Any = None) -> Any:
@@ -131,6 +137,7 @@ class Config:
 
     def set(self, dotted: str, value: Any) -> None:
         """Apply a CLI override in place."""
+        self.overrides[dotted] = value
         parts = dotted.split(".")
         node = self._data
         for part in parts[:-1]:

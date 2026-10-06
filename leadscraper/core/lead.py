@@ -55,6 +55,9 @@ class Lead:
     sources: list[str] = field(default_factory=list)
     source_urls: list[str] = field(default_factory=list)
     notes: list[str] = field(default_factory=list)
+    #: Official identifiers, scheme -> value ("gstin" -> "27ABCDE1234F1Z5",
+    #: "uk_company" -> "01234567"). The strongest identity key there is.
+    registry_ids: dict[str, str] = field(default_factory=dict)
 
     # --- venue attributes (venue runs only; empty on a vendor run) ----------
     #: "Property" or "Brand" (an operator such as StayVista, not one venue).
@@ -152,7 +155,7 @@ class Lead:
 
     # --- merge ------------------------------------------------------------
 
-    def merge(self, other: "Lead") -> list[str]:
+    def merge(self, other: "Lead", now: float | None = None) -> list[str]:
         """Fold `other` into self. Returns the names of fields that changed.
 
         Merge policy:
@@ -181,6 +184,11 @@ class Lead:
             if not getattr(self, scalar) and getattr(other, scalar):
                 setattr(self, scalar, getattr(other, scalar))
                 changed.append(scalar)
+
+        for scheme, value in (other.registry_ids or {}).items():
+            if value and not self.registry_ids.get(scheme):
+                self.registry_ids[scheme] = value
+                changed.append("registry_ids")
 
         changed.extend(self._merge_venue(other))
 
@@ -245,7 +253,8 @@ class Lead:
                     changed.append("notes")
 
         if changed:
-            self.last_updated = time.time()
+            # `now` lets a replay of old records keep their own timestamps.
+            self.last_updated = time.time() if now is None else now
             self.first_seen = min(self.first_seen, other.first_seen)
         return dedupe_preserving_order(changed)
 
@@ -440,6 +449,10 @@ class Lead:
 
     @classmethod
     def from_json(cls, blob: str) -> "Lead":
-        data = json.loads(blob)
-        known = {f for f in cls.__dataclass_fields__}
+        return cls.from_dict(json.loads(blob))
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> "Lead":
+        """Fields this version doesn't know (older or newer records) are ignored."""
+        known = cls.__dataclass_fields__
         return cls(**{k: v for k, v in data.items() if k in known})

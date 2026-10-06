@@ -34,6 +34,7 @@ from leadscraper.config import Config  # noqa: E402
 from leadscraper.export.csv_writer import leads_to_rows  # noqa: E402
 from leadscraper.core.lead import Lead  # noqa: E402
 from leadscraper.leadtypes.local_business.scoring import Scorer  # noqa: E402
+from leadscraper.db.legacy_import import import_legacy_store  # noqa: E402
 from leadscraper.db.store import DedupOptions, LeadStore  # noqa: E402
 
 GOLDEN_DIR = HERE / "golden"
@@ -68,7 +69,24 @@ def apply_name_noise(config: Config) -> None:
 
 
 def open_store(path: Path, config: Config) -> LeadStore:
-    return LeadStore(path, Scorer(config), DedupOptions.from_config(config))
+    """A fresh application DB holding one project, configured like the run."""
+    return LeadStore(path, Scorer(config), DedupOptions.from_config(config),
+                     project="characterisation", country=config.country)
+
+
+def migrate(baseline: Path, config: Config, scratch: Path, mode: str):
+    """Phase 1 acceptance: import a copy of the legacy store into a project.
+
+    Returns (open store, ImportReport). The baseline itself is only ever
+    copied, read-only.
+    """
+    legacy_copy = copy_db(baseline, scratch / f"legacy-{mode}.sqlite3")
+    target = scratch / f"app-{mode}.sqlite3"
+    if target.exists():
+        target.unlink()
+    store = open_store(target, config)
+    report = import_legacy_store(legacy_copy, store, mode=mode, record_run=False)
+    return store, report
 
 
 # --- goldens -----------------------------------------------------------------
@@ -143,13 +161,17 @@ def copy_db(source: Path, dest: Path) -> Path:
 
 
 def export_snapshot(baseline: Path, config: Config, scratch: Path) -> dict[str, Any]:
-    """What `run.py --export-only` produces from a copy of the baseline."""
+    """What `--export-only` produces after a verbatim migration of the baseline.
+
+    Keys are the legacy row ids, so the snapshot compares with one taken
+    before the migration existed.
+    """
     apply_name_noise(config)
-    work = copy_db(baseline, scratch / "export.sqlite3")
-    store = open_store(work, config)
+    store, report = migrate(baseline, config, scratch, "verbatim")
+    legacy_id = {new: ids[0] for new, ids in report.clusters.items()}
     try:
         store.rescore_all()
-        by_id = store.all_with_ids()
+        by_id = [(legacy_id[new_id], lead) for new_id, lead in store.all_with_ids()]
         sorted_leads = store.sorted_leads()
     finally:
         store.close()
@@ -172,45 +194,20 @@ def export_snapshot(baseline: Path, config: Config, scratch: Path) -> dict[str, 
 
 
 def dedup_snapshot(baseline: Path, config: Config, scratch: Path) -> dict[str, Any]:
-    """Replay every stored lead, in id order, into an empty store.
+    """Replay every stored lead, in id order, into an empty project (a replay migration).
 
     Pins today's dedup decisions on real data: which records the current
     rules would fold together, and which they refuse to store at all.
     """
     apply_name_noise(config)
-    source = sqlite3.connect(f"file:{baseline}?mode=ro", uri=True)
-    try:
-        originals = [(lead_id, Lead.from_json(data)) for lead_id, data in
-                     source.execute("SELECT id, data FROM leads ORDER BY id")]
-    finally:
-        source.close()
-
-    target = scratch / "replay.sqlite3"
-    if target.exists():
-        target.unlink()
-    store = open_store(target, config)
-    clusters: dict[int, list[int]] = {}
-    rejected: list[int] = []
-    actions = {"new": 0, "merged": 0, "unchanged": 0}
-    try:
-        for original_id, lead in originals:
-            try:
-                new_id, action, _ = store.upsert(lead)
-            except ValueError:
-                rejected.append(original_id)
-                continue
-            actions[action] += 1
-            clusters.setdefault(new_id, []).append(original_id)
-        stored = store.count()
-    finally:
-        store.close()
-
+    store, report = migrate(baseline, config, scratch, "replay")
+    store.close()
     return {
-        "replayed": len(originals),
-        "stored": stored,
-        "actions": actions,
-        "rejected_ids": rejected,
-        "merged_clusters": sorted(ids for ids in clusters.values() if len(ids) > 1),
+        "replayed": report.legacy_rows,
+        "stored": report.stored,
+        "actions": dict(report.actions),
+        "rejected_ids": list(report.rejected_ids),
+        "merged_clusters": report.merged_clusters,
     }
 
 

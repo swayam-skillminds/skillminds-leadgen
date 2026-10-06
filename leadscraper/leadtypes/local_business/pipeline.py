@@ -29,7 +29,7 @@ from ...export.sheets import SheetsWriter
 from .planning import SelectionPlan, plan_discovery, select_sources
 from ...sources import DISCOVERY_SOURCES, ENRICHMENT_SOURCES, SourceContext
 from ...core.normalize import looks_like_seo_title, phone_display
-from ...db.store import DedupOptions, LeadStore
+from ...db.store import DedupOptions, LeadStore, store_target
 from ...packs.hospitality.venues import TIERS, VENUE_TYPES
 
 log = logging.getLogger(__name__)
@@ -69,6 +69,8 @@ class Pipeline:
         dry_run: bool = False,
         store=None,
         install_signals: bool = True,
+        failure_sink: Callable[[dict], None] | None = None,
+        unit_sink: Callable[[dict], None] | None = None,
     ):
         self.config = config
         self.localities = localities
@@ -80,7 +82,10 @@ class Pipeline:
         #: closed so callers embedding this pipeline can read the results.
         self.leads: list[Lead] = []
 
-        self.failures = FailureLog(config.path_for("failure_log", "logs/failures.jsonl"))
+        self.failures = FailureLog(config.path_for("failure_log", "logs/failures.jsonl"),
+                                   sink=failure_sink)
+        #: Told about every finished discovery unit (the run's work-unit history).
+        self._unit_sink = unit_sink
         self.limiter = RateLimiter()
         # The city (and, for venue runs, words like "villa") must not stop
         # "Mokshah" and "Mokshah Villa Igatpuri" sharing a dedup key.
@@ -93,8 +98,10 @@ class Pipeline:
         #: A store handed in (by the engine, shared across lead types) belongs
         #: to the caller, who closes it; one opened here is closed here.
         self._owns_store = store is None
-        self.store = store if store is not None else LeadStore(
-            config.path_for("db_path", "data/leads.sqlite3"), self.scorer)
+        if store is None:
+            target, store_kwargs = store_target(config)
+            store = LeadStore(target, self.scorer, **store_kwargs)
+        self.store = store
         if hasattr(self.store, "scorer"):
             self.store.scorer = self.scorer
         # Set after construction so a store without dedup options (a stub, an
@@ -296,7 +303,8 @@ class Pipeline:
         where = f"{locality.name if locality else 'all localities'} / " \
                 f"{category.name if category else 'all categories'}"
         log.info("[%s] %s", source.name, where)
-        found = 0
+        found, status, error = 0, "done", ""
+        started, new_before = time.time(), self.stats.new_leads
         try:
             for lead in source.discover(locality, category):
                 if self._stop_requested:
@@ -305,6 +313,7 @@ class Pipeline:
                 self._store_lead(lead, source.name)
         except Exception as exc:
             # A source that raises despite its own guards must not kill the run.
+            status, error = "failed", repr(exc)
             self.failures.record(
                 source.name, "source_crashed",
                 locality=locality.name if locality else None,
@@ -312,7 +321,33 @@ class Pipeline:
             )
             log.exception("source %s crashed on %s", source.name, where)
         self.stats.units_done += 1
+        self._note_unit(source, locality, category, started, found,
+                        self.stats.new_leads - new_before, status, error)
         log.info("[%s] %s -> %d raw leads", source.name, where, found)
+
+    def _note_unit(self, source, locality, category, started: float, found: int, new: int,
+                   status: str, error: str) -> None:
+        """Feed the unit's cost and yield to the scheduling stats and the run history."""
+        seconds = time.time() - started
+        area = locality.name if locality else "*"
+        cat = category.name if category else "*"
+        recorder = getattr(self.store, "record_unit", None)
+        try:
+            if callable(recorder):
+                recorder(source.name, area, cat, seconds, new)
+            if self._unit_sink is not None:
+                from datetime import datetime, timezone
+
+                self._unit_sink({
+                    "lead_type": "local_business", "source": source.name,
+                    "area": locality.name if locality else None,
+                    "category": category.name if category else None,
+                    "scope": getattr(source, "scope", "combo"), "status": status,
+                    "found": found, "error": error,
+                    "started_at": datetime.fromtimestamp(started, tz=timezone.utc),
+                })
+        except Exception as exc:  # bookkeeping never stops a run
+            log.warning("could not record unit %s %s/%s: %s", source.name, area, cat, exc)
 
     def _store_lead(self, lead: Lead, source_name: str) -> None:
         self.stats.leads_seen += 1

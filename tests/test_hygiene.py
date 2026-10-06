@@ -154,9 +154,11 @@ def test_enriched_round_trip(store):
 
 
 def test_mark_enriched_is_idempotent(store):
-    store.mark_enriched(7, "website")
-    store.mark_enriched(7, "website")
-    assert store.is_enriched(7, "website") is True
+    # Marks now reference a real organisation (a foreign key), so make one.
+    lead_id, _, _ = store.upsert(Lead(business_name="Royal Caterers", locality="Andheri"))
+    store.mark_enriched(lead_id, "website")
+    store.mark_enriched(lead_id, "website")
+    assert store.is_enriched(lead_id, "website") is True
 
 
 # --- schema upgrade --------------------------------------------------------

@@ -1,330 +1,278 @@
-"""SQLite-backed lead store with dedup-on-write.
+"""The organisation store: one project's deduplicated leads, on SQLAlchemy.
 
-Dedup strategy, in priority order:
-  1. Shared phone number      -> definitely the same business (strongest signal)
-  2. Same Google Maps place   -> same business, when phones don't contradict
-  3. Identical canonical name -> same business, when phones don't contradict
-  4. Fuzzy name >= threshold within the same locality -> same business
+Every write goes through ``upsert`` (a new finding) or ``merge_into`` (an
+enrichment of a known record). Identity is decided by ``core.identity``; this
+module answers its lookups (``CandidateIndex``) from indexed tables, in the
+same row order the original SQLite store's indexes returned, so every
+dedup decision is reproduced exactly.
 
-Rules 1 and 2 can merge across localities (a caterer listed in both Andheri
-and Dadar is one business; Maps returns the same place to searches run from
-neighbouring suburbs). Rules 3 and 4 are deliberately more conservative
-because "Royal Banquets" in two suburbs may well be two companies.
+Alongside the record each write leaves:
 
-A venue run tightens and extends this through `DedupOptions`:
-  * a shared phone only merges when the names are also similar -- one
-    StayVista reservations number fronts dozens of unrelated villas;
-  * two records whose coordinates sit within a few hundred metres merge when
-    their names are loosely similar, which catches "Mokshah" (StayVista) vs
-    "Mokshah Villa Igatpuri" (Maps) even when their localities disagree.
+* identity keys (phones, Maps place, domain, registry IDs) in claim order;
+* contacts, each with the source that first published it;
+* an evidence row -- source, URL, fields changed, when;
+* the run's membership row ("new" / "updated"), when a run is attached.
+
+After an enrichment (``merge_into``) or a rename (``update_fields``) the
+record is checked against the store again and folded into any record it now
+matches: enrichment that gives two stored records the same phone used to
+leave them as duplicates forever.
 """
 
 from __future__ import annotations
 
 import logging
-import sqlite3
+import math
+import re
 import threading
 import time
-from dataclasses import dataclass
+from dataclasses import asdict, fields as dataclass_fields
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Iterable, Literal
+from typing import Any, Iterable, Literal
 
-from rapidfuzz import fuzz
+from sqlalchemy import and_, delete, func, select, tuple_, update
+from sqlalchemy.engine import Connection, Engine
 
 from ..core.errors import is_error_title
+from ..core.identity import DedupOptions, IdentityResolver, identity_domain, identity_keys
 from ..core.lead import Lead
-from ..core.normalize import maps_place_key, normalize_name
-from ..leadtypes.local_business.scoring import Scorer
-from ..core.geo import haversine_km
-from ..packs.hospitality.venues import TIER_RANK
+from ..core.normalize import maps_place_key
+from .engine import init_schema, is_sqlite, open_database, url_for
+from .models import (
+    Contact, DeadDomain, EnrichmentMark, Evidence, IdentityKey, Organization, Person, Project,
+    RunOrganization, SeenUrl, Signal, UnitStat, Workspace,
+)
+
+__all__ = ["LeadStore", "DedupOptions", "UpsertAction", "slugify_project", "store_target"]
 
 log = logging.getLogger(__name__)
 
 UpsertAction = Literal["new", "merged", "unchanged"]
 
-FUZZY_NAME_THRESHOLD = 92
+ORGS = Organization.__table__
+KEYS = IdentityKey.__table__
+CONTACTS = Contact.__table__
+PEOPLE = Person.__table__
+EVIDENCE = Evidence.__table__
+RUN_ORGS = RunOrganization.__table__
+SIGNALS = Signal.__table__
+SEEN = SeenUrl.__table__
+DEAD = DeadDomain.__table__
+UNITS = UnitStat.__table__
+MARKS = EnrichmentMark.__table__
+
+#: Fields whose change can make a record match another one.
+_IDENTITY_FIELDS = {"phones", "gmaps_url", "website", "registry_ids", "latitude", "business_name"}
+#: Channels a record's contacts are read from: (channel, Lead attribute).
+_CONTACT_FIELDS = (("phone", "phones"), ("email", "emails"), ("website", "website"),
+                   ("instagram", "instagram"), ("facebook", "facebook"),
+                   ("linkedin", "linkedin"), ("whatsapp", "whatsapp"), ("address", "address"))
+#: Sources whose contacts a model read from page text: still published on the
+#: page (A.2.5), but held with less confidence than a parsed field.
+_AI_SOURCES = {"ai_extract"}
 
 
-@dataclass
-class DedupOptions:
-    """Per-run dedup knobs. The defaults reproduce the vendor run exactly."""
+def utcnow() -> datetime:
+    return datetime.now(timezone.utc)
 
-    #: When set, a phone match also needs this name similarity (0-100).
-    phone_match_min_similarity: int | None = None
-    #: When set, records within this many metres are merge candidates...
-    geo_match_radius_m: float | None = None
-    #: ...provided their names reach this similarity.
-    geo_match_min_similarity: int = 70
-    #: "vendors": locality -> category -> score. "venues": tier -> score.
-    sort: str = "vendors"
-    #: Let a distinctive identical name merge across localities (venue runs:
-    #: Airbnb files a villa under "Nashik", Booking under "Igatpuri").
-    cross_locality_names: bool = False
 
-    @classmethod
-    def from_config(cls, config) -> "DedupOptions":
-        if config is None:
-            return cls()
-        get = config.get
-        venue_run = str(get("profile", "vendors") or "vendors").lower() == "venues"
-        phone_sim = get("dedup.phone_match_min_similarity", 60 if venue_run else None)
-        geo_radius = get("dedup.geo_match_radius_m", 250 if venue_run else None)
-        return cls(
-            phone_match_min_similarity=int(phone_sim) if phone_sim is not None else None,
-            geo_match_radius_m=float(geo_radius) if geo_radius else None,
-            geo_match_min_similarity=int(get("dedup.geo_match_min_similarity", 70)),
-            sort="venues" if venue_run else "vendors",
-            cross_locality_names=bool(get("dedup.cross_locality_names", venue_run)),
-        )
+def _epoch_to_dt(value: float | None) -> datetime:
+    try:
+        return datetime.fromtimestamp(float(value), tz=timezone.utc)
+    except (TypeError, ValueError, OverflowError, OSError):
+        return utcnow()
 
-_SCHEMA = """
-CREATE TABLE IF NOT EXISTS leads (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    name_key     TEXT NOT NULL,
-    locality     TEXT NOT NULL DEFAULT '',
-    category     TEXT NOT NULL DEFAULT '',
-    score        REAL NOT NULL DEFAULT 0,
-    data         TEXT NOT NULL,
-    created_at   REAL NOT NULL,
-    updated_at   REAL NOT NULL
-);
-CREATE INDEX IF NOT EXISTS idx_leads_name   ON leads(name_key);
-CREATE INDEX IF NOT EXISTS idx_leads_group  ON leads(locality, category, score DESC);
 
-CREATE TABLE IF NOT EXISTS phone_index (
-    phone   TEXT PRIMARY KEY,
-    lead_id INTEGER NOT NULL REFERENCES leads(id) ON DELETE CASCADE
-);
+def slugify_project(name: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", (name or "").lower()).strip("-") or "default"
 
-CREATE TABLE IF NOT EXISTS place_index (
-    place   TEXT PRIMARY KEY,
-    lead_id INTEGER NOT NULL REFERENCES leads(id) ON DELETE CASCADE
-);
 
-CREATE TABLE IF NOT EXISTS seen_urls (
-    url        TEXT PRIMARY KEY,
-    source     TEXT NOT NULL,
-    fetched_at REAL NOT NULL
-);
+def _populated_fields(lead: Lead) -> list[str]:
+    return [f.name for f in dataclass_fields(lead)
+            if f.name not in ("first_seen", "last_updated", "score")
+            and getattr(lead, f.name) not in (None, "", [], {}, False, 0, 0.0)]
 
-CREATE TABLE IF NOT EXISTS dead_domains (
-    host       TEXT PRIMARY KEY,
-    reason     TEXT NOT NULL,
-    first_seen REAL NOT NULL,
-    hits       INTEGER NOT NULL DEFAULT 1
-);
 
-CREATE TABLE IF NOT EXISTS unit_stats (
-    source          TEXT NOT NULL,
-    area            TEXT NOT NULL,
-    category        TEXT NOT NULL,
-    runs            INTEGER NOT NULL DEFAULT 0,
-    total_seconds   REAL NOT NULL DEFAULT 0,
-    total_new_leads INTEGER NOT NULL DEFAULT 0,
-    last_run        REAL NOT NULL,
-    PRIMARY KEY (source, area, category)
-);
+class _LazyRecord:
+    """A stored record fetched only when a rule actually looks inside it."""
 
-CREATE TABLE IF NOT EXISTS enriched (
-    lead_id  INTEGER NOT NULL,
-    enricher TEXT NOT NULL,
-    done_at  REAL NOT NULL,
-    PRIMARY KEY (lead_id, enricher)
-);
-"""
+    __slots__ = ("_store", "_id", "_lead")
+
+    def __init__(self, store: "LeadStore", record_id: int):
+        self._store, self._id, self._lead = store, record_id, None
+
+    def __getattr__(self, name: str) -> Any:
+        if self._lead is None:
+            self._lead = self._store.get(self._id)
+        return getattr(self._lead, name)
 
 
 class LeadStore:
-    """Thread-safe store. All writes go through `upsert`."""
+    """Thread-safe store for one project. All writes go through ``upsert`` / ``merge_into``.
 
-    def __init__(self, db_path: str | Path, scorer: Scorer | None = None,
-                 options: DedupOptions | None = None):
+    ``db`` is a file path (a SQLite application DB), a database URL, or an
+    Engine shared with other stores. ``project`` names the lead database
+    inside it; ``run_id`` attaches writes to a run's history.
+    """
+
+    def __init__(self, db: str | Path | Engine, scorer=None,
+                 options: DedupOptions | None = None, *,
+                 project: str = "default", workspace: str = "default",
+                 project_description: str = "", run_id: int | None = None,
+                 lead_type: str = "local_business", country: str = ""):
+        if scorer is None:
+            from ..leadtypes.local_business.scoring import Scorer
+
+            scorer = Scorer()
         self.options = options or DedupOptions()
-        self.db_path = Path(db_path)
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        self.scorer = scorer or Scorer()
+        self.scorer = scorer
+        self.lead_type = lead_type
+        self.country = country
+        self.run_id = run_id
+        #: Set by an importer so contacts and evidence name the import, not
+        #: the record's first source (which may not be where a value came from).
+        self.source_override: str | None = None
         self._lock = threading.RLock()
-        self._conn = sqlite3.connect(self.db_path, check_same_thread=False)
-        self._conn.row_factory = sqlite3.Row
-        self._conn.executescript(_SCHEMA)
-        self._backfill_place_index()
+        if isinstance(db, Engine):
+            self.engine, self._owns_engine = db, False
+            init_schema(db)
+        else:
+            self.engine, self._owns_engine = open_database(db), True
+        self.db_path = (Path(url_for(db).split("///", 1)[-1])
+                        if not isinstance(db, Engine) and is_sqlite(str(self.engine.url))
+                        else None)
+        self._conn: Connection = self.engine.connect()
+        self.workspace_id = self._ensure_workspace(workspace)
+        self.project_id = self._ensure_project(project, project_description)
+        self.project_name = project
         self._conn.commit()
-        self.stats = {"new": 0, "merged": 0, "unchanged": 0}
+        self.stats = {"new": 0, "merged": 0, "unchanged": 0, "consolidated": 0}
 
-    def _backfill_place_index(self) -> None:
-        """Index Maps places for a store written before the index existed.
+    # --- tenancy ---------------------------------------------------------------
 
-        Runs once: an empty index over a non-empty store is the only state
-        this touches. Lowest id wins a contested place, as on a live write.
-        """
-        if self._conn.execute("SELECT 1 FROM place_index LIMIT 1").fetchone():
+    def _ensure_workspace(self, name: str) -> int:
+        table = Workspace.__table__
+        row = self._conn.execute(select(table.c.id).where(table.c.name == name)).first()
+        if row:
+            return int(row[0])
+        return int(self._conn.execute(
+            table.insert().values(name=name, created_at=utcnow())).inserted_primary_key[0])
+
+    def _ensure_project(self, name: str, description: str) -> int:
+        table = Project.__table__
+        slug = slugify_project(name)
+        row = self._conn.execute(select(table.c.id).where(
+            table.c.workspace_id == self.workspace_id, table.c.slug == slug)).first()
+        if row:
+            return int(row[0])
+        now = utcnow()
+        return int(self._conn.execute(table.insert().values(
+            workspace_id=self.workspace_id, name=name, slug=slug, description=description,
+            created_at=now, updated_at=now)).inserted_primary_key[0])
+
+    # --- helpers -----------------------------------------------------------------
+
+    def _insert_ignore(self, table, values: dict[str, Any] | list[dict[str, Any]]) -> None:
+        if not values:
             return
-        for row in self._conn.execute("SELECT id, data FROM leads ORDER BY id").fetchall():
-            self._index_place(row["id"], Lead.from_json(row["data"]).gmaps_url)
+        if self.engine.dialect.name == "postgresql":
+            from sqlalchemy.dialects.postgresql import insert as dialect_insert
+        else:
+            from sqlalchemy.dialects.sqlite import insert as dialect_insert
+        self._conn.execute(dialect_insert(table).on_conflict_do_nothing(), values)
 
-    # --- lookup -----------------------------------------------------------
-    #
-    # Every helper below takes the lock itself rather than trusting its caller
-    # to hold it: the lock is an RLock, so the nested acquire inside
-    # `find_match`/`upsert` is free, and no helper is left unsafe when called
-    # on its own from a worker thread.
-
-    def _find_by_phone(self, phones: Iterable[str], lead: Lead | None = None) -> int | None:
-        phones = [p for p in phones if p]
-        if not phones:
-            return None
-        if self.options.phone_match_min_similarity is not None and lead is not None:
-            return self._find_by_phone_and_name(phones, lead)
-        placeholders = ",".join("?" * len(phones))
-        with self._lock:
-            row = self._conn.execute(
-                f"SELECT lead_id FROM phone_index WHERE phone IN ({placeholders}) LIMIT 1",
-                phones,
-            ).fetchone()
-        return row["lead_id"] if row else None
-
-    def _find_by_phone_and_name(self, phones: list[str], lead: Lead) -> int | None:
-        """Phone match that also demands a similar name.
-
-        The phone index keeps only the FIRST lead to claim a number, which is
-        exactly wrong for a shared reservations line, so candidates come from a
-        scan of the stored records instead. Venue runs are hundreds of rows,
-        not hundreds of thousands, so the scan is cheap.
-        """
-        threshold = self.options.phone_match_min_similarity or 0
-        wanted = set(phones)
-        with self._lock:
-            rows = self._conn.execute("SELECT id, data FROM leads").fetchall()
-        best_id, best_score = None, -1.0
-        for row in rows:
-            existing = Lead.from_json(row["data"])
-            if not wanted & set(existing.phones):
-                continue
-            similarity = self._name_similarity(lead, existing)
-            if similarity >= threshold and similarity > best_score:
-                best_id, best_score = row["id"], similarity
-        return best_id
-
-    def _find_by_location(self, lead: Lead) -> int | None:
-        """Records pinned within `geo_match_radius_m` whose names loosely agree."""
-        radius = self.options.geo_match_radius_m
-        if not radius or lead.latitude is None or lead.longitude is None:
-            return None
-        with self._lock:
-            rows = self._conn.execute("SELECT id, data FROM leads").fetchall()
-        best_id, best_score = None, -1.0
-        for row in rows:
-            existing = Lead.from_json(row["data"])
-            if existing.latitude is None or existing.longitude is None:
-                continue
-            metres = 1000 * haversine_km(lead.latitude, lead.longitude,
-                                         existing.latitude, existing.longitude)
-            if metres > radius:
-                continue
-            similarity = self._name_similarity(lead, existing)
-            if similarity >= self.options.geo_match_min_similarity and similarity > best_score:
-                best_id, best_score = row["id"], similarity
-        return best_id
+    def _org_filter(self):
+        return ORGS.c.project_id == self.project_id
 
     @staticmethod
-    def _name_similarity(a: Lead, b: Lead) -> float:
-        """0-100; containment counts as a full match ("Mokshah" in "Mokshah Villa")."""
-        key_a, key_b = a.name_key, b.name_key
-        if not key_a or not key_b:
-            return 0.0
-        if len(min(key_a, key_b, key=len)) >= 4 and (key_a in key_b or key_b in key_a):
-            return 100.0
-        return float(max(fuzz.token_sort_ratio(key_a, key_b), fuzz.token_set_ratio(key_a, key_b)))
+    def _lead(record: dict[str, Any]) -> Lead:
+        return Lead.from_dict(record)
 
-    def _find_by_place(self, lead: Lead) -> int | None:
-        """Same Google Maps place, guarded against contradicting phones."""
-        place = maps_place_key(lead.gmaps_url)
-        if not place:
-            return None
-        with self._lock:
-            row = self._conn.execute(
-                "SELECT l.id, l.data FROM place_index p JOIN leads l ON l.id = p.lead_id"
-                " WHERE p.place = ?", (place,)
-            ).fetchone()
-        if row is None or self._phones_contradict(lead, Lead.from_json(row["data"])):
-            return None
-        return row["id"]
+    # --- CandidateIndex (what core.identity asks) ----------------------------------
 
-    def _find_by_name(self, lead: Lead) -> int | None:
-        """Exact canonical-name match, guarded against contradicting phones."""
-        key = lead.name_key
-        if not key or len(key) < 3:
-            return None
+    def first_claimant(self, kind: str, value: str, exclude: frozenset[int]) -> int | None:
         with self._lock:
             rows = self._conn.execute(
-                "SELECT id, data, locality FROM leads WHERE name_key = ?", (key,)
-            ).fetchall()
-        for row in rows:
-            existing = Lead.from_json(row["data"])
-            if self._phones_contradict(lead, existing):
-                continue
-            if self._locality_compatible(lead, existing) or self._distinctive_match(lead, existing):
-                return row["id"]
+                select(KEYS.c.organization_id)
+                .where(KEYS.c.project_id == self.project_id, KEYS.c.kind == kind,
+                       KEYS.c.value == value)
+                .order_by(KEYS.c.id)).all()
+        for (org_id,) in rows:
+            if org_id not in exclude:
+                return int(org_id)
         return None
 
-    def _distinctive_match(self, a: Lead, b: Lead) -> bool:
-        """Same distinctive name in different localities, pins (if any) close by."""
-        if not self.options.cross_locality_names:
-            return False
-        key = a.name_key
-        if len(key) < 10 or len(key.split()) < 2:
-            return False
-        if None not in (a.latitude, a.longitude, b.latitude, b.longitude):
-            return haversine_km(a.latitude, a.longitude, b.latitude, b.longitude) <= 15
-        return True
+    def holders(self, kind: str, values: Iterable[str],
+                exclude: frozenset[int]) -> list[tuple[int, Lead]]:
+        values = sorted({v for v in values if v})
+        if not values:
+            return []
+        with self._lock:
+            ids = select(KEYS.c.organization_id).where(
+                KEYS.c.project_id == self.project_id, KEYS.c.kind == kind,
+                KEYS.c.value.in_(values))
+            rows = self._conn.execute(
+                select(ORGS.c.id, ORGS.c.record).where(ORGS.c.id.in_(ids))
+                .order_by(ORGS.c.id)).all()
+        return [(int(r.id), self._lead(r.record)) for r in rows if r.id not in exclude]
 
-    def _find_by_fuzzy_name(self, lead: Lead) -> int | None:
-        """Near-identical name within the same locality."""
-        key = lead.name_key
-        if not key or len(key) < 5 or not lead.locality:
-            return None
+    def by_name_key(self, name_key: str, exclude: frozenset[int]) -> list[tuple[int, Lead]]:
         with self._lock:
             rows = self._conn.execute(
-                "SELECT id, name_key, data FROM leads WHERE locality = ?", (lead.locality,)
-            ).fetchall()
-        best_id, best_score = None, 0.0
-        for row in rows:
-            ratio = fuzz.token_sort_ratio(key, row["name_key"])
-            if ratio >= FUZZY_NAME_THRESHOLD and ratio > best_score:
-                existing = Lead.from_json(row["data"])
-                if self._phones_contradict(lead, existing):
-                    continue
-                best_id, best_score = row["id"], ratio
-        return best_id
+                select(ORGS.c.id, ORGS.c.record)
+                .where(self._org_filter(), ORGS.c.name_key == name_key)
+                .order_by(ORGS.c.id)).all()
+        return [(int(r.id), self._lead(r.record)) for r in rows if r.id not in exclude]
 
-    @staticmethod
-    def _phones_contradict(a: Lead, b: Lead) -> bool:
-        """True when both have phones and none overlap -- i.e. different firms."""
-        if not a.phones or not b.phones:
-            return False
-        return not (set(a.phones) & set(b.phones))
-
-    @staticmethod
-    def _locality_compatible(a: Lead, b: Lead) -> bool:
-        """Same-name records merge only when locality agrees or is unknown."""
-        if not a.locality or not b.locality:
-            return True
-        return normalize_name(a.locality) == normalize_name(b.locality)
-
-    def find_match(self, lead: Lead) -> int | None:
+    def in_locality(self, locality: str,
+                    exclude: frozenset[int]) -> list[tuple[int, str, Any]]:
+        # (category, score desc, id): the order the original store's
+        # (locality, category, score DESC) index handed rows back in, which
+        # decides ties between equally good fuzzy matches.
         with self._lock:
-            return (
-                self._find_by_phone(lead.phones, lead)
-                or self._find_by_place(lead)
-                or self._find_by_name(lead)
-                or self._find_by_fuzzy_name(lead)
-                or self._find_by_location(lead)
-            )
+            rows = self._conn.execute(
+                select(ORGS.c.id, ORGS.c.name_key)
+                .where(self._org_filter(), ORGS.c.locality == locality)
+                .order_by(ORGS.c.category, ORGS.c.score.desc(), ORGS.c.id)).all()
+        return [(int(r.id), r.name_key, _LazyRecord(self, int(r.id)))
+                for r in rows if r.id not in exclude]
 
-    # --- write ------------------------------------------------------------
+    def near(self, lat: float, lng: float, radius_m: float,
+             exclude: frozenset[int]) -> list[tuple[int, Lead]]:
+        # A generous box; the rule itself checks the exact distance.
+        dlat = radius_m / 111_000.0 * 1.5 + 1e-4
+        dlng = dlat / max(math.cos(math.radians(lat)), 0.01)
+        with self._lock:
+            rows = self._conn.execute(
+                select(ORGS.c.id, ORGS.c.record)
+                .where(self._org_filter(),
+                       ORGS.c.latitude.between(lat - dlat, lat + dlat),
+                       ORGS.c.longitude.between(lng - dlng, lng + dlng))
+                .order_by(ORGS.c.id)).all()
+        return [(int(r.id), self._lead(r.record)) for r in rows if r.id not in exclude]
 
-    def upsert(self, lead: Lead) -> tuple[int, UpsertAction, list[str]]:
-        """Insert or merge. Returns (lead_id, action, changed_fields)."""
+    def get(self, lead_id: int) -> Lead | None:
+        with self._lock:
+            row = self._conn.execute(select(ORGS.c.record).where(
+                ORGS.c.id == lead_id, self._org_filter())).first()
+        return self._lead(row.record) if row else None
+
+    # --- matching ----------------------------------------------------------------
+
+    def find_match(self, lead: Lead, exclude: Iterable[int] = ()) -> int | None:
+        with self._lock:
+            return IdentityResolver(self.options).find_match(lead, self, exclude)
+
+    # --- write -------------------------------------------------------------------
+
+    def upsert(self, lead: Lead, *, legacy_id: int | None = None,
+               now: float | None = None) -> tuple[int, UpsertAction, list[str]]:
+        """Insert or merge. Returns (lead_id, action, changed_fields).
+
+        `now` stamps a merge with a given time instead of the clock -- used
+        when replaying old records, so they keep their own dates.
+        """
         lead = lead.normalized()
         if not lead.business_name.strip():
             raise ValueError("refusing to store a lead with no business name")
@@ -337,100 +285,306 @@ class LeadStore:
         with self._lock:
             match_id = self.find_match(lead)
             if match_id is None:
-                lead_id = self._insert(lead)
+                lead_id = self._insert(lead, legacy_id=legacy_id)
                 self.stats["new"] += 1
                 return lead_id, "new", ["*new*"]
 
-            row = self._conn.execute(
-                "SELECT data FROM leads WHERE id = ?", (match_id,)
-            ).fetchone()
-            existing = Lead.from_json(row["data"])
+            existing = self.get(match_id)
             # `merge` keeps the first gmaps_url, so a second place that turned
             # out to be this business is indexed here or it would split later.
-            self._index_place(match_id, lead.gmaps_url)
-            changed = existing.merge(lead)
+            self._claim(match_id, "place", [maps_place_key(lead.gmaps_url)])
+            stamp = None if now is None else max(now, existing.last_updated)
+            changed = existing.merge(lead, now=stamp)
             if not changed:
                 self._conn.commit()
                 self.stats["unchanged"] += 1
                 return match_id, "unchanged", []
-            self._update(match_id, existing)
+            self._update(match_id, existing, source=self._source_of(lead),
+                         url=(lead.source_urls or [None])[0], changed=changed)
             self.stats["merged"] += 1
             return match_id, "merged", changed
 
-    def _insert(self, lead: Lead) -> int:
+    def merge_into(self, lead_id: int, partial: Lead) -> list[str]:
+        """Merge a partial Lead into a KNOWN lead id.
+
+        Enrichment must not go through `upsert`: an enricher often discovers a
+        phone number the stored record doesn't have yet, and `upsert`'s
+        "different phones means different business" guard would then split the
+        lead in two. Here we already know they're the same record -- and once
+        it has merged, the record may now match another one, which is folded in.
+        """
+        with self._lock:
+            existing = self.get(lead_id)
+            if existing is None:
+                return []
+            partial = partial.normalized()
+            self._claim(lead_id, "place", [maps_place_key(partial.gmaps_url)])
+            changed = existing.merge(partial)
+            if not changed:
+                self._conn.commit()
+                return changed
+            self._update(lead_id, existing, source=self._source_of(partial),
+                         url=(partial.source_urls or [None])[0], changed=changed)
+            self.stats["merged"] += 1
+            if _IDENTITY_FIELDS & set(changed):
+                self.consolidate(lead_id)
+            return changed
+
+    def update_fields(self, lead_id: int, *, _source: str = "update", **fields) -> list[str]:
+        """Overwrite specific fields on a known lead.
+
+        Used by the AI polish pass, which legitimately *replaces* a bad
+        SERP-derived name rather than merging alongside it -- `merge` is the
+        wrong tool there because it deliberately protects the existing name.
+        """
+        with self._lock:
+            lead = self.get(lead_id)
+            if lead is None:
+                return []
+            changed = []
+            for name, value in fields.items():
+                if not hasattr(lead, name):
+                    continue
+                if getattr(lead, name) != value:
+                    setattr(lead, name, value)
+                    changed.append(name)
+            if changed:
+                self._update(lead_id, lead, source=_source, url=None, changed=changed)
+                if _IDENTITY_FIELDS & set(changed):
+                    self.consolidate(lead_id)
+            return changed
+
+    def consolidate(self, lead_id: int, max_rounds: int = 5) -> int:
+        """Fold `lead_id` into any record it now matches (and repeat).
+
+        The lower id survives, so a record's first-seen identity is stable.
+        Returns the id the record lives under afterwards.
+        """
+        current = lead_id
+        with self._lock:
+            for _ in range(max_rounds):
+                record = self.get(current)
+                if record is None:
+                    return current
+                other = self.find_match(record, exclude={current})
+                if other is None:
+                    return current
+                survivor, victim = sorted((current, other))
+                self._fold(survivor, victim)
+                current = survivor
+        return current
+
+    def _fold(self, survivor: int, victim: int) -> None:
+        keep, gone = self.get(survivor), self.get(victim)
+        if keep is None or gone is None:
+            return
+        keep.merge(gone)
+        log.info("consolidated %r (#%d) into %r (#%d)", gone.business_name, victim,
+                 keep.business_name, survivor)
+        conn = self._conn
+        # Keys: drop the victim's duplicates of the survivor's, re-point the
+        # rest in place so their claim order is kept.
+        held = select(KEYS.c.kind, KEYS.c.value).where(KEYS.c.organization_id == survivor)
+        conn.execute(delete(KEYS).where(KEYS.c.organization_id == victim,
+                                        tuple_(KEYS.c.kind, KEYS.c.value).in_(held)))
+        conn.execute(update(KEYS).where(KEYS.c.organization_id == victim)
+                     .values(organization_id=survivor))
+        held_contacts = select(CONTACTS.c.channel, CONTACTS.c.value).where(
+            CONTACTS.c.organization_id == survivor)
+        conn.execute(delete(CONTACTS).where(
+            CONTACTS.c.organization_id == victim,
+            tuple_(CONTACTS.c.channel, CONTACTS.c.value).in_(held_contacts)))
+        for table in (CONTACTS, PEOPLE, SIGNALS, EVIDENCE):
+            conn.execute(update(table).where(table.c.organization_id == victim)
+                         .values(organization_id=survivor))
+        runs_held = select(RUN_ORGS.c.run_id).where(RUN_ORGS.c.organization_id == survivor)
+        conn.execute(delete(RUN_ORGS).where(RUN_ORGS.c.organization_id == victim,
+                                            RUN_ORGS.c.run_id.in_(runs_held)))
+        conn.execute(update(RUN_ORGS).where(RUN_ORGS.c.organization_id == victim)
+                     .values(organization_id=survivor))
+        marks = conn.execute(select(MARKS.c.enricher, MARKS.c.done_at).where(
+            MARKS.c.organization_id == victim)).all()
+        self._insert_ignore(MARKS, [{"organization_id": survivor, "enricher": m.enricher,
+                                     "workspace_id": self.workspace_id, "done_at": m.done_at}
+                                    for m in marks])
+        conn.execute(delete(MARKS).where(MARKS.c.organization_id == victim))
+        conn.execute(delete(ORGS).where(ORGS.c.id == victim))
+        self._update(survivor, keep, source="consolidation", url=None,
+                     changed=[f"merged #{victim}"])
+        self.stats["consolidated"] += 1
+
+    # --- row writers ---------------------------------------------------------------
+
+    def _source_of(self, lead: Lead) -> str:
+        if self.source_override:
+            return self.source_override
+        return lead.sources[0] if lead.sources else "unknown"
+
+    def _score(self, lead: Lead) -> dict[str, Any]:
+        """Score the lead (setting lead.score) and return the score columns."""
         self.scorer.apply(lead)
+        explain = getattr(self.scorer, "explain", None)
+        overall = explain(lead) if callable(explain) else None
+        return {
+            "score": lead.score,
+            "fit": overall.fit if overall else None,
+            "intent": overall.intent if overall else None,
+            "reach": overall.reach if overall else None,
+            "score_reasons": list(overall.reasons) if overall else [],
+        }
+
+    def _columns(self, lead: Lead) -> dict[str, Any]:
+        return {
+            "name": lead.business_name[:500],
+            "name_key": lead.name_key[:500],
+            "locality": lead.locality or "",
+            "category": lead.category or "",
+            "domain": identity_domain(lead.website),
+            "record": asdict(lead),
+            "latitude": lead.latitude,
+            "longitude": lead.longitude,
+        }
+
+    def insert_record(self, lead: Lead, *, legacy_id: int | None = None,
+                      index: bool = True) -> int:
+        """Store a record as it is, without matching it against the store.
+
+        For importers that already know the record is its own organisation.
+        With ``index=False`` its identity keys are left for the caller to
+        claim (``claim``/``index_record``), so an import can reproduce the
+        original store's claim order.
+        """
+        with self._lock:
+            return self._insert(lead.normalized(), legacy_id=legacy_id, index=index)
+
+    def claim(self, lead_id: int, kind: str, values: Iterable[str | None]) -> None:
+        self._claim(lead_id, kind, values)
+        self._conn.commit()
+
+    def index_record(self, lead_id: int) -> None:
+        lead = self.get(lead_id)
+        if lead is not None:
+            with self._lock:
+                self._sync_keys(lead_id, lead)
+                self._conn.commit()
+
+    def _insert(self, lead: Lead, *, legacy_id: int | None = None, index: bool = True) -> int:
+        scores = self._score(lead)
         now = time.time()
         with self._lock:
-            cursor = self._conn.execute(
-                "INSERT INTO leads (name_key, locality, category, score, data, created_at, updated_at)"
-                " VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (lead.name_key, lead.locality, lead.category, lead.score,
-                 lead.to_json(), lead.first_seen or now, now),
-            )
-            lead_id = int(cursor.lastrowid)
-            self._index_phones(lead_id, lead.phones)
-            self._index_place(lead_id, lead.gmaps_url)
+            lead_id = int(self._conn.execute(ORGS.insert().values(
+                workspace_id=self.workspace_id, project_id=self.project_id,
+                country=self.country, lead_types=[self.lead_type], legacy_id=legacy_id,
+                created_at=_epoch_to_dt(lead.first_seen or now), updated_at=_epoch_to_dt(now),
+                **self._columns(lead), **scores,
+            )).inserted_primary_key[0])
+            if index:
+                self._sync_keys(lead_id, lead)
+            source = self._source_of(lead)
+            self._sync_contacts(lead_id, lead, source)
+            self._evidence(lead_id, source, (lead.source_urls or [None])[0],
+                           _populated_fields(lead))
+            self._note_run(lead_id, "new")
             self._conn.commit()
         return lead_id
 
-    def _update(self, lead_id: int, lead: Lead) -> None:
-        self.scorer.apply(lead)
+    def _update(self, lead_id: int, lead: Lead, *, source: str, url: str | None,
+                changed: list[str]) -> None:
+        scores = self._score(lead)
         with self._lock:
-            self._conn.execute(
-                "UPDATE leads SET name_key=?, locality=?, category=?, score=?, data=?, updated_at=?"
-                " WHERE id=?",
-                (lead.name_key, lead.locality, lead.category, lead.score,
-                 lead.to_json(), time.time(), lead_id),
-            )
-            self._index_phones(lead_id, lead.phones)
-            self._index_place(lead_id, lead.gmaps_url)
+            row = self._conn.execute(select(ORGS.c.lead_types).where(ORGS.c.id == lead_id)).first()
+            lead_types = list(row.lead_types or []) if row else []
+            if self.lead_type not in lead_types:
+                lead_types.append(self.lead_type)
+            self._conn.execute(update(ORGS).where(ORGS.c.id == lead_id).values(
+                lead_types=lead_types, updated_at=utcnow(), **self._columns(lead), **scores))
+            self._sync_keys(lead_id, lead)
+            self._sync_contacts(lead_id, lead, source)
+            self._evidence(lead_id, source, url, changed)
+            self._note_run(lead_id, "updated")
             self._conn.commit()
 
-    def _index_phones(self, lead_id: int, phones: Iterable[str]) -> None:
+    def _claim(self, lead_id: int, kind: str, values: Iterable[str | None]) -> None:
+        """Index keys for a record; the first record to claim a value keeps it."""
         with self._lock:
-            for phone in phones:
-                if not phone:
-                    continue
-                # INSERT OR IGNORE: the first lead to claim a phone keeps it, which
-                # prevents two records ping-ponging the same number.
-                self._conn.execute(
-                    "INSERT OR IGNORE INTO phone_index (phone, lead_id) VALUES (?, ?)",
-                    (phone, lead_id),
-                )
+            for value in values:
+                if value:
+                    self._insert_ignore(KEYS, {
+                        "workspace_id": self.workspace_id, "project_id": self.project_id,
+                        "organization_id": lead_id, "kind": kind, "value": value[:500],
+                        "created_at": utcnow()})
 
-    def _index_place(self, lead_id: int, gmaps_url: str | None) -> None:
-        place = maps_place_key(gmaps_url)
-        if not place:
+    def _sync_keys(self, lead_id: int, lead: Lead) -> None:
+        # Phones, then the Maps place: the order the original store indexed
+        # them in, which decides who claims a value first.
+        keys = identity_keys(lead)
+        for kind in ("phone", "place", "domain", "registry"):
+            self._claim(lead_id, kind, keys[kind])
+
+    def _sync_contacts(self, lead_id: int, lead: Lead, source: str) -> None:
+        wanted: list[tuple[str, str]] = []
+        for channel, attr in _CONTACT_FIELDS:
+            value = getattr(lead, attr)
+            for item in (value if isinstance(value, list) else [value]):
+                if item:
+                    wanted.append((channel, str(item)[:1000]))
+        existing = {(r.channel, r.value) for r in self._conn.execute(
+            select(CONTACTS.c.channel, CONTACTS.c.value).where(
+                CONTACTS.c.organization_id == lead_id)).all()}
+        for channel, value in existing - set(wanted):
+            self._conn.execute(delete(CONTACTS).where(
+                CONTACTS.c.organization_id == lead_id, CONTACTS.c.channel == channel,
+                CONTACTS.c.value == value))
+        fresh = [{"workspace_id": self.workspace_id, "organization_id": lead_id,
+                  "channel": channel, "value": value, "kind": "published", "source": source,
+                  "confidence": 0.8 if source in _AI_SOURCES else 1.0, "created_at": utcnow()}
+                 for channel, value in dict.fromkeys(wanted) if (channel, value) not in existing]
+        self._insert_ignore(CONTACTS, fresh)
+        if lead.contact_name:
+            known = self._conn.execute(select(PEOPLE.c.id).where(
+                PEOPLE.c.organization_id == lead_id, PEOPLE.c.name == lead.contact_name)).first()
+            if not known:
+                self._conn.execute(PEOPLE.insert().values(
+                    workspace_id=self.workspace_id, organization_id=lead_id,
+                    name=lead.contact_name[:300], source=source, created_at=utcnow()))
+
+    def _evidence(self, lead_id: int, source: str, url: str | None, fields: list[str]) -> None:
+        self._conn.execute(EVIDENCE.insert().values(
+            workspace_id=self.workspace_id, organization_id=lead_id, run_id=self.run_id,
+            lead_type=self.lead_type, source=source[:100], url=url[:2000] if url else None,
+            fields=list(fields), fetched_at=utcnow()))
+
+    def _note_run(self, lead_id: int, action: str) -> None:
+        if self.run_id is None:
             return
-        with self._lock:
-            # First claim keeps the place, exactly like the phone index.
-            self._conn.execute(
-                "INSERT OR IGNORE INTO place_index (place, lead_id) VALUES (?, ?)",
-                (place, lead_id),
-            )
+        # The first thing that happened to an organisation in a run is what
+        # the run did to it: new stays new however often it merges later.
+        self._insert_ignore(RUN_ORGS, {"workspace_id": self.workspace_id, "run_id": self.run_id,
+                                       "organization_id": lead_id, "action": action,
+                                       "lead_type": self.lead_type})
 
-    # --- url memo (resume support) ---------------------------------------
+    # --- url memo (resume support) ---------------------------------------------------
 
     def mark_seen(self, url: str, source: str) -> None:
         if not url:
             return
         with self._lock:
-            self._conn.execute(
-                "INSERT OR REPLACE INTO seen_urls (url, source, fetched_at) VALUES (?, ?, ?)",
-                (url, source, time.time()),
-            )
+            self._conn.execute(delete(SEEN).where(SEEN.c.project_id == self.project_id,
+                                                  SEEN.c.url == url))
+            self._conn.execute(SEEN.insert().values(
+                project_id=self.project_id, url=url, workspace_id=self.workspace_id,
+                source=source, fetched_at=time.time()))
             self._conn.commit()
 
     def already_seen(self, url: str) -> bool:
         if not url:
             return False
         with self._lock:
-            row = self._conn.execute(
-                "SELECT 1 FROM seen_urls WHERE url = ? LIMIT 1", (url,)
-            ).fetchone()
+            row = self._conn.execute(select(SEEN.c.url).where(
+                SEEN.c.project_id == self.project_id, SEEN.c.url == url)).first()
         return row is not None
 
-    # --- dead domains -----------------------------------------------------
+    # --- dead domains (shared by the whole workspace) ----------------------------------
 
     def mark_dead_domain(self, host: str, reason: str) -> None:
         """Remember a host that is gone or permanently walled off.
@@ -441,54 +595,55 @@ class LeadStore:
         if not host:
             return
         with self._lock:
-            self._conn.execute(
-                "INSERT INTO dead_domains (host, reason, first_seen, hits) VALUES (?, ?, ?, 1)"
-                " ON CONFLICT(host) DO UPDATE SET hits = hits + 1",
-                (host, reason, time.time()),
-            )
+            done = self._conn.execute(update(DEAD).where(
+                DEAD.c.workspace_id == self.workspace_id, DEAD.c.host == host)
+                .values(hits=DEAD.c.hits + 1)).rowcount
+            if not done:
+                self._conn.execute(DEAD.insert().values(
+                    workspace_id=self.workspace_id, host=host, reason=reason,
+                    first_seen=time.time(), hits=1))
             self._conn.commit()
 
     def is_dead_domain(self, host: str) -> bool:
         if not host:
             return False
         with self._lock:
-            row = self._conn.execute(
-                "SELECT 1 FROM dead_domains WHERE host = ? LIMIT 1", (host,)
-            ).fetchone()
+            row = self._conn.execute(select(DEAD.c.host).where(
+                DEAD.c.workspace_id == self.workspace_id, DEAD.c.host == host)).first()
         return row is not None
 
     def dead_domains(self) -> dict[str, str]:
         with self._lock:
-            rows = self._conn.execute("SELECT host, reason FROM dead_domains").fetchall()
-        return {row["host"]: row["reason"] for row in rows}
+            rows = self._conn.execute(select(DEAD.c.host, DEAD.c.reason).where(
+                DEAD.c.workspace_id == self.workspace_id)).all()
+        return {row.host: row.reason for row in rows}
 
-    # --- unit stats (scheduling feedback) ---------------------------------
+    # --- unit stats (scheduling feedback) ----------------------------------------------
 
     def record_unit(self, source: str, area: str, category: str,
                     seconds: float, new_leads: int) -> None:
         """Log what one (source, area, category) unit cost and returned."""
+        key = and_(UNITS.c.workspace_id == self.workspace_id, UNITS.c.source == source,
+                   UNITS.c.area == area, UNITS.c.category == category)
         with self._lock:
-            self._conn.execute(
-                "INSERT INTO unit_stats"
-                " (source, area, category, runs, total_seconds, total_new_leads, last_run)"
-                " VALUES (?, ?, ?, 1, ?, ?, ?)"
-                " ON CONFLICT(source, area, category) DO UPDATE SET"
-                " runs = runs + 1,"
-                " total_seconds = total_seconds + excluded.total_seconds,"
-                " total_new_leads = total_new_leads + excluded.total_new_leads,"
-                " last_run = excluded.last_run",
-                (source, area, category, float(seconds), int(new_leads), time.time()),
-            )
+            done = self._conn.execute(update(UNITS).where(key).values(
+                runs=UNITS.c.runs + 1, total_seconds=UNITS.c.total_seconds + float(seconds),
+                total_new_leads=UNITS.c.total_new_leads + int(new_leads),
+                last_run=time.time())).rowcount
+            if not done:
+                self._conn.execute(UNITS.insert().values(
+                    workspace_id=self.workspace_id, source=source, area=area, category=category,
+                    runs=1, total_seconds=float(seconds), total_new_leads=int(new_leads),
+                    last_run=time.time()))
             self._conn.commit()
 
     def unit_stat(self, source: str, area: str, category: str) -> tuple[float, float] | None:
         """(avg_seconds, avg_new_leads) for one unit, None when never run."""
         with self._lock:
-            row = self._conn.execute(
-                "SELECT runs, total_seconds, total_new_leads FROM unit_stats"
-                " WHERE source = ? AND area = ? AND category = ?",
-                (source, area, category),
-            ).fetchone()
+            row = self._conn.execute(select(UNITS.c.runs, UNITS.c.total_seconds,
+                                            UNITS.c.total_new_leads).where(
+                UNITS.c.workspace_id == self.workspace_id, UNITS.c.source == source,
+                UNITS.c.area == area, UNITS.c.category == category)).first()
         return self._averages(row)
 
     def unit_stats_for_source(self, source: str) -> tuple[float, float] | None:
@@ -498,68 +653,63 @@ class LeadStore:
         locality still scrapes roughly like its source's other localities.
         """
         with self._lock:
-            row = self._conn.execute(
-                "SELECT SUM(runs) AS runs, SUM(total_seconds) AS total_seconds,"
-                " SUM(total_new_leads) AS total_new_leads FROM unit_stats WHERE source = ?",
-                (source,),
-            ).fetchone()
+            row = self._conn.execute(select(
+                func.sum(UNITS.c.runs).label("runs"),
+                func.sum(UNITS.c.total_seconds).label("total_seconds"),
+                func.sum(UNITS.c.total_new_leads).label("total_new_leads"),
+            ).where(UNITS.c.workspace_id == self.workspace_id, UNITS.c.source == source)).first()
         return self._averages(row)
 
     @staticmethod
-    def _averages(row: sqlite3.Row | None) -> tuple[float, float] | None:
+    def _averages(row) -> tuple[float, float] | None:
         # SUM() over no rows yields a row of NULLs, hence the falsy check.
-        if row is None or not row["runs"]:
+        if row is None or not row.runs:
             return None
-        runs = float(row["runs"])
-        return row["total_seconds"] / runs, row["total_new_leads"] / runs
+        runs = float(row.runs)
+        return row.total_seconds / runs, row.total_new_leads / runs
 
-    # --- enrichment memo --------------------------------------------------
+    # --- enrichment memo -----------------------------------------------------------------
 
     def mark_enriched(self, lead_id: int, enricher: str) -> None:
         with self._lock:
-            self._conn.execute(
-                "INSERT OR REPLACE INTO enriched (lead_id, enricher, done_at) VALUES (?, ?, ?)",
-                (int(lead_id), enricher, time.time()),
-            )
+            self._conn.execute(delete(MARKS).where(MARKS.c.organization_id == int(lead_id),
+                                                   MARKS.c.enricher == enricher))
+            self._conn.execute(MARKS.insert().values(
+                organization_id=int(lead_id), enricher=enricher,
+                workspace_id=self.workspace_id, done_at=time.time()))
             self._conn.commit()
 
     def is_enriched(self, lead_id: int, enricher: str) -> bool:
         with self._lock:
-            row = self._conn.execute(
-                "SELECT 1 FROM enriched WHERE lead_id = ? AND enricher = ? LIMIT 1",
-                (int(lead_id), enricher),
-            ).fetchone()
+            row = self._conn.execute(select(MARKS.c.enricher).where(
+                MARKS.c.organization_id == int(lead_id), MARKS.c.enricher == enricher)).first()
         return row is not None
 
-    # --- read -------------------------------------------------------------
-
-    def get(self, lead_id: int) -> Lead | None:
-        with self._lock:
-            row = self._conn.execute(
-                "SELECT data FROM leads WHERE id = ?", (lead_id,)
-            ).fetchone()
-        return Lead.from_json(row["data"]) if row else None
+    # --- read ------------------------------------------------------------------------------
 
     def all_leads(self) -> list[Lead]:
+        return [lead for _, lead in self.all_with_ids()]
+
+    def all_with_ids(self) -> list[tuple[int, Lead]]:
+        """(id, Lead) pairs in id order -- enrichment needs the id to merge in place."""
         with self._lock:
-            rows = self._conn.execute("SELECT data FROM leads").fetchall()
-        return [Lead.from_json(row["data"]) for row in rows]
+            rows = self._conn.execute(select(ORGS.c.id, ORGS.c.record)
+                                      .where(self._org_filter()).order_by(ORGS.c.id)).all()
+        return [(int(r.id), self._lead(r.record)) for r in rows]
 
     def count(self) -> int:
         with self._lock:
-            return int(self._conn.execute("SELECT COUNT(*) AS n FROM leads").fetchone()["n"])
+            return int(self._conn.execute(select(func.count()).select_from(ORGS)
+                                          .where(self._org_filter())).scalar_one())
 
     def rescore_all(self) -> None:
         """Recompute every score (weights may have changed between runs)."""
         with self._lock:
-            rows = self._conn.execute("SELECT id, data FROM leads").fetchall()
-            for row in rows:
-                lead = Lead.from_json(row["data"])
-                self.scorer.apply(lead)
-                self._conn.execute(
-                    "UPDATE leads SET score=?, data=? WHERE id=?",
-                    (lead.score, lead.to_json(), row["id"]),
-                )
+            for lead_id, lead in self.all_with_ids():
+                scores = self._score(lead)
+                self._conn.execute(update(ORGS).where(ORGS.c.id == lead_id).values(
+                    record=asdict(lead), latitude=lead.latitude, longitude=lead.longitude,
+                    **scores))
             self._conn.commit()
 
     def sorted_leads(self) -> list[Lead]:
@@ -573,6 +723,8 @@ class LeadStore:
         for lead in leads:
             self.scorer.apply(lead)
         if self.options.sort == "venues":
+            from ..packs.hospitality.venues import TIER_RANK
+
             return sorted(
                 leads,
                 key=lambda lead: (
@@ -591,62 +743,6 @@ class LeadStore:
             ),
         )
 
-    def all_with_ids(self) -> list[tuple[int, Lead]]:
-        """(id, Lead) pairs -- enrichment needs the id to merge in place."""
-        with self._lock:
-            rows = self._conn.execute("SELECT id, data FROM leads ORDER BY id").fetchall()
-        return [(row["id"], Lead.from_json(row["data"])) for row in rows]
-
-    def merge_into(self, lead_id: int, partial: Lead) -> list[str]:
-        """Merge a partial Lead into a KNOWN lead id.
-
-        Enrichment must not go through `upsert`: an enricher often discovers a
-        phone number the stored record doesn't have yet, and `upsert`'s
-        "different phones means different business" guard would then split the
-        lead in two. Here we already know they're the same record.
-        """
-        with self._lock:
-            row = self._conn.execute(
-                "SELECT data FROM leads WHERE id = ?", (lead_id,)
-            ).fetchone()
-            if row is None:
-                return []
-            existing = Lead.from_json(row["data"])
-            partial = partial.normalized()
-            self._index_place(lead_id, partial.gmaps_url)
-            changed = existing.merge(partial)
-            if changed:
-                self._update(lead_id, existing)
-                self.stats["merged"] += 1
-            else:
-                self._conn.commit()
-            return changed
-
-    def update_fields(self, lead_id: int, **fields) -> list[str]:
-        """Overwrite specific fields on a known lead.
-
-        Used by the AI polish pass, which legitimately *replaces* a bad
-        SERP-derived name rather than merging alongside it -- `merge` is the
-        wrong tool there because it deliberately protects the existing name.
-        """
-        with self._lock:
-            row = self._conn.execute(
-                "SELECT data FROM leads WHERE id = ?", (lead_id,)
-            ).fetchone()
-            if row is None:
-                return []
-            lead = Lead.from_json(row["data"])
-            changed = []
-            for name, value in fields.items():
-                if not hasattr(lead, name):
-                    continue
-                if getattr(lead, name) != value:
-                    setattr(lead, name, value)
-                    changed.append(name)
-            if changed:
-                self._update(lead_id, lead)
-            return changed
-
     def website_enrichment_targets(self) -> list[tuple[int, Lead]]:
         """Leads with a website whose email we still don't have."""
         return [(lead_id, lead) for lead_id, lead in self.all_with_ids()
@@ -659,5 +755,27 @@ class LeadStore:
 
     def close(self) -> None:
         with self._lock:
-            self._conn.commit()
-            self._conn.close()
+            try:
+                self._conn.commit()
+                self._conn.close()
+            finally:
+                if self._owns_engine:
+                    self.engine.dispose()
+
+
+def store_target(config) -> tuple[str | Path, dict[str, Any]]:
+    """Where a run's records live: (database, LeadStore keyword arguments).
+
+    A run config names a project, which lives in the application database
+    (``runtime.db_url``, else ``LEADSCRAPER_DB_URL``, else the per-user default).
+    A bare config without one -- tests, embedding code -- keeps using its
+    ``runtime.db_path`` file as a one-project database.
+    """
+    from ..paths import default_db_url
+
+    project = config.get("project")
+    if project:
+        return (config.get("runtime.db_url") or default_db_url(),
+                {"project": str(project), "country": config.country,
+                 "project_description": str(config.get("description") or "")})
+    return config.path_for("db_path", "data/leads.sqlite3"), {}
