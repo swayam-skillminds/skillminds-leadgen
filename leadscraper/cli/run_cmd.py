@@ -15,6 +15,16 @@ Examples
   # Fill in contact details for leads already discovered
   python run.py --enrich-only
 
+  # The best leads obtainable in 15 minutes, at quick depth
+  python run.py --config presets/nashik-venues.yaml --time-budget 15 --depth quick
+
+  # Hand the run to a worker (python -m leadscraper worker), or resume one
+  python run.py --config my-run.yaml --queue
+  python run.py --resume 42
+
+Ctrl-C pauses: the units in flight finish, everything is flushed, and the run
+can be resumed from its checkpoint. A second Ctrl-C stops at once.
+
 A legacy config.yaml works as before: it runs as the preset it imports to,
 in its own project ("Mumbai event vendors", "Nashik venues"). Its records
 live in the application database; import the old store once with
@@ -90,6 +100,24 @@ def build_parser(prog: str | None = None) -> argparse.ArgumentParser:
                            help="Limit AI to specific features (repeatable)")
     behaviour.add_argument("--fast", action="store_true",
                            help="Halve all delays. Raises the odds of being blocked.")
+    engine = parser.add_argument_group("engine (time budget, depth, queue)")
+    engine.add_argument("--time-budget", type=float, default=None, metavar="MINUTES",
+                        help="Stop starting new work so the run ends within this many minutes "
+                             "(+ a reserved tail for flush/score/export); best units first")
+    engine.add_argument("--depth", choices=["quick", "balanced", "deep"], default=None,
+                        help="Per-unit thoroughness (default: the config's, else balanced)")
+    engine.add_argument("--workers", type=int, default=None, metavar="N",
+                        help="Discovery units run in parallel across hosts (default 3)")
+    engine.add_argument("--force-enrich", action="store_true",
+                        help="Re-enrich leads an enricher already went through on earlier runs")
+    engine.add_argument("--resume", type=int, default=None, metavar="RUN_ID",
+                        help="Resume a paused / interrupted / failed run from its checkpoint")
+    engine.add_argument("--queue", action="store_true",
+                        help="Queue the run for a worker (`leadscraper worker`) and exit")
+    engine.add_argument("--preview", action="store_true",
+                        help="A ~2-minute sample (one area x one category x top sources) "
+                             "plus a full-run estimate, in a scratch project")
+
     behaviour.add_argument("--allow-empty-project", action="store_true",
                            help="Start an empty project even though a legacy store for "
                                 "this config exists and has not been migrated")
@@ -206,10 +234,72 @@ def export_only(config: Config) -> int:
         store.close()
 
 
+def resume(args: argparse.Namespace) -> int:
+    """`--resume RUN_ID`: continue a stored run in this process."""
+    from ..db.engine import open_database
+    from ..db.runs import get_run
+    from ..engine.runner import execute, request_from_row
+    from ..paths import default_db_url
+
+    engine = open_database(default_db_url())
+    try:
+        row = get_run(engine, args.resume)
+    finally:
+        engine.dispose()
+    if row is None:
+        print(f"error: no run {args.resume}", file=sys.stderr)
+        return 2
+    if row["status"] in ("completed", "cancelled"):
+        print(f"error: run {args.resume} is {row['status']}; only paused, interrupted or "
+              "failed runs resume", file=sys.stderr)
+        return 2
+    if row["status"] in ("running", "pausing", "stopping") and \
+            not str(row.get("worker_id") or "").startswith("cli:"):
+        print(f"error: run {args.resume} is {row['status']} on {row.get('worker_id')}",
+              file=sys.stderr)
+        return 2
+    request = request_from_row(row, install_signals=True)
+    setup_logging(request.config, verbose=args.verbose, quiet=args.quiet)
+    print(f"Resuming run {args.resume} ({row['status']}) of project "
+          f"'{request.config.get('project')}' from its checkpoint")
+    outcome = execute(request)
+    report_outcome(outcome)
+    return 0 if outcome.status in ("completed", "paused") else 1
+
+
+def report_outcome(outcome) -> None:
+    """What the engine adds to the pipeline's report: status, budget, skips."""
+    if outcome.run_id is None:
+        return
+    print(f"Run {outcome.run_id}: {outcome.status} after {outcome.elapsed_seconds / 60:.1f} min"
+          + (f" -- {outcome.error}" if outcome.error else ""))
+    est = outcome.estimate or {}
+    span = est.get("budget") or est
+    if span.get("p50_seconds") is not None:
+        print(f"  estimated {span['p50_seconds'] / 60:.1f}-{span['p90_seconds'] / 60:.1f} min "
+              "(p50-p90)")
+    if outcome.skipped:
+        reasons: dict[str, int] = {}
+        for _key, reason in outcome.skipped:
+            reasons[reason] = reasons.get(reason, 0) + 1
+        print(f"  skipped units: {len(outcome.skipped)} "
+              f"({'; '.join(f'{n} {r}' for r, n in reasons.items())})")
+        for key, reason in outcome.skipped[:15]:
+            print(f"    {key}  -- {reason}")
+        if len(outcome.skipped) > 15:
+            print(f"    ... and {len(outcome.skipped) - 15} more "
+                  f"(leadscraper runs show {outcome.run_id})")
+    if outcome.status == "paused":
+        print(f"  resume with: python -m leadscraper runs resume {outcome.run_id}"
+              f"  (or: python run.py --resume {outcome.run_id})")
+
+
 def main(argv: list[str] | None = None, prog: str | None = None) -> int:
     from ..engine.runner import RunRequest, execute
 
     args = build_parser(prog).parse_args(argv)
+    if args.resume is not None:
+        return resume(args)
 
     try:
         config = Config.load(args.config)
@@ -269,11 +359,52 @@ def main(argv: list[str] | None = None, prog: str | None = None) -> int:
                   file=sys.stderr)
             return 2
 
-    outcome = execute(RunRequest(
+    if args.preview:
+        from ..engine.preview import preview
+
+        result = preview(config)
+        print_preview(result)
+        return 0 if result.status in ("completed", "paused") else 1
+
+    request = RunRequest(
         config=config, localities=localities, categories=categories,
         source_names=source_names, enricher_names=enricher_names, dry_run=args.dry_run,
-    ))
+        depth=args.depth, time_budget_minutes=args.time_budget, force_enrich=args.force_enrich,
+        discovery_workers=args.workers,
+    )
+    if args.queue:
+        from ..engine.worker import submit_run
+
+        run_id = submit_run(request)
+        print(f"Queued run {run_id} for project '{config.get('project')}'. Start a worker to "
+              f"execute it:\n  python -m leadscraper worker\n"
+              f"and follow it with:\n  python -m leadscraper runs events {run_id} --follow")
+        return 0
+    outcome = execute(request)
+    report_outcome(outcome)
+    if outcome.status == "paused":
+        return 0
     local = outcome.results.get("local_business")
     if local is None or local.failed:
         return 1
-    return 0 if (local.stats.get("combos_done") or args.dry_run or args.enrich_only) else 1
+    return 0 if (local.stats.get("combos_done") or args.dry_run or args.enrich_only
+                 or outcome.skipped) else 1
+
+
+def print_preview(result) -> None:
+    from ..engine.estimator import describe_estimate
+
+    print(f"\nPREVIEW ({result.status}, {result.seconds:.0f}s): {result.area} x {result.category}"
+          f" via {', '.join(result.sources) or 'no source'}")
+    if result.records:
+        for record in result.records:
+            print(f"  {str(record.get('Score', '')):>5}  {str(record.get('Business Name'))[:40]:<40}"
+                  f"  {str(record.get('Phones') or '')[:22]:<22} {str(record.get('Website') or '')[:30]}")
+    else:
+        print("  (no records found in the preview window)")
+    print("\nFull run estimate:")
+    print(describe_estimate(result.estimate))
+    calibrated = result.estimate.get("calibrated")
+    if calibrated:
+        print(f"Calibrated by the preview (x{calibrated['factor']}): "
+              f"{calibrated['p50_seconds'] / 60:.1f}-{calibrated['p90_seconds'] / 60:.1f} min")

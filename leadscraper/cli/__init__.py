@@ -7,6 +7,10 @@ Commands:
   config           import-legacy | validate | schema
   presets          list the shipped presets
   db               upgrade | info
+  worker           take queued runs off the queue (and resume interrupted ones)
+  runs             list | show | pause | resume | cancel | events
+  estimate         how long a config would take; what fits a time budget
+  preview          a ~2-minute sample run plus a full-run estimate
 """
 
 from __future__ import annotations
@@ -157,6 +161,158 @@ def _cmd_db(args: argparse.Namespace) -> int:
     return 2
 
 
+def _engine(args: argparse.Namespace):
+    from ..db.engine import open_database
+
+    return open_database(getattr(args, "db", None) or default_db_url())
+
+
+def _cmd_worker(args: argparse.Namespace) -> int:
+    import logging
+
+    from ..engine.keepawake import KeepAwake
+    from ..engine.worker import Worker, list_workers, request_worker_stop
+
+    if args.worker_cmd == "stop":
+        engine = _engine(args)
+        try:
+            asked = request_worker_stop(engine, args.name)
+        finally:
+            engine.dispose()
+        print(f"asked {asked} worker(s) to stop; each finishes its in-flight work first")
+        return 0
+    if args.worker_cmd == "list":
+        engine = _engine(args)
+        try:
+            for row in list_workers(engine):
+                print(f"{row['name']:<32} {row['status']:<9} pid {row['pid']:<7} "
+                      f"run {row['current_run_id'] or '-':<6} heartbeat {row['heartbeat_at']}")
+        finally:
+            engine.dispose()
+        return 0
+    logging.basicConfig(level=logging.DEBUG if args.verbose else logging.INFO,
+                        format="%(asctime)s %(levelname)-7s %(name)-28s %(message)s",
+                        datefmt="%H:%M:%S", force=True)
+    for noisy in ("urllib3", "websockets", "asyncio", "charset_normalizer", "alembic"):
+        logging.getLogger(noisy).setLevel(logging.WARNING)
+    worker = Worker(db_url=args.db, name=args.name, poll_seconds=args.poll,
+                    stale_seconds=args.stale_after, heartbeat_seconds=args.heartbeat,
+                    keep_awake=KeepAwake(enabled=False) if args.no_keep_awake else None)
+    executed = worker.run(once=args.once, max_runs=args.max_runs)
+    print(f"worker {worker.name} stopped after {executed} run(s)")
+    return 0
+
+
+def _cmd_runs(args: argparse.Namespace) -> int:
+    import time as _time
+
+    from ..db.runs import TransitionError, get_run, list_runs, request_control, unit_rows
+    from ..engine.events import describe, read_events
+
+    engine = _engine(args)
+    try:
+        if args.runs_cmd == "list":
+            for row in list_runs(engine, statuses=args.status, limit=args.limit):
+                stats = (row.get("stats") or {}).get("engine") or {}
+                print(f"{row['id']:>5}  {row['status']:<10} {row['kind']:<8} "
+                      f"{str(row['created_at'])[:19]}  project {row['project_id']}  "
+                      f"{stats.get('units_done', '-')}/{stats.get('units_total', '-')} units  "
+                      f"{row.get('worker_id') or ''}")
+            return 0
+        row = get_run(engine, args.run_id)
+        if row is None:
+            print(f"error: no run {args.run_id}", file=sys.stderr)
+            return 2
+        if args.runs_cmd == "show":
+            engine_stats = (row.get("stats") or {}).get("engine") or {}
+            units = unit_rows(engine, args.run_id)
+            counts: dict[str, int] = {}
+            for unit in units:
+                counts[unit["status"]] = counts.get(unit["status"], 0) + 1
+            print(json.dumps({
+                "id": row["id"], "status": row["status"], "kind": row["kind"],
+                "project_id": row["project_id"], "worker": row.get("worker_id"),
+                "attempts": row.get("attempts"), "active_seconds": row.get("active_seconds"),
+                "created_at": str(row["created_at"]), "finished_at": str(row["finished_at"]),
+                "checkpoint": row.get("checkpoint"), "units": counts,
+                "estimate": {k: (row.get("estimate") or {}).get(k)
+                             for k in ("p50_seconds", "p90_seconds", "expected_new", "budget")},
+                "summary": engine_stats, "error": row.get("error"),
+            }, indent=1, default=str))
+            return 0
+        if args.runs_cmd in ("pause", "resume", "cancel"):
+            try:
+                status = request_control(engine, args.run_id, args.runs_cmd)
+            except TransitionError as exc:
+                print(f"error: {exc}", file=sys.stderr)
+                return 2
+            hint = {"queued": " -- a worker will resume it from its checkpoint",
+                    "pausing": " -- in-flight work finishes, then it pauses",
+                    "stopping": " -- in-flight work finishes, then it stops"}.get(status, "")
+            print(f"run {args.run_id}: {status}{hint}")
+            return 0
+        if args.runs_cmd == "events":
+            after = args.after
+            while True:
+                batch = read_events(engine, args.run_id, after=after)
+                for event in batch:
+                    if args.json:
+                        print(event.model_dump_json())
+                    else:
+                        print(f"{event.seq:>5} {event.at:%H:%M:%S} {describe(event)}")
+                    after = event.seq
+                if not args.follow:
+                    return 0
+                current = get_run(engine, args.run_id)
+                if current and current["status"] in ("completed", "failed", "cancelled",
+                                                     "paused") and not batch:
+                    return 0
+                _time.sleep(1.0)
+        return 2
+    finally:
+        engine.dispose()
+
+
+def _load_config(path: str):
+    from ..config import Config
+    from ..config.compile import compile_run_config
+    from ..config.geography import needs_geocoding, resolve_geography
+
+    config = Config.load(path)
+    if config.run_config is not None and needs_geocoding(config.run_config):
+        config = compile_run_config(resolve_geography(config.run_config), path=config.path)
+    return config
+
+
+def _cmd_estimate(args: argparse.Namespace) -> int:
+    from ..engine.estimator import describe_estimate
+    from ..engine.runner import RunRequest, execute
+
+    config = _load_config(args.config)
+    outcome = execute(RunRequest(config=config, dry_run=True, print_plan=False,
+                                 install_signals=False, depth=args.depth,
+                                 time_budget_minutes=args.time_budget,
+                                 discovery_workers=args.workers))
+    if args.json:
+        print(json.dumps(outcome.estimate, indent=1, default=str))
+    else:
+        print(describe_estimate(outcome.estimate))
+    return 0
+
+
+def _cmd_preview(args: argparse.Namespace) -> int:
+    from ..engine.preview import preview
+    from .run_cmd import print_preview
+
+    config = _load_config(args.config)
+    result = preview(config, seconds=args.seconds, area=args.area, category=args.category)
+    if args.json:
+        print(json.dumps(result.__dict__, indent=1, default=str))
+    else:
+        print_preview(result)
+    return 0 if result.status in ("completed", "paused") else 1
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="leadscraper", description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -199,6 +355,56 @@ def build_parser() -> argparse.ArgumentParser:
     up.add_argument("--sql", action="store_true", help="print the SQL instead of running it")
     info = db_sub.add_parser("info", help="projects and their sizes")
     info.add_argument("--db")
+
+    worker = sub.add_parser("worker", help="run a worker (or: worker stop | worker list)")
+    worker.add_argument("worker_cmd", nargs="?", choices=["start", "stop", "list"],
+                        default="start")
+    worker.add_argument("--db", help="database URL (default: LEADSCRAPER_DB_URL or per-user)")
+    worker.add_argument("--name", help="worker name (default: host-pid); `stop` targets it")
+    worker.add_argument("--once", action="store_true",
+                        help="exit when the queue is empty instead of waiting")
+    worker.add_argument("--max-runs", type=int, default=None)
+    worker.add_argument("--poll", type=float, default=2.0, help="seconds between queue polls")
+    worker.add_argument("--heartbeat", type=float, default=5.0, help="heartbeat seconds")
+    worker.add_argument("--stale-after", type=float, default=60.0,
+                        help="a run without a heartbeat this long is resumed by this worker")
+    worker.add_argument("--no-keep-awake", action="store_true",
+                        help="let the machine sleep while runs are active")
+    worker.add_argument("-v", "--verbose", action="store_true")
+
+    runs = sub.add_parser("runs", help="run history and control")
+    runs_sub = runs.add_subparsers(dest="runs_cmd", required=True)
+    listing = runs_sub.add_parser("list", help="recent runs")
+    listing.add_argument("--status", action="append")
+    listing.add_argument("--limit", type=int, default=20)
+    listing.add_argument("--db")
+    for name, text in (("show", "one run: status, units, estimate vs actual"),
+                       ("pause", "pause (in-flight work finishes, then it flushes)"),
+                       ("resume", "queue a paused or failed run to resume from its checkpoint"),
+                       ("cancel", "cancel (in-flight work finishes, then it flushes)")):
+        cmd = runs_sub.add_parser(name, help=text)
+        cmd.add_argument("run_id", type=int)
+        cmd.add_argument("--db")
+    events = runs_sub.add_parser("events", help="a run's event stream (replay, or --follow)")
+    events.add_argument("run_id", type=int)
+    events.add_argument("--after", type=int, default=0, help="only events after this seq")
+    events.add_argument("--follow", action="store_true", help="keep printing new events")
+    events.add_argument("--json", action="store_true")
+    events.add_argument("--db")
+
+    estimate = sub.add_parser("estimate", help="estimate a run config without running it")
+    estimate.add_argument("--config", required=True)
+    estimate.add_argument("--time-budget", type=float, default=None, metavar="MINUTES")
+    estimate.add_argument("--depth", choices=["quick", "balanced", "deep"])
+    estimate.add_argument("--workers", type=int, default=None)
+    estimate.add_argument("--json", action="store_true")
+
+    preview = sub.add_parser("preview", help="a ~2-minute sample run plus a full-run estimate")
+    preview.add_argument("--config", required=True)
+    preview.add_argument("--seconds", type=float, default=120)
+    preview.add_argument("--area")
+    preview.add_argument("--category")
+    preview.add_argument("--json", action="store_true")
     return parser
 
 
@@ -208,7 +414,8 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_run(argv[1:])
     args = build_parser().parse_args(argv)
     handlers = {"migrate-legacy": _cmd_migrate, "config": _cmd_config,
-                "presets": _cmd_presets, "db": _cmd_db}
+                "presets": _cmd_presets, "db": _cmd_db, "worker": _cmd_worker,
+                "runs": _cmd_runs, "estimate": _cmd_estimate, "preview": _cmd_preview}
     if args.command not in handlers:
         build_parser().print_help()
         return 2

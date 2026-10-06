@@ -785,6 +785,19 @@ class LeadStore:
         return [(lead_id, lead) for lead_id, lead in self.all_with_ids()
                 if lead.instagram and not (lead.emails and lead.phones)]
 
+    def clear(self) -> int:
+        """Delete every organisation of this project (and what hangs off them).
+
+        Only the preview uses it: its scratch project starts empty each time.
+        Run history stays.
+        """
+        with self._lock:
+            count = self.count()
+            self._conn.execute(delete(ORGS).where(self._org_filter()))
+            self._conn.execute(delete(SEEN).where(SEEN.c.project_id == self.project_id))
+            self._conn.commit()
+        return count
+
     def close(self) -> None:
         with self._lock:
             try:

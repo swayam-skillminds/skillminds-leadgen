@@ -12,7 +12,8 @@ correlated term -- a prior that is off is off for every unit of its source,
 so those errors add up rather than cancel.
 
 During a run ``LiveEta`` refines the remaining time from what the run is
-actually observing (actual / expected so far, and the parallelism achieved).
+actually observing: the cost model learns from every finished unit, and the
+parallelism achieved is measured.
 """
 
 from __future__ import annotations
@@ -211,33 +212,35 @@ def _ai(sessions: dict[str, Any], expected_new: float) -> dict[str, Any] | None:
 
 
 class LiveEta:
-    """The remaining time, refined from what the run observes."""
+    """The remaining time, refined from what the run observes.
+
+    The queued units' costs come from the run's ``CostModel``, which has
+    already observed every finished unit (so a source running slower than
+    expected raises the estimate of its remaining units). On top of that this
+    measures the parallelism the run actually achieves: seconds of unit work
+    done per second of wall-clock discovery.
+    """
 
     def __init__(self, workers: int, post_p50: float, post_p90: float, finalise: float):
         self.workers = max(1, workers)
         self.post_p50 = post_p50
         self.post_p90 = post_p90
         self.finalise = finalise
-        self.expected_done = 0.0
-        self.actual_done = 0.0
+        self.work_done = 0.0
 
-    def observe(self, expected: float, actual: float) -> None:
-        self.expected_done += max(0.0, expected)
-        self.actual_done += max(0.0, actual)
+    def observe(self, seconds: float) -> None:
+        self.work_done += max(0.0, seconds)
 
-    def calibration(self) -> float:
-        if self.expected_done <= 0:
+    def parallelism(self, discovery_wall: float) -> float:
+        if discovery_wall <= 0 or self.work_done <= 0:
             return 1.0
-        return min(3.0, max(1 / 3, self.actual_done / self.expected_done))
+        return min(float(self.workers), max(1.0, self.work_done / discovery_wall))
 
     def remaining(self, queued_mean: float, queued_sd: float, discovery_wall: float,
                   *, budget_left: float | None = None) -> tuple[float, float]:
-        calib = self.calibration()
-        parallel = 1.0
-        if discovery_wall > 0 and self.actual_done > 0:
-            parallel = min(float(self.workers), max(1.0, self.actual_done / discovery_wall))
-        p50 = queued_mean * calib / parallel + self.post_p50 + self.finalise
-        p90 = (queued_mean + Z90 * queued_sd) * calib / parallel + self.post_p90 + self.finalise
+        parallel = self.parallelism(discovery_wall)
+        p50 = queued_mean / parallel + self.post_p50 + self.finalise
+        p90 = (queued_mean + Z90 * queued_sd) / parallel + self.post_p90 + self.finalise
         if budget_left is not None:
             p50 = min(p50, max(0.0, budget_left))
             p90 = min(p90, max(0.0, budget_left))

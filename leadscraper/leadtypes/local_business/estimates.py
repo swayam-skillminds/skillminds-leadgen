@@ -104,7 +104,7 @@ def unit_prior(source, locality, category, config) -> UnitCost:
     if name == "google_search":
         pages = int(cfg.get("pages", 2))
         searches = min(3, len(queries))
-        return prior_cost(searches * pages * (serp_delay + FETCH), searches * 1.0)
+        return prior_cost(searches * pages * (serp_delay + FETCH), searches * pages * 0.3)
     if name == "facebook":
         searches = min(2, len(queries))
         return prior_cost(searches * (serp_delay + FETCH) + searches * 4 * (delay + FETCH),
@@ -118,7 +118,9 @@ def unit_prior(source, locality, category, config) -> UnitCost:
     fetch = RENDER if getattr(source, "uses_browser", False) else FETCH
     if scope == "locality":
         return prior_cost(pages * 3 * (delay + fetch), pages * 6.0)
-    return prior_cost(pages * (delay + fetch), pages * 2.0)
+    # Directories: a quarter of a new organisation per listing page. Most of
+    # what they list, Maps already has (the original runs: ~95% from Maps).
+    return prior_cost(pages * (delay + fetch), pages * 0.25)
 
 
 def post_estimate(pipeline, expected_new: float) -> tuple[float, float]:

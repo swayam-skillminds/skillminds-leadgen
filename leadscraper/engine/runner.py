@@ -546,8 +546,7 @@ class _Run:
             except Exception as exc:
                 log.warning("could not record unit stats for %s: %s", planned.key, exc)
             self.costs.observe(unit, seconds, outcome.new)
-            if planned.cost is not None:
-                self.eta.observe(planned.cost.seconds, seconds)
+            self.eta.observe(seconds)
         self.units_done += 1
         self.new += outcome.new
         self.merged += outcome.merged
