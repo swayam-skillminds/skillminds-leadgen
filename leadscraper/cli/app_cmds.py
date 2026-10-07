@@ -366,6 +366,109 @@ def cmd_run_history(args: argparse.Namespace) -> int:
 
 # --- parsers ------------------------------------------------------------------------------------
 
+@_service_call
+def cmd_ai(args: argparse.Namespace) -> int:
+    """AI (Phase 5): providers, connectivity test, ICP builder, planner, candidate sources."""
+    from ..services import ai
+
+    engine, ws = _open(args)
+    try:
+        cmd = args.ai_cmd
+        if cmd == "providers":
+            data = ai.providers(engine, ws)
+            if args.json:
+                _print_json(data)
+                return 0
+            for row in data["providers"]:
+                key = {True: "key: yes", False: "key: NO", None: "no key needed"}[
+                    row.get("key_configured")]
+                state = "usable" if row.get("usable") else f"not usable ({row.get('problem')})"
+                chain = " [chain]" if row.get("in_workspace_chain") else ""
+                print(f"{row['name']:<18} {row.get('worker_model') or '-':<24} {key:<14} "
+                      f"{state}{chain}")
+            print(f"chain: {' -> '.join(data['chain'])}")
+            return 0
+        if cmd == "test":
+            result = ai.test_provider(engine, ws, args.name)
+            print(f"{result['provider']}: {'ok' if result['ok'] else 'FAILED'}"
+                  + (f" ({result['model']}, {result['latency_ms']} ms, "
+                     f"${result['cost_usd']:.5f})" if result["ok"] else
+                     f" -- {result['error']}"))
+            return 0 if result["ok"] else 1
+        if cmd == "offerings":
+            for item in ai.offerings():
+                print(f"{item['key']:<20} {item['title']}")
+            return 0
+        if cmd == "icp":
+            result = ai.build_icp(engine, ws, brief=args.brief, offering=args.offering,
+                                  country=args.country, places=args.place or None)
+            return _write_draft(result, args.output)
+        if cmd == "plan":
+            from ..services.configs import parse_text
+
+            path = Path(args.file)
+            result = ai.plan_config(engine, ws, parse_text(path.read_bytes(),
+                                                           filename=path.name),
+                                    roles=args.role or None)
+            for change in result["changes"]:
+                print(f"  + {change}")
+            return _write_draft(result, args.output)
+        if cmd == "discover-sources":
+            result = ai.discover_sources(engine, ws, country=args.country,
+                                         categories=args.category or [],
+                                         places=args.place or None, industry=args.industry,
+                                         limit=args.limit)
+            for row in result["candidates"]:
+                print(f"{row['id']:>4}  {row['status']:<9} {row['name'][:40]:<40} {row['url']}")
+            for row in result["rejected"]:
+                print(f"   -  rejected  {row['url']}: {row['reason']}")
+            print(f"AI cost ${result['ai']['cost_usd']:.4f}. Approve with "
+                  "`leadscraper ai candidates approve ID`.")
+            return 0
+        if cmd == "candidates":
+            if args.action == "list":
+                for row in ai.list_candidates(engine, ws, status=args.status, limit=500).items:
+                    print(f"{row['id']:>4}  {row['status']:<9} {row['country'] or '--':<3} "
+                          f"{row['name'][:40]:<40} {row['url']}")
+                return 0
+            if args.id is None:
+                print("error: give the candidate's id", file=sys.stderr)
+                return 2
+            if args.action == "delete":
+                ai.delete_candidate(engine, ws, args.id)
+                print(f"deleted candidate {args.id}")
+                return 0
+            status = {"approve": "approved", "reject": "rejected"}[args.action]
+            row = ai.decide_candidate(engine, ws, args.id, status)
+            print(f"{row['id']}: {row['name']} -> {row['status']}")
+            return 0
+        if cmd == "usage":
+            _print_json(ai.usage(engine, ws, run_id=args.run))
+            return 0
+        return 2
+    finally:
+        engine.dispose()
+
+
+def _write_draft(result: dict, output: str | None) -> int:
+    import yaml
+
+    for note in result.get("notes") or []:
+        print(f"  note: {note}")
+    for error in result.get("errors") or []:
+        print(f"  invalid: {error}", file=sys.stderr)
+    text = yaml.safe_dump(result["config"], sort_keys=False, allow_unicode=True)
+    if output:
+        Path(output).write_text(text, encoding="utf-8")
+        print(f"draft written to {output} -- review it, then "
+              f"`leadscraper config save {output}` (nothing was run)")
+    else:
+        print(text)
+    print(f"AI: ${result['ai']['cost_usd']:.4f}, {result['ai']['calls']} call(s)"
+          + (f" -- {result['ai']['stopped']}" if result['ai'].get("stopped") else ""))
+    return 0 if result.get("valid", True) else 1
+
+
 def _db(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     parser.add_argument("--db", help="database URL (default: LEADSCRAPER_DB_URL or per-user)")
     return parser
@@ -441,9 +544,41 @@ def add_parsers(sub) -> dict:
     for name in ("set", "delete", "check"):
         secret_sub.add_parser(name).add_argument("name")
 
+    ai = sub.add_parser("ai", help="AI providers, ICP builder, planner, candidate sources")
+    ai_sub = ai.add_subparsers(dest="ai_cmd", required=True)
+    _db(ai_sub.add_parser("providers", help="providers, models, whether a key is "
+                                            "configured")).add_argument("--json",
+                                                                        action="store_true")
+    _db(ai_sub.add_parser("test", help="one tiny call to a provider")).add_argument("name")
+    _db(ai_sub.add_parser("offerings", help="Skillminds offerings the ICP builder knows"))
+    icp = _db(ai_sub.add_parser("icp", help="a brief -> a draft run config (never run)"))
+    icp.add_argument("brief")
+    icp.add_argument("--offering")
+    icp.add_argument("--country")
+    icp.add_argument("--place", action="append")
+    icp.add_argument("-o", "--output", help="write the draft YAML here")
+    plan = _db(ai_sub.add_parser("plan", help="suggest areas, queries, titles for a config"))
+    plan.add_argument("file")
+    plan.add_argument("--role", action="append")
+    plan.add_argument("-o", "--output")
+    disc = _db(ai_sub.add_parser("discover-sources", help="propose candidate directories"))
+    disc.add_argument("--country", required=True)
+    disc.add_argument("--category", action="append")
+    disc.add_argument("--place", action="append")
+    disc.add_argument("--industry")
+    disc.add_argument("--limit", type=int, default=10)
+    cand = _db(ai_sub.add_parser("candidates", help="candidate sources: list | approve | "
+                                                     "reject | delete"))
+    cand.add_argument("action", choices=["list", "approve", "reject", "delete"])
+    cand.add_argument("id", type=int, nargs="?")
+    cand.add_argument("--status", choices=["proposed", "approved", "rejected"])
+    _db(ai_sub.add_parser("usage", help="AI spend by provider and feature")).add_argument(
+        "--run", type=int)
+
     return {"api": cmd_api, "status": cmd_status, "export": cmd_export, "bundle": cmd_bundle,
             "projects": cmd_projects, "suppression": cmd_suppression,
-            "schedules": cmd_schedules, "purge": cmd_purge, "secrets": cmd_secrets}
+            "schedules": cmd_schedules, "purge": cmd_purge, "secrets": cmd_secrets,
+            "ai": cmd_ai}
 
 
 def add_config_parsers(config_sub) -> None:

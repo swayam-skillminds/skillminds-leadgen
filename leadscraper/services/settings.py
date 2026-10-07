@@ -13,7 +13,7 @@ from __future__ import annotations
 import copy
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import select, update
 from sqlalchemy.engine import Engine
 
@@ -36,10 +36,45 @@ class Retention(BaseModel):
         90, ge=1, description="Forget fetched-URL memos older than this (pages are re-fetched).")
 
 
+class WorkspaceAI(BaseModel):
+    """The workspace's AI providers (Phase 5): defaults for runs, and for config assist."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    providers: list[Any] = Field(
+        default_factory=list,
+        description="The fallback chain runs use when their config names none, first "
+                    "preferred: names (\"anthropic\") or entries ({name, kind, base_url, "
+                    "worker_model, judge_model, key_secret_name, ...}). Keys are secrets, "
+                    "referred to by name only.")
+    prices: dict[str, dict[str, Any]] = Field(
+        default_factory=dict, description="Price overrides, USD per million tokens: "
+                                          "{provider: {model: {input, output}}}.")
+    assist_budget_usd: float = Field(
+        0.50, ge=0, description="Cap per ICP-builder / planner / source-discovery request.")
+    assist_features: list[str] = Field(
+        default_factory=lambda: ["icp_builder", "planner", "source_discovery"],
+        description="Which config-assist features may call AI.")
+
+    @field_validator("providers")
+    @classmethod
+    def _valid_providers(cls, value: list[Any]) -> list[Any]:
+        from ..ai.providers.registry import make_spec
+        from ..core.secrets import is_secret_key
+
+        for entry in value:
+            if isinstance(entry, dict) and any(is_secret_key(k) for k in entry):
+                raise ValueError("provider entries name their key's secret "
+                                 "(key_secret_name); they never hold a key")
+            make_spec(entry)                    # raises ValueError for an unknown kind
+        return value
+
+
 class WorkspaceSettings(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     retention: Retention = Field(default_factory=Retention)
+    ai: WorkspaceAI = Field(default_factory=WorkspaceAI)
     keep_awake: bool = Field(True, description="Hold a keep-awake lock while a run is active "
                                                "(local mode).")
     robots_txt: bool = Field(True, description="Honour robots.txt when crawling businesses' own "
@@ -110,3 +145,11 @@ def apply_to_config(engine: Engine, workspace_id: int, config: Any) -> None:
     for key, value in (("keep_awake", settings.keep_awake), ("robots_txt", settings.robots_txt)):
         if config.get(f"runtime.{key}") is None:
             config.set(f"runtime.{key}", value, record=False)
+
+
+def ai_settings(engine: Engine, workspace_id: int) -> dict[str, Any]:
+    """The workspace's AI section (providers, prices, assist budget) as a plain dict."""
+    try:
+        return effective(engine, workspace_id).ai.model_dump()
+    except Exception:                       # settings never stop a run
+        return WorkspaceAI().model_dump()

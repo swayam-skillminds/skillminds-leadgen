@@ -59,6 +59,9 @@ class ExportRecord:
     flags: list[str] = field(default_factory=list)
     #: Which of the run's places it is in ("" when unknown).
     place: str = ""
+    #: AI attributes (Phase 5): key -> {value, estimated, producer}. Never facts:
+    #: their columns say "(AI)" / "(AI estimate)".
+    attributes: dict[str, dict[str, Any]] = field(default_factory=dict)
     overall: OverallScore = field(default_factory=OverallScore)
     #: Column key -> value, filled when the columns are assembled.
     values: dict[str, Any] = field(default_factory=dict)

@@ -101,6 +101,16 @@ def _person_link(record: ExportRecord) -> str | None:
     return next((p["profile_url"] for p in record.people if p.get("profile_url")), None)
 
 
+def _attribute(record: ExportRecord, key: str) -> str | None:
+    item = (record.attributes or {}).get(key)
+    if not item:
+        return None
+    value = item.get("value")
+    if isinstance(value, list):
+        return _joined([str(v) for v in value], ", ")
+    return str(value) if value not in (None, "") else None
+
+
 def _inferred_email(record: ExportRecord) -> str | None:
     return _joined([c["value"] for c in record.inferred if c.get("channel") == "email"])
 
@@ -243,6 +253,22 @@ def core_columns(*, places: int, titles: dict[str, str], has_run: bool) -> dict[
             Column("other_signals", "Other Signals", width=44, optional=True,
                    get=_other_signals),
         ],
+        # Phase 5: what AI wrote about an organisation -- never a published fact,
+        # so each header says so. Optional: absent unless AI produced them.
+        "ai": [
+            Column("ai_summary", "Summary (AI)", width=50, optional=True,
+                   description="One line by AI on what it does and why it matched. Not a "
+                               "published fact.",
+                   get=lambda r: _attribute(r, "summary")),
+            Column("ai_industry", "Industry (AI)", width=24, optional=True,
+                   description="Industry tags inferred by AI from its name, category and "
+                               "site.",
+                   get=lambda r: _attribute(r, "industry")),
+            Column("ai_company_size", "Company Size (AI estimate)", width=14, optional=True,
+                   breakdown=False,
+                   description="Headcount band estimated by AI. An estimate, not a fact.",
+                   get=lambda r: _attribute(r, "company_size")),
+        ],
         "provenance": [
             Column("sources", "Sources", width=22,
                    description="Which sources found or enriched it.",
@@ -323,7 +349,7 @@ def assemble(records: list[ExportRecord], *, cfg: Any, lead_type_keys: list[str]
 
     ordered = [*core["lead"], *slots["front"], *core["location"], *slots["body"],
                *core["contacts"], *slots["contacts"], *core["address"], *core["scores"],
-               *core["signals"], *slots["tail"], *core["provenance"]]
+               *core["signals"], *slots["tail"], *core["ai"], *core["provenance"]]
     wanted = None if fields is None else set(fields)
     ordered = [c for c in ordered if c.field is None or wanted is None or c.field in wanted]
     if records:
@@ -335,7 +361,8 @@ def assemble(records: list[ExportRecord], *, cfg: Any, lead_type_keys: list[str]
 
 
 #: Columns an empty export leaves out: they only exist to show data.
-DATA_ONLY = frozenset({"other_phones", "other_emails", "inferred_email", "suppressed",
+DATA_ONLY = frozenset({"ai_summary", "ai_industry", "ai_company_size",
+                       "other_phones", "other_emails", "inferred_email", "suppressed",
                        "decision_maker_profile", "notes", "change", "signal_link",
                        "other_signals"})
 

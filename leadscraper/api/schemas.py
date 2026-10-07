@@ -589,6 +589,9 @@ class Organization(OrganizationSummary):
                       "fields": ["emails"], "lead_type": "local_business", "run_id": 42,
                       "fetched_at": NOW}],
         "identity_keys": [{"kind": "phone", "value": "+919820012345"}],
+        "attributes": [{"key": "company_size", "value": "11-50", "origin": "ai",
+                        "estimated": True, "producer": "anthropic/claude-haiku-4-5",
+                        "updated_at": NOW}],
         "runs": [{"run_id": 42, "action": "new", "lead_type": "local_business", "at": NOW}]})
 
     record: dict[str, Any]
@@ -597,6 +600,8 @@ class Organization(OrganizationSummary):
     signals: list[dict[str, Any]]
     evidence: list[dict[str, Any]]
     identity_keys: list[dict[str, Any]]
+    #: AI attributes (industry, company-size estimate, summary): never published facts.
+    attributes: list[dict[str, Any]] = []
     runs: list[dict[str, Any]]
 
 
@@ -806,12 +811,21 @@ class TestResult(BaseModel):
 class SettingsOut(BaseModel):
     model_config = examples({
         "retention": {"logs_days": 30, "events_days": 90, "seen_urls_days": 90},
-        "keep_awake": True, "robots_txt": True, "data_dir": "/data",
+        "keep_awake": True, "robots_txt": True,
+        "ai": {"providers": ["anthropic", {"name": "groq", "kind": "openai_compatible",
+                                           "base_url": "https://api.groq.com/openai/v1",
+                                           "worker_model": "llama-4-scout",
+                                           "key_secret_name": "groq-api-key"}],
+               "prices": {}, "assist_budget_usd": 0.5,
+               "assist_features": ["icp_builder", "planner", "source_discovery"]},
+        "data_dir": "/data",
         "database": "postgresql+psycopg://leads:***@db:5432/leads", "mode": "server"})
 
     retention: dict[str, Any]
     keep_awake: bool
     robots_txt: bool
+    #: AI providers (fallback chain), price overrides, config-assist budget (Phase 5).
+    ai: dict[str, Any] = {}
     data_dir: str
     database: str
     mode: str
@@ -819,11 +833,13 @@ class SettingsOut(BaseModel):
 
 class SettingsUpdate(BaseModel):
     model_config = examples({"retention": {"logs_days": 14}, "robots_txt": True},
+                            {"ai": {"providers": ["anthropic", "claude_code_cli"]}},
                             extra="forbid")
 
     retention: dict[str, int | None] | None = None
     keep_awake: bool | None = None
     robots_txt: bool | None = None
+    ai: dict[str, Any] | None = None
 
 
 class PurgeResult(BaseModel):
@@ -870,3 +886,222 @@ class Preset(BaseModel):
     country: str | None
     places: list[str]
     document: dict[str, Any]
+
+
+# --- AI (Phase 5) ----------------------------------------------------------------------------
+
+AI_SPEND = {"cost_usd": 0.0042, "calls": 2, "cache_hits": 0, "providers": ["anthropic"],
+            "stopped": None}
+
+
+class AIProvider(BaseModel):
+    model_config = examples({
+        "name": "anthropic", "kind": "anthropic", "worker_model": "claude-haiku-4-5",
+        "judge_model": "claude-opus-5-5", "base_url": None,
+        "key_secret_name": "anthropic-api-key", "enabled": True,
+        "capabilities": {"structured_output": True, "tool_use": True, "web_search": True,
+                         "context_tokens": 200000},
+        "key_configured": True, "key_source": "keyring", "needs_key": True, "usable": True,
+        "problem": None, "bills_separately": True, "in_workspace_chain": True},
+        extra="allow")
+
+    name: str
+    kind: str | None = None
+    usable: bool
+    problem: str | None = None
+    key_configured: bool | None = Field(None, description="Whether a key is configured -- "
+                                                          "never the key itself.")
+
+
+class AIProvidersOut(BaseModel):
+    model_config = examples({
+        "providers": AIProvider.model_config["json_schema_extra"]["examples"],
+        "chain": ["anthropic"], "assist_budget_usd": 0.5,
+        "note": "Keys are never shown."})
+
+    providers: list[AIProvider]
+    chain: list[str]
+    assist_budget_usd: float | None = None
+    note: str = ""
+
+
+class ProviderTestOut(BaseModel):
+    model_config = examples({"provider": "anthropic", "ok": True, "error": None,
+                             "model": "claude-haiku-4-5", "latency_ms": 840,
+                             "cost_usd": 0.00003})
+
+    provider: str
+    ok: bool
+    error: str | None = None
+    model: str | None = None
+    latency_ms: int | None = None
+    cost_usd: float = 0.0
+
+
+class Offering(BaseModel):
+    model_config = examples({
+        "key": "erp", "title": "ERP implementation",
+        "description": "ERP for operations, inventory, accounting and manufacturing.",
+        "categories": ["manufacturing companies", "distributors"],
+        "roles": ["Managing Director", "CFO"], "signals": ["expansion"],
+        "industries": ["manufacturing"], "lead_types": ["local_business", "hiring"],
+        "must_have": ["phone"]}, extra="allow")
+
+    key: str
+    title: str
+
+
+class OfferingsOut(BaseModel):
+    model_config = examples({"items": Offering.model_config["json_schema_extra"]["examples"]})
+
+    items: list[Offering]
+
+
+class ICPRequest(BaseModel):
+    model_config = examples({"brief": "We sell ERP to mid-size manufacturers in Pune and "
+                                      "Nashik that are expanding.", "offering": "erp"},
+                            {"brief": "Websites for dental clinics in Austin", "country": "US",
+                             "places": ["Austin"]}, extra="forbid")
+
+    brief: str = Field(..., min_length=1, description="What you sell and to whom.")
+    offering: str | None = Field(None, description="A Skillminds offering key (GET "
+                                                   "/ai/offerings) to start from.")
+    country: str | None = None
+    places: list[str] | None = None
+
+
+class ICPDraftOut(BaseModel):
+    model_config = examples({
+        "config": EXAMPLE_CONFIG, "valid": True, "errors": [],
+        "notes": ["decision-maker roles to look for: Managing Director, CFO"],
+        "offering": "erp", "source": "ai",
+        "confirm": "This is a draft. Review it, save it as a config, then run it.",
+        "ai": AI_SPEND})
+
+    config: dict[str, Any]
+    valid: bool
+    errors: list[Any]
+    notes: list[str]
+    offering: str | None = None
+    source: str
+    confirm: str = ""
+    ai: dict[str, Any]
+
+
+class PlanRequest(BaseModel):
+    model_config = examples({"config": EXAMPLE_CONFIG, "roles": ["CTO"]}, extra="forbid")
+
+    config: dict[str, Any]
+    roles: list[str] | None = None
+
+
+class PlanOut(BaseModel):
+    model_config = examples({
+        "config": EXAMPLE_CONFIG, "valid": True, "errors": [],
+        "changes": ["category Dentists: + queries dental clinic, orthodontist"],
+        "suggestions": {"areas": [{"place": "Pune", "areas": ["Baner", "Kothrud"]}],
+                        "category_queries": [{"category": "Dentists",
+                                              "queries": ["dental clinic", "orthodontist"]}],
+                        "role_titles": [{"role": "CTO",
+                                         "titles": ["Chief Technology Officer"]}],
+                        "lead_types": ["local_business"], "notes": []},
+        "applicable": {"packs": [{"key": "in", "title": "India", "applies": True,
+                                  "why_not": None}],
+                       "lead_types": [{"key": "local_business", "title": "Local businesses"}]},
+        "source": "ai", "confirm": "Suggestions only: review the changes, then save the config.",
+        "ai": AI_SPEND}, extra="allow")
+
+    config: dict[str, Any]
+    valid: bool
+    changes: list[str]
+    source: str
+    ai: dict[str, Any]
+
+
+class CandidateSourceOut(BaseModel):
+    model_config = examples({
+        "id": 3, "name": "Pune Dental Association member list",
+        "url": "https://dentists-directory.example/pune", "host": "dentists-directory.example",
+        "country": "IN", "place": "Pune", "category": "Dentists", "kind": "directory",
+        "page_type": "listing", "rationale": "Lists member clinics with phone numbers.",
+        "terms_note": "", "status": "proposed", "proposed_by": "anthropic/claude-haiku-4-5",
+        "created_at": NOW, "decided_at": None, "last_run_at": None})
+
+    id: int
+    name: str
+    url: str
+    host: str
+    country: str | None = None
+    place: str | None = None
+    category: str | None = None
+    kind: str
+    page_type: str
+    rationale: str
+    terms_note: str
+    status: Literal["proposed", "approved", "rejected"]
+    proposed_by: str
+    created_at: datetime | None = None
+    decided_at: datetime | None = None
+    last_run_at: datetime | None = None
+
+
+class SourceDiscoveryRequest(BaseModel):
+    model_config = examples({"country": "IN", "categories": ["Dentists"], "places": ["Pune"]},
+                            extra="forbid")
+
+    country: str
+    categories: list[str] = Field(default_factory=list)
+    places: list[str] | None = None
+    industry: str | None = None
+    limit: int = Field(10, ge=1, le=25)
+
+
+class SourceDiscoveryOut(BaseModel):
+    model_config = examples({
+        "candidates": CandidateSourceOut.model_config["json_schema_extra"]["examples"],
+        "rejected": [{"name": "Some job board", "url": "https://www.indeed.com/",
+                      "reason": "excluded by policy (A.2.4)"}],
+        "searched": True, "note": None, "ai": AI_SPEND})
+
+    candidates: list[CandidateSourceOut]
+    rejected: list[dict[str, Any]]
+    searched: bool
+    note: str | None = None
+    ai: dict[str, Any]
+
+
+class CandidateCreate(BaseModel):
+    model_config = examples({"url": "https://dentists-directory.example/pune",
+                             "name": "Pune dentists directory", "country": "IN",
+                             "place": "Pune", "category": "Dentists"}, extra="forbid")
+
+    url: str
+    name: str | None = None
+    country: str
+    place: str | None = None
+    category: str | None = None
+    rationale: str = ""
+
+
+class CandidateDecision(BaseModel):
+    model_config = examples({"status": "approved"}, extra="forbid")
+
+    status: Literal["approved", "rejected", "proposed"]
+
+
+class AIUsageOut(BaseModel):
+    model_config = examples({
+        "run_id": 42, "cost_usd": 0.0315, "calls": 14,
+        "by_provider": {"anthropic": 0.0315}, "by_feature": {"normalisation": 0.012,
+                                                             "extraction_fallback": 0.0195},
+        "rows": [{"provider": "anthropic", "model": "claude-haiku-4-5",
+                  "feature": "extraction_fallback", "calls": 6, "cache_hits": 2,
+                  "failures": 0, "input_tokens": 18000, "output_tokens": 1500,
+                  "searches": 0, "cost_usd": 0.0255}]})
+
+    run_id: int | None = None
+    cost_usd: float
+    calls: int
+    by_provider: dict[str, float]
+    by_feature: dict[str, float]
+    rows: list[dict[str, Any]]

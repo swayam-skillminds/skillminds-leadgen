@@ -36,8 +36,8 @@ from sqlalchemy.engine import Engine
 
 from ..core.lead import Lead
 from ..db.models import (
-    AIUsage, Contact, FailureRow, Organization, Person, Project, Run, RunOrganization, Signal,
-    WorkUnitRow,
+    AIUsage, Contact, FailureRow, Organization, OrgAttribute, Person, Project, Run,
+    RunOrganization, Signal, WorkUnitRow,
 )
 from ..export.columns import assemble
 from ..export.excel import to_xlsx
@@ -58,6 +58,7 @@ PROJECTS = Project.__table__
 MEMBERS = RunOrganization.__table__
 SIGNALS = Signal.__table__
 PEOPLE = Person.__table__
+ATTRS = OrgAttribute.__table__
 CONTACTS = Contact.__table__
 UNITS = WorkUnitRow.__table__
 FAILURES = FailureRow.__table__
@@ -224,13 +225,19 @@ def _facts(conn, ws: Workspace, ids: list[int]) -> dict[str, Any]:
         inferred[row["organization_id"]].append({
             "channel": row["channel"], "value": row["value"], "source": row["source"],
             "confidence": row["confidence"]})
+    attributes: dict[int, dict[str, dict[str, Any]]] = defaultdict(dict)
+    for row in by_id(ATTRS):
+        attributes[row["organization_id"]][row["key"]] = {
+            "value": row["value"], "estimated": bool(row["estimated"]),
+            "origin": row["origin"], "producer": row["producer"]}
     seen = func.max(func.coalesce(RUNS.c.started_at, RUNS.c.created_at)).label("seen")
     last_seen = {int(row["organization_id"]): aware(row["seen"]) for row in _rows(
         conn, lambda chunk: select(MEMBERS.c.organization_id, seen)
         .join(RUNS, RUNS.c.id == MEMBERS.c.run_id)
         .where(MEMBERS.c.organization_id.in_(chunk), RUNS.c.workspace_id == ws.id)
         .group_by(MEMBERS.c.organization_id), ids)}
-    return {"signals": signals, "people": people, "inferred": inferred, "last_seen": last_seen}
+    return {"signals": signals, "people": people, "inferred": inferred, "last_seen": last_seen,
+            "attributes": attributes}
 
 
 def _run_context(conn, run: dict[str, Any]) -> dict[str, Any]:
@@ -265,6 +272,11 @@ def _run_context(conn, run: dict[str, Any]) -> dict[str, Any]:
     spend = conn.execute(select(func.coalesce(func.sum(AI_USAGE.c.cost_usd), 0.0),
                                 func.coalesce(func.sum(AI_USAGE.c.calls), 0))
                          .where(AI_USAGE.c.run_id == run_id)).first()
+    used = [row[0] for row in conn.execute(
+        select(AI_USAGE.c.provider, func.sum(AI_USAGE.c.cost_usd).label("spent"))
+        .where(AI_USAGE.c.run_id == run_id, AI_USAGE.c.calls > 0)
+        .group_by(AI_USAGE.c.provider).order_by(func.sum(AI_USAGE.c.cost_usd).desc(),
+                                                AI_USAGE.c.provider))]
     found = conn.execute(select(func.count()).select_from(MEMBERS)
                          .where(MEMBERS.c.run_id == run_id)).scalar() or 0
     unit_facts: dict[str, Any] = dict(units)
@@ -272,6 +284,7 @@ def _run_context(conn, run: dict[str, Any]) -> dict[str, Any]:
         unit_facts["skip_reason"] = skip_reasons.most_common(1)[0][0]
     return {"sources": list(sources.values()), "units": unit_facts, "failures": failures,
             "ai_spend": float(spend[0] or 0.0), "ai_calls": int(spend[1] or 0),
+            "ai_providers": used,
             "run_found": int(found), "started_at": aware(run.get("started_at")),
             "duration_seconds": float(run.get("active_seconds") or 0.0)}
 
@@ -376,7 +389,8 @@ def build_table(engine: Engine, ws: Workspace, *, run_id: int | None = None,
             inferred=facts["inferred"].get(org_id, []), first_seen=_epoch(lead.first_seen),
             last_seen=max(seen) if seen else None,
             change="new" if scope == "new" else actions.get(int(org_id)),
-            flags=matcher.flags(lead), place=place_of(lead, places)))
+            flags=matcher.flags(lead), place=place_of(lead, places),
+            attributes=facts["attributes"].get(org_id, {})))
     score_records(records, cfg, scorer.score_weights)
 
     keys = _lead_type_keys(config, records)
@@ -396,7 +410,9 @@ def build_table(engine: Engine, ws: Workspace, *, run_id: int | None = None,
     ai = None
     country = ""
     if config is not None:
-        ai = {"enabled": bool(config.get("ai.enabled")), "provider": config.get("ai.backend"),
+        providers = context.get("ai_providers") or []
+        ai = {"enabled": bool(config.get("ai.enabled")),
+              "provider": ", ".join(providers) if providers else config.get("ai.backend"),
               "cap_usd": config.get("ai.max_cost_usd"),
               "spend_usd": context.get("ai_spend", 0.0), "calls": context.get("ai_calls", 0)}
         try:

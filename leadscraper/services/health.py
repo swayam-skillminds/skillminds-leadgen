@@ -118,6 +118,15 @@ def keys() -> dict[str, Any]:
         "claude_cli": shutil.which("claude") is not None,
         "google_service_account": service_account,
     }
+    # AI provider keys (Phase 5): configured or not, from the secret store or the
+    # standard env variable -- never the value. GET /ai/providers has the detail.
+    try:
+        from ..ai.providers.registry import build, make_spec
+
+        for kind in ("anthropic", "openai", "gemini"):
+            configured[f"ai_{kind}_key"] = build(make_spec(kind)).key_source() is not None
+    except Exception:            # health never fails on an optional component
+        pass
     names = [k for k, v in configured.items() if v]
     return _check("ok", ", ".join(names) or "none configured (all optional)",
                   configured=configured)

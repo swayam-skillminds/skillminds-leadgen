@@ -59,8 +59,8 @@ from sqlalchemy.engine import Engine
 from .. import __version__
 from ..core.secrets import scrub
 from ..db.models import (
-    AIUsage, Contact, Evidence, FailureRow, IdentityKey, Organization, Person, Project, Run,
-    RunOrganization, SavedConfig, Schedule, Signal, SuppressionList, WorkUnitRow,
+    AIUsage, Contact, Evidence, FailureRow, IdentityKey, Organization, OrgAttribute, Person,
+    Project, Run, RunOrganization, SavedConfig, Schedule, Signal, SuppressionList, WorkUnitRow,
 )
 from ..db.store import slugify_project
 from .errors import Invalid, ServiceError
@@ -78,6 +78,7 @@ CONTACTS = Contact.__table__
 PEOPLE = Person.__table__
 SIGNALS = Signal.__table__
 EVIDENCE = Evidence.__table__
+ATTRS = OrgAttribute.__table__
 RUNS = Run.__table__
 UNITS = WorkUnitRow.__table__
 FAILURES = FailureRow.__table__
@@ -92,7 +93,7 @@ PROJECTS = Project.__table__
 _LOCAL = frozenset({"id", "workspace_id", "project_id", "organization_id", "run_id", "list_id",
                     "saved_config_id", "worker_id", "heartbeat_at"})
 _LEAD_CHILDREN = (("identity_keys", KEYS), ("contacts", CONTACTS), ("people", PEOPLE),
-                  ("signals", SIGNALS), ("evidence", EVIDENCE))
+                  ("signals", SIGNALS), ("evidence", EVIDENCE), ("attributes", ATTRS))
 
 
 def _plain_row(table, row: dict[str, Any], drop: frozenset[str] = frozenset()) -> dict[str, Any]:

@@ -29,7 +29,8 @@ from sqlalchemy.engine import Engine
 from ..core.identity import identity_domain
 from ..core.normalize import normalize_phone
 from ..db.models import (
-    Contact, Evidence, FailureRow, IdentityKey, Organization, Person, Run, RunOrganization,
+    Contact, Evidence, FailureRow, IdentityKey, Organization, OrgAttribute, Person, Run,
+    RunOrganization,
     Signal,
 )
 from .errors import Invalid, NotFound
@@ -40,6 +41,7 @@ ORGS = Organization.__table__
 CONTACTS = Contact.__table__
 PEOPLE = Person.__table__
 SIGNALS = Signal.__table__
+ATTRS = OrgAttribute.__table__
 EVIDENCE = Evidence.__table__
 KEYS = IdentityKey.__table__
 MEMBERS = RunOrganization.__table__
@@ -141,6 +143,8 @@ def get_organization(engine: Engine, ws: Workspace, org_id: int) -> dict[str, An
                                .order_by(SIGNALS.c.observed_at.desc())).mappings().all()
         evidence = conn.execute(select(EVIDENCE).where(EVIDENCE.c.organization_id == org_id)
                                 .order_by(EVIDENCE.c.id).limit(500)).mappings().all()
+        attributes = conn.execute(select(ATTRS).where(ATTRS.c.organization_id == org_id)
+                                  .order_by(ATTRS.c.key)).mappings().all()
         keys = conn.execute(select(KEYS.c.kind, KEYS.c.value).where(
             KEYS.c.organization_id == org_id).order_by(KEYS.c.id)).all()
         runs = conn.execute(select(MEMBERS.c.run_id, MEMBERS.c.action, MEMBERS.c.lead_type,
@@ -166,6 +170,10 @@ def get_organization(engine: Engine, ws: Workspace, org_id: int) -> dict[str, An
                       "lead_type": e["lead_type"] or None, "run_id": e["run_id"],
                       "fetched_at": aware(e["fetched_at"])} for e in evidence],
         "identity_keys": [{"kind": k, "value": v} for k, v in keys],
+        # Not published facts: AI tags, estimates and summaries, always labelled.
+        "attributes": [{"key": a["key"], "value": a["value"], "origin": a["origin"],
+                        "estimated": bool(a["estimated"]), "producer": a["producer"],
+                        "updated_at": aware(a["updated_at"])} for a in attributes],
         "runs": [{"run_id": r["run_id"], "action": r["action"],
                   "lead_type": r["lead_type"] or None, "at": aware(r["created_at"])}
                  for r in runs],

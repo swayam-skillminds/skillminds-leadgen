@@ -40,7 +40,7 @@ from sqlalchemy.engine import Engine
 from .. import __version__
 from ..services.errors import ServiceError
 from . import schemas as s
-from .routers import configs, operations, projects, runs, system
+from .routers import ai, configs, operations, projects, runs, system
 
 PREFIX = "/api/v1"
 CORS_ENV = "LEADSCRAPER_CORS_ORIGINS"
@@ -114,7 +114,7 @@ def create_app(engine: Engine | None = None, *, db_url: str | None = None) -> Fa
     if "*" not in hosts:
         app.add_middleware(TrustedHostMiddleware, allowed_hosts=hosts)
 
-    for module in (system, projects, configs, runs, operations):
+    for module in (system, projects, configs, runs, operations, ai):
         app.include_router(module.router, prefix=PREFIX, responses=ERRORS)
 
     @app.get("/", include_in_schema=False)
