@@ -495,3 +495,28 @@ def test_an_unknown_timezone_falls_back_to_utc_everywhere(engine):
                                               "timezone": "Mars/Olympus_Mons"})
     table = exports.build_table(engine, default_workspace(engine), run_id=run_id)
     assert table.timezone == "UTC"
+
+
+def test_the_filtered_view_follows_records_and_reads_right_without_calculation(engine):
+    """Live SUBTOTAL formulas over Records, each stored with its unfiltered result."""
+    _, content, table = build(engine, "mix")
+    book = load_workbook(io.BytesIO(content))
+    computed = load_workbook(io.BytesIO(content), data_only=True)["Overview"]
+    overview = book["Overview"]
+    formulas = [(c.coordinate, c.value) for ws in book.worksheets for row in ws.iter_rows()
+                for c in row if c.data_type == "f"]
+    # The only formulas in the workbook: the filtered-view tiles (no scraped text, ever).
+    assert {coord[1:] for coord, _ in formulas} == {"9"}
+    assert all(ws_title == "Overview" for ws_title in
+               {ws.title for ws in book.worksheets for row in ws.iter_rows() for c in row
+                if c.data_type == "f"})
+    labels = {overview.cell(8, c).value: overview.cell(9, c) for c in range(1, 6)}
+    assert labels["SHOWING (OF 7)"].value == "=SUBTOTAL(103,Records!$B$2:$B$8)"
+    assert "SUBTOTAL(103,OFFSET(Records!" in labels["WITH PHONE"].value
+    results = {label: computed[cell.coordinate].value for label, cell in labels.items()}
+    phones = sum(1 for r in table.records if r.lead.phones)
+    signals = sum(1 for r in table.records if r.values.get("_signals"))
+    assert results == {"SHOWING (OF 7)": 7, "AVG SCORE": pytest.approx(
+        sum(r.score for r in table.records) / 7, abs=1e-6), "WITH PHONE": phones,
+        "WITH EMAIL": sum(1 for r in table.records if r.lead.emails), "WITH SIGNAL": signals}
+    assert book.calculation.fullCalcOnLoad

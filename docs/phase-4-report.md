@@ -3,7 +3,7 @@
 Date: 2026-10-07 · Branch: `phase-4/excel` (see "About the branch") · Plan: `APP-BUILD-PROMPT.md` Section A + Phase 4
 
 **Result:** Phase 4 is complete.
-- The suite is green: 482 passed, 8 skipped (it was 457 passed, 8 skipped on `phase-3/api`). The 8 skips are the opt-in Postgres and live tests, as before.
+- The suite is green: 483 passed, 8 skipped (it was 457 passed, 8 skipped on `phase-3/api`). The 8 skips are the opt-in Postgres and live tests, as before.
 - The export suites, the engine suite and the opt-in Postgres tests also pass against a real PostgreSQL 16 (section 8). That run found a **cross-backend ordering bug** (Postgres JSONB doesn't keep key order), which is now fixed.
 - All three acceptance checks pass (section 9). The sample workbooks are in `docs/samples/`.
 - An independent review found one crash, which is fixed, and five lesser issues, all fixed (section 10).
@@ -38,6 +38,7 @@ The Records tab also has:
 
 **Overview** absorbs the reference's Overview, Data Quality and Legend tabs:
 - **Title and KPI tiles:** records, new, updated, with phone, with email, with signal (when the run looks for signals), average score.
+- **Filtered view:** the same counts as live formulas over Records (section 12).
 - **Run summary:** project, config, run and status, date (in the run's timezone), duration, places and areas, country, lead types, sources used (with found counts), work units (done / failed / skipped), depth and budget, AI on/off and spend (from the `ai_usage` ledger), score weights, scope, suppression and filters, sort order, generated time.
 - **Results:** new vs updated vs unchanged; top 10 leads; counts by lead type, by place or locality, by each lead-type breakdown column (category; for venues tier in tier order and venue type), by signal type, and by score band.
 - **Data quality:** coverage % per field (any contact, phone, email, website, address, socials, maps, decision-maker, inferred email, rating, price, signal) with a colour scale.
@@ -189,12 +190,15 @@ None of these touch the characterisation results.
 
 ## 12. Deviations from the plan, with reasons
 
-- **The Overview holds values, not formulas.** The reference workbook computed its Overview with `COUNTIFS` over the data tab. Here the figures are computed from the database when the book is generated:
+- **The Overview's figures are values; one small block is live.** The reference workbook computed its whole Overview with `COUNTIFS` over the data tab. Here every figure is computed from the database when the book is generated:
   - openpyxl cannot store a formula's result, so formulas show as blank or zero in previewers, pandas and some mobile viewers until recalculated;
-  - Phase 4.3 asks for output generated from the DB, and testable;
-  - it keeps "no live formulas" as a rule for the whole book.
+  - Phase 4.3 asks for output generated from the DB, and testable.
 
-  The cost: filtering Records doesn't update the Overview. The only formulas left are conditional-format rules (banding, signal recency).
+  So that the Overview still answers "how many of the rows I filtered…", a **Filtered view** row was added after the first version of this report: showing, average score, with phone / email / signal. These are `SUBTOTAL` formulas over Records, which count only the rows the autofilter shows.
+  - Each formula is written with its unfiltered result (openpyxl leaves the result empty; the zip pass in `export/excel.py` writes it in), and the book is set to recalculate on open.
+  - So a previewer shows the right numbers, and Excel, LibreOffice and Google Sheets follow the filter.
+  - These are the only formulas in the workbook, which `test_the_filtered_view_follows_records_and_reads_right_without_calculation` asserts; scraped text is never a formula.
+  - Not covered: the breakdown tables and coverage still describe the whole export.
 - **The reference's editorial "zones" (Nashik territory groups) are not carried over.** They are hand-written groupings for one region. Grouping by place and the place / locality breakdowns are the general form. The old tool still has them.
 - **Frozen panes: the header, the score and the name** (`C2`), as the reference froze its leading columns, rather than literally only column A.
 - **"Grouped by place" is an ordering** (places in config order, best first within each), not separator rows. Separator rows would break the autofilter and sorting in Excel.
@@ -206,8 +210,8 @@ None of these touch the characterisation results.
 
 - **CI has not run on this branch:** nothing was pushed. The golden descriptions are OS-independent (dates are rendered in the run's timezone, not the machine's; `tzdata` covers Windows), but a CI run on macOS, Windows and Linux should confirm them before merging. Pushing is yours to do or ask for.
 - **Merge order:** `phase-3/api` → `main`, then `phase-4/excel`. `fix/live-check` is still open too.
-- **Your uncommitted edit to `APP-BUILD-PROMPT.md`** (the Phase 5 "Extraction techniques" section) is left untouched in the working tree. It isn't part of these commits.
 - **`organizations.score`** (the API's list sort) is still the store's write-time `local_business` score. For organisations several lead types found, it can differ from the export's combined score. That matters from Phase 6 on, when the store should score with every lead type too.
+- **The filtered-view formulas were checked for their stored results and rendered with Quick Look, but not recalculated in Excel, LibreOffice or Numbers on this machine** (none is installed except Numbers, which I didn't drive). `SUBTOTAL(103, OFFSET(…))` inside `SUMPRODUCT` is the standard visible-rows idiom in Excel, LibreOffice and Google Sheets. Please filter Records once in Excel and check the block moves.
 - **Records rows are 15 pt high,** as in the reference, so wrapped text (score reasons, notes) shows one line until a row is expanded. Previewers that auto-fit, such as Quick Look, show it whole.
 - **Not exercised:** opening the samples in Excel and LibreOffice. They were checked with openpyxl and macOS Quick Look. Google Sheets `RAW` was tested against a fake worksheet only.
 - **Still not applied:** `filters.exclude_chains`, `icp` (`RunConfig.unapplied()` names them).
@@ -224,4 +228,6 @@ Commits on this branch (after `phase-3/api`):
 - `test: golden workbook structure for four fixture runs; sample workbooks in docs/samples`
 - `docs: the workbook (API exports, engine run files, lead-type columns, README, CLAUDE.md)`
 - `fix: findings of the Phase 4 review`
-- and this report.
+- `docs: Phase 4 report …`
+- `docs(plan): Phase 5 extraction techniques …` (your edit to `APP-BUILD-PROMPT.md`, committed as you wrote it)
+- `feat(export): a live filtered view on the Overview`

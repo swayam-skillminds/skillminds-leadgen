@@ -8,65 +8,59 @@
     "t": "s",
     "v": "Sample dentists and caterers — Lead Book"
    },
-   "A10": {
-    "align": "top",
-    "font": "Arial 10 b",
-    "t": "s",
-    "v": "Run"
-   },
    "A11": {
     "align": "top",
-    "font": "Arial 10 b",
+    "font": "Arial 11 b #1F3864",
     "t": "s",
-    "v": "Date"
+    "v": "RUN SUMMARY"
    },
    "A12": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Duration"
+    "v": "Project"
    },
    "A13": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Places"
+    "v": "Config"
    },
    "A14": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Country"
+    "v": "Run"
    },
    "A15": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Lead types"
+    "v": "Date"
    },
    "A16": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Sources used"
+    "v": "Duration"
    },
    "A17": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Work units"
+    "v": "Places"
    },
    "A18": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Depth"
+    "v": "Country"
    },
    "A19": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "AI"
+    "v": "Lead types"
    },
    "A2": {
     "align": "center",
@@ -78,110 +72,110 @@
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Score weights"
+    "v": "Sources used"
    },
    "A21": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "This workbook"
+    "v": "Work units"
    },
    "A22": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Sorted by"
+    "v": "Depth"
    },
    "A23": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Generated"
+    "v": "AI"
+   },
+   "A24": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Score weights"
    },
    "A25": {
     "align": "top",
-    "font": "Arial 11 b #1F3864",
+    "font": "Arial 10 b",
     "t": "s",
-    "v": "RESULTS"
+    "v": "This workbook"
    },
    "A26": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Records"
+    "v": "Sorted by"
    },
    "A27": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Change in this run"
+    "v": "Generated"
    },
    "A29": {
     "align": "top",
     "font": "Arial 11 b #1F3864",
     "t": "s",
-    "v": "TOP 10 LEADS"
+    "v": "RESULTS"
    },
    "A30": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Records"
+   },
+   "A31": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Change in this run"
+   },
+   "A33": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "TOP 10 LEADS"
+   },
+   "A34": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Name"
    },
-   "A31": {
+   "A35": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Pearl Orthodontics"
    },
-   "A32": {
+   "A36": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Bright Smile Dental Studio"
    },
-   "A33": {
+   "A37": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Saffron Table Caterers"
    },
-   "A34": {
+   "A38": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Coastal Feast Catering"
    },
-   "A35": {
-    "align": "top wrap",
-    "font": "Arial 10 b",
-    "t": "s",
-    "v": "Lotus Family Dentistry"
-   },
-   "A36": {
-    "align": "top wrap",
-    "font": "Arial 10 b",
-    "t": "s",
-    "v": "Riverside Dental Care"
-   },
-   "A37": {
-    "align": "top wrap",
-    "font": "Arial 10 b",
-    "t": "s",
-    "v": "Monsoon Spice Caterers"
-   },
-   "A38": {
-    "align": "top wrap",
-    "font": "Arial 10 b",
-    "t": "s",
-    "v": "Silver Spoon Banquet Kitchen"
-   },
    "A39": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Harbour Dental Clinic"
+    "v": "Lotus Family Dentistry"
    },
    "A4": {
     "align": "top",
@@ -193,51 +187,56 @@
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Green Leaf Kitchens"
+    "v": "Riverside Dental Care"
+   },
+   "A41": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Monsoon Spice Caterers"
    },
    "A42": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Silver Spoon Banquet Kitchen"
+   },
+   "A43": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Harbour Dental Clinic"
+   },
+   "A44": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Green Leaf Kitchens"
+   },
+   "A46": {
     "align": "top",
     "font": "Arial 11 b #1F3864",
     "t": "s",
     "v": "BY CATEGORY"
    },
-   "A43": {
+   "A47": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Category"
    },
-   "A44": {
+   "A48": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Caterers"
    },
-   "A45": {
-    "align": "top wrap",
-    "font": "Arial 10 b",
-    "t": "s",
-    "v": "Dentists"
-   },
-   "A47": {
-    "align": "top",
-    "font": "Arial 11 b #1F3864",
-    "t": "s",
-    "v": "BY PLACE"
-   },
-   "A48": {
-    "align": "left center wrap",
-    "fill": "44546A",
-    "font": "Arial 10 b #FFFFFF",
-    "t": "s",
-    "v": "Place"
-   },
    "A49": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Mumbai"
+    "v": "Dentists"
    },
    "A5": {
     "align": "left center",
@@ -246,372 +245,376 @@
     "t": "n",
     "v": 10
    },
-   "A50": {
+   "A51": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "BY PLACE"
+   },
+   "A52": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Place"
+   },
+   "A53": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Mumbai"
+   },
+   "A54": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Pune"
    },
-   "A52": {
+   "A56": {
     "align": "top",
     "font": "Arial 11 b #1F3864",
     "t": "s",
     "v": "BY SCORE BAND"
    },
-   "A53": {
+   "A57": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Score band"
    },
-   "A54": {
+   "A58": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "60–79"
    },
-   "A55": {
+   "A59": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "20–39"
    },
-   "A57": {
+   "A61": {
     "align": "top",
     "font": "Arial 11 b #1F3864",
     "t": "s",
     "v": "DATA QUALITY"
    },
-   "A58": {
+   "A62": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Field"
    },
-   "A59": {
+   "A63": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Any contact"
    },
-   "A60": {
+   "A64": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Phone"
    },
-   "A61": {
+   "A65": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Email"
    },
-   "A62": {
+   "A66": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Website"
    },
-   "A63": {
+   "A67": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Address"
    },
-   "A64": {
+   "A68": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Social profile"
    },
-   "A65": {
+   "A69": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Google Maps listing"
    },
-   "A66": {
+   "A7": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "FILTERED VIEW"
+   },
+   "A70": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Decision-maker"
    },
-   "A67": {
+   "A71": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Rating"
    },
-   "A69": {
+   "A73": {
     "align": "top",
     "font": "Arial 11 b #1F3864",
     "t": "s",
     "v": "COLUMN LEGEND"
    },
-   "A7": {
-    "align": "top",
-    "font": "Arial 11 b #1F3864",
-    "t": "s",
-    "v": "RUN SUMMARY"
-   },
-   "A70": {
+   "A74": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Column"
    },
-   "A71": {
+   "A75": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Score"
    },
-   "A72": {
+   "A76": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Lead Types"
    },
-   "A73": {
+   "A77": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Place"
    },
-   "A74": {
+   "A78": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Fit"
    },
-   "A75": {
+   "A79": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Intent"
    },
-   "A76": {
-    "align": "top wrap",
-    "font": "Arial 10 b",
-    "t": "s",
-    "v": "Reach"
-   },
-   "A77": {
-    "align": "top wrap",
-    "font": "Arial 10 b",
-    "t": "s",
-    "v": "Score Reasons"
-   },
-   "A78": {
-    "align": "top wrap",
-    "font": "Arial 10 b",
-    "t": "s",
-    "v": "Sources"
-   },
-   "A79": {
-    "align": "top wrap",
-    "font": "Arial 10 b",
-    "t": "s",
-    "v": "Change"
-   },
    "A8": {
     "align": "top",
-    "font": "Arial 10 b",
+    "font": "Arial 9 #7F7F7F",
     "t": "s",
-    "v": "Project"
+    "v": "SHOWING (OF 10)"
    },
    "A80": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Last Seen"
+    "v": "Reach"
    },
    "A81": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Org ID"
+    "v": "Score Reasons"
+   },
+   "A82": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Sources"
    },
    "A83": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Change"
+   },
+   "A84": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Last Seen"
+   },
+   "A85": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Org ID"
+   },
+   "A87": {
     "align": "top wrap",
     "font": "Arial 8 i #7F7F7F",
     "t": "s",
     "v": "Every figure is computed from the project database when the workbook is generated; Records holds the rows behind each. Contact details appear only where they were published. Re-export at any time from the API or CLI, without re-scraping."
    },
    "A9": {
-    "align": "top",
-    "font": "Arial 10 b",
-    "t": "s",
-    "v": "Config"
-   },
-   "B10": {
-    "align": "top wrap",
-    "font": "Arial 10",
-    "t": "s",
-    "v": "#1 · completed"
-   },
-   "B11": {
-    "align": "top wrap",
-    "font": "Arial 10",
-    "t": "s",
-    "v": "30 Sep 2026, 15:00 (Asia/Kolkata)"
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 14 b #44546A",
+    "t": "f",
+    "v": "=SUBTOTAL(103,Records!$B$2:$B$11)"
    },
    "B12": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "38 min"
+    "v": "Sample dentists and caterers"
    },
    "B13": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "Pune, Mumbai"
+    "v": "Sample dentists and caterers"
    },
    "B14": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "India (IN)"
+    "v": "#1 · completed"
    },
    "B15": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "Local businesses"
+    "v": "30 Sep 2026, 15:00 (Asia/Kolkata)"
    },
    "B16": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "google_maps (12 found), justdial (3 found)"
+    "v": "38 min"
    },
    "B17": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "7 of 8 done, 1 failed"
+    "v": "Pune, Mumbai"
    },
    "B18": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "balanced"
+    "v": "India (IN)"
    },
    "B19": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "off"
+    "v": "Local businesses"
    },
    "B20": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "Fit 40% · Intent 40% · Reach 20%"
+    "v": "google_maps (12 found), justdial (3 found)"
    },
    "B21": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "organisations this run found"
+    "v": "7 of 8 done, 1 failed"
    },
    "B22": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "place, then score"
+    "v": "balanced"
    },
    "B23": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "01 Oct 2026, 15:00 (Asia/Kolkata), from the project database"
+    "v": "off"
+   },
+   "B24": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Fit 40% · Intent 40% · Reach 20%"
+   },
+   "B25": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "organisations this run found"
    },
    "B26": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "10"
+    "v": "place, then score"
    },
    "B27": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "10 new · 0 updated · 0 found again unchanged"
+    "v": "01 Oct 2026, 15:00 (Asia/Kolkata), from the project database"
    },
    "B30": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "10"
+   },
+   "B31": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "10 new · 0 updated · 0 found again unchanged"
+   },
+   "B34": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Score"
    },
-   "B31": {
+   "B35": {
     "align": "center top",
     "fmt": "0.0",
     "font": "Arial 10",
     "t": "n",
     "v": 78.49
    },
-   "B32": {
+   "B36": {
     "align": "center top",
     "fmt": "0.0",
     "font": "Arial 10",
     "t": "n",
     "v": 77.09
    },
-   "B33": {
+   "B37": {
     "align": "center top",
     "fmt": "0.0",
     "font": "Arial 10",
     "t": "n",
     "v": 73.26
    },
-   "B34": {
+   "B38": {
     "align": "center top",
     "fmt": "0.0",
     "font": "Arial 10",
     "t": "n",
     "v": 69.6
    },
-   "B35": {
-    "align": "center top",
-    "fmt": "0.0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 66.87
-   },
-   "B36": {
-    "align": "center top",
-    "fmt": "0.0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 39.97
-   },
-   "B37": {
-    "align": "center top",
-    "fmt": "0.0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 36.9
-   },
-   "B38": {
-    "align": "center top",
-    "fmt": "0.0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 32.31
-   },
    "B39": {
     "align": "center top",
     "fmt": "0.0",
     "font": "Arial 10",
     "t": "n",
-    "v": 30.46
+    "v": 66.87
    },
    "B4": {
     "align": "top",
@@ -624,35 +627,49 @@
     "fmt": "0.0",
     "font": "Arial 10",
     "t": "n",
-    "v": 24.51
+    "v": 39.97
+   },
+   "B41": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 36.9
+   },
+   "B42": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 32.31
    },
    "B43": {
-    "align": "left center wrap",
-    "fill": "44546A",
-    "font": "Arial 10 b #FFFFFF",
-    "t": "s",
-    "v": "Records"
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 30.46
    },
    "B44": {
-    "align": "top",
-    "fmt": "#,##0",
+    "align": "center top",
+    "fmt": "0.0",
     "font": "Arial 10",
     "t": "n",
-    "v": 5
+    "v": 24.51
    },
-   "B45": {
-    "align": "top",
-    "fmt": "#,##0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 5
-   },
-   "B48": {
+   "B47": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Records"
+   },
+   "B48": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 5
    },
    "B49": {
     "align": "top",
@@ -668,19 +685,19 @@
     "t": "n",
     "v": 10
    },
-   "B50": {
-    "align": "top",
-    "fmt": "#,##0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 5
-   },
-   "B53": {
+   "B52": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Records"
+   },
+   "B53": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 5
    },
    "B54": {
     "align": "top",
@@ -689,47 +706,33 @@
     "t": "n",
     "v": 5
    },
-   "B55": {
+   "B57": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Records"
+   },
+   "B58": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
     "t": "n",
     "v": 5
    },
-   "B58": {
-    "align": "left center wrap",
-    "fill": "44546A",
-    "font": "Arial 10 b #FFFFFF",
-    "t": "s",
-    "v": "Filled"
-   },
    "B59": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
     "t": "n",
-    "v": 10
-   },
-   "B60": {
-    "align": "top",
-    "fmt": "#,##0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 8
-   },
-   "B61": {
-    "align": "top",
-    "fmt": "#,##0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 6
+    "v": 5
    },
    "B62": {
-    "align": "top",
-    "fmt": "#,##0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 7
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Filled"
    },
    "B63": {
     "align": "top",
@@ -743,150 +746,160 @@
     "fmt": "#,##0",
     "font": "Arial 10",
     "t": "n",
-    "v": 4
+    "v": 8
    },
    "B65": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
     "t": "n",
-    "v": 8
+    "v": 6
    },
    "B66": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
     "t": "n",
-    "v": 0
+    "v": 7
    },
    "B67": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
     "t": "n",
+    "v": 10
+   },
+   "B68": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
+   },
+   "B69": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
     "v": 8
    },
+   "B7": {
+    "font": "Arial 8 i #7F7F7F",
+    "t": "s",
+    "v": "follows the filter on Records (recalculated when the workbook opens)"
+   },
    "B70": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "B71": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 8
+   },
+   "B74": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Meaning"
    },
-   "B71": {
+   "B75": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "Overall rank, 0–100: the run's weights over Fit, Intent and Reach. A component no lead type in the run scores is left out and the other weights are scaled up; one that some lead type scores counts 0 for an organisation without it."
    },
-   "B72": {
+   "B76": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "The lead types that found or enriched the organisation."
    },
-   "B73": {
+   "B77": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "Which of the run's places it is in."
    },
-   "B74": {
+   "B78": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "Is it the kind of organisation we sell to? 0–100."
    },
-   "B75": {
+   "B79": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "Is there a reason to buy now (hiring, funding, tenders…)? 0–100: 0 when nothing was found, blank when no lead type in the run looks for one."
    },
-   "B76": {
-    "align": "top wrap",
-    "font": "Arial 9 #404040",
-    "t": "s",
-    "v": "Can we get hold of someone? 0–100, from the published contact channels."
-   },
-   "B77": {
-    "align": "top wrap",
-    "font": "Arial 9 #404040",
-    "t": "s",
-    "v": "Why it ranks where it does: each lead type's reasons, strongest first."
-   },
-   "B78": {
-    "align": "top wrap",
-    "font": "Arial 9 #404040",
-    "t": "s",
-    "v": "Which sources found or enriched it."
-   },
-   "B79": {
-    "align": "top wrap",
-    "font": "Arial 9 #404040",
-    "t": "s",
-    "v": "What this run did: New (first found), Updated (added something), Unchanged (found again, nothing to add)."
-   },
    "B8": {
-    "align": "top wrap",
-    "font": "Arial 10",
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
     "t": "s",
-    "v": "Sample dentists and caterers"
+    "v": "AVG SCORE"
    },
    "B80": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
-    "v": "The last run that found it (or changed it)."
+    "v": "Can we get hold of someone? 0–100, from the published contact channels."
    },
    "B81": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Why it ranks where it does: each lead type's reasons, strongest first."
+   },
+   "B82": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Which sources found or enriched it."
+   },
+   "B83": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "What this run did: New (first found), Updated (added something), Unchanged (found again, nothing to add)."
+   },
+   "B84": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The last run that found it (or changed it)."
+   },
+   "B85": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "The organisation's id in the API (/organizations/{id})."
    },
    "B9": {
-    "align": "top wrap",
-    "font": "Arial 10",
-    "t": "s",
-    "v": "Sample dentists and caterers"
+    "align": "left center",
+    "fmt": "0.0",
+    "font": "Arial 14 b #44546A",
+    "t": "f",
+    "v": "=IFERROR(SUBTOTAL(101,Records!$A$2:$A$11),\"–\")"
    },
-   "C30": {
+   "C34": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Where"
    },
-   "C31": {
-    "align": "top wrap",
-    "font": "Arial 10",
-    "t": "s",
-    "v": "Mumbai"
-   },
-   "C32": {
-    "align": "top wrap",
-    "font": "Arial 10",
-    "t": "s",
-    "v": "Pune"
-   },
-   "C33": {
-    "align": "top wrap",
-    "font": "Arial 10",
-    "t": "s",
-    "v": "Pune"
-   },
-   "C34": {
-    "align": "top wrap",
-    "font": "Arial 10",
-    "t": "s",
-    "v": "Mumbai"
-   },
    "C35": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "Pune"
+    "v": "Mumbai"
    },
    "C36": {
     "align": "top wrap",
@@ -898,7 +911,7 @@
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "Mumbai"
+    "v": "Pune"
    },
    "C38": {
     "align": "top wrap",
@@ -910,7 +923,7 @@
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "Mumbai"
+    "v": "Pune"
    },
    "C4": {
     "align": "top",
@@ -924,33 +937,43 @@
     "t": "s",
     "v": "Pune"
    },
-   "C43": {
-    "align": "left center wrap",
-    "fill": "44546A",
-    "font": "Arial 10 b #FFFFFF",
+   "C41": {
+    "align": "top wrap",
+    "font": "Arial 10",
     "t": "s",
-    "v": "Share"
+    "v": "Mumbai"
+   },
+   "C42": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Mumbai"
+   },
+   "C43": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Mumbai"
    },
    "C44": {
-    "align": "top",
-    "fmt": "0.0%",
+    "align": "top wrap",
     "font": "Arial 10",
-    "t": "n",
-    "v": 0.5
+    "t": "s",
+    "v": "Pune"
    },
-   "C45": {
-    "align": "top",
-    "fmt": "0.0%",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 0.5
-   },
-   "C48": {
+   "C47": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Share"
+   },
+   "C48": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.5
    },
    "C49": {
     "align": "top",
@@ -966,19 +989,19 @@
     "t": "n",
     "v": 0
    },
-   "C50": {
-    "align": "top",
-    "fmt": "0.0%",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 0.5
-   },
-   "C53": {
+   "C52": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Share"
+   },
+   "C53": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.5
    },
    "C54": {
     "align": "top",
@@ -987,47 +1010,33 @@
     "t": "n",
     "v": 0.5
    },
-   "C55": {
+   "C57": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Share"
+   },
+   "C58": {
     "align": "top",
     "fmt": "0.0%",
     "font": "Arial 10",
     "t": "n",
     "v": 0.5
    },
-   "C58": {
-    "align": "left center wrap",
-    "fill": "44546A",
-    "font": "Arial 10 b #FFFFFF",
-    "t": "s",
-    "v": "Coverage"
-   },
    "C59": {
     "align": "top",
     "fmt": "0.0%",
     "font": "Arial 10",
     "t": "n",
-    "v": 1
-   },
-   "C60": {
-    "align": "top",
-    "fmt": "0.0%",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 0.8
-   },
-   "C61": {
-    "align": "top",
-    "fmt": "0.0%",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 0.6
+    "v": 0.5
    },
    "C62": {
-    "align": "top",
-    "fmt": "0.0%",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 0.7
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Coverage"
    },
    "C63": {
     "align": "top",
@@ -1041,28 +1050,69 @@
     "fmt": "0.0%",
     "font": "Arial 10",
     "t": "n",
-    "v": 0.4
+    "v": 0.8
    },
    "C65": {
     "align": "top",
     "fmt": "0.0%",
     "font": "Arial 10",
     "t": "n",
-    "v": 0.8
+    "v": 0.6
    },
    "C66": {
     "align": "top",
     "fmt": "0.0%",
     "font": "Arial 10",
     "t": "n",
-    "v": 0
+    "v": 0.7
    },
    "C67": {
     "align": "top",
     "fmt": "0.0%",
     "font": "Arial 10",
     "t": "n",
+    "v": 1
+   },
+   "C68": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.4
+   },
+   "C69": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
     "v": 0.8
+   },
+   "C70": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "C71": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.8
+   },
+   "C8": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "WITH PHONE"
+   },
+   "C9": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 14 b #44546A",
+    "t": "f",
+    "v": "=SUMPRODUCT(SUBTOTAL(103,OFFSET(Records!$I$2,ROW(Records!$I$2:$I$11)-ROW(Records!$I$2),0)))"
    },
    "D4": {
     "align": "top",
@@ -1070,40 +1120,26 @@
     "t": "s",
     "v": "WITH PHONE"
    },
-   "D43": {
+   "D47": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Avg score"
    },
-   "D44": {
+   "D48": {
     "align": "top",
     "fmt": "0.0",
     "font": "Arial 10",
     "t": "n",
     "v": 47.3
    },
-   "D45": {
-    "align": "top",
-    "fmt": "0.0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 58.6
-   },
-   "D48": {
-    "align": "left center wrap",
-    "fill": "44546A",
-    "font": "Arial 10 b #FFFFFF",
-    "t": "s",
-    "v": "Avg score"
-   },
    "D49": {
     "align": "top",
     "fmt": "0.0",
     "font": "Arial 10",
     "t": "n",
-    "v": 49.6
+    "v": 58.6
    },
    "D5": {
     "align": "left center",
@@ -1112,107 +1148,110 @@
     "t": "n",
     "v": 8
    },
-   "D50": {
-    "align": "top",
-    "fmt": "0.0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 56.3
-   },
-   "D53": {
+   "D52": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Avg score"
    },
+   "D53": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 49.6
+   },
    "D54": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 56.3
+   },
+   "D57": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Avg score"
+   },
+   "D58": {
     "align": "top",
     "fmt": "0.0",
     "font": "Arial 10",
     "t": "n",
     "v": 73.1
    },
-   "D55": {
+   "D59": {
     "align": "top",
     "fmt": "0.0",
     "font": "Arial 10",
     "t": "n",
     "v": 32.8
    },
-   "D58": {
+   "D62": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Reading"
    },
-   "D59": {
+   "D63": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "A phone, email, website, social profile or booking line."
    },
-   "D60": {
+   "D64": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "Published numbers only."
    },
-   "D61": {
+   "D65": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "Published addresses only; inferred ones are counted separately."
    },
-   "D62": {
+   "D66": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "The organisation's own site (directory and platform pages excluded)."
    },
-   "D64": {
+   "D68": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "Instagram, Facebook, LinkedIn or WhatsApp."
    },
-   "D66": {
+   "D70": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "A named person (and title) from a public page."
    },
-   "E30": {
+   "D8": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "WITH EMAIL"
+   },
+   "D9": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 14 b #44546A",
+    "t": "f",
+    "v": "=SUMPRODUCT(SUBTOTAL(103,OFFSET(Records!$K$2,ROW(Records!$K$2:$K$11)-ROW(Records!$K$2),0)))"
+   },
+   "E34": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Category"
-   },
-   "E31": {
-    "align": "top wrap",
-    "font": "Arial 10",
-    "t": "s",
-    "v": "Dentists"
-   },
-   "E32": {
-    "align": "top wrap",
-    "font": "Arial 10",
-    "t": "s",
-    "v": "Dentists"
-   },
-   "E33": {
-    "align": "top wrap",
-    "font": "Arial 10",
-    "t": "s",
-    "v": "Caterers"
-   },
-   "E34": {
-    "align": "top wrap",
-    "font": "Arial 10",
-    "t": "s",
-    "v": "Caterers"
    },
    "E35": {
     "align": "top wrap",
@@ -1254,42 +1293,52 @@
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
+    "v": "Dentists"
+   },
+   "E41": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Caterers"
+   },
+   "E42": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
     "v": "Caterers"
    },
    "E43": {
-    "align": "left center wrap",
-    "fill": "44546A",
-    "font": "Arial 10 b #FFFFFF",
+    "align": "top wrap",
+    "font": "Arial 10",
     "t": "s",
-    "v": "With phone"
+    "v": "Dentists"
    },
    "E44": {
-    "align": "top",
-    "fmt": "#,##0",
+    "align": "top wrap",
     "font": "Arial 10",
-    "t": "n",
-    "v": 4
+    "t": "s",
+    "v": "Caterers"
    },
-   "E45": {
-    "align": "top",
-    "fmt": "#,##0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 4
-   },
-   "E48": {
+   "E47": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "With phone"
+   },
+   "E48": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
    },
    "E49": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
     "t": "n",
-    "v": 3
+    "v": 4
    },
    "E5": {
     "align": "left center",
@@ -1298,19 +1347,19 @@
     "t": "n",
     "v": 6
    },
-   "E50": {
-    "align": "top",
-    "fmt": "#,##0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 5
-   },
-   "E53": {
+   "E52": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "With phone"
+   },
+   "E53": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
    },
    "E54": {
     "align": "top",
@@ -1319,68 +1368,68 @@
     "t": "n",
     "v": 5
    },
-   "E55": {
+   "E57": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "With phone"
+   },
+   "E58": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 5
+   },
+   "E59": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
     "t": "n",
     "v": 3
    },
-   "F30": {
+   "F34": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Phone"
    },
-   "F31": {
+   "F35": {
     "align": "top",
     "fmt": "@",
     "font": "Arial 10",
     "t": "s",
     "v": "+91 22 0000 0104"
    },
-   "F32": {
+   "F36": {
     "align": "top",
     "fmt": "@",
     "font": "Arial 10",
     "t": "s",
     "v": "+91 20 0000 0101"
    },
-   "F33": {
+   "F37": {
     "align": "top",
     "fmt": "@",
     "font": "Arial 10",
     "t": "s",
     "v": "+91 20 0000 0106"
    },
-   "F34": {
+   "F38": {
     "align": "top",
     "fmt": "@",
     "font": "Arial 10",
     "t": "s",
     "v": "+91 22 0000 0108"
    },
-   "F35": {
+   "F39": {
     "align": "top",
     "fmt": "@",
     "font": "Arial 10",
     "t": "s",
     "v": "+91 20 0000 0102"
-   },
-   "F36": {
-    "align": "top",
-    "fmt": "@",
-    "font": "Arial 10",
-    "t": "s",
-    "v": "+91 20 0000 0103"
-   },
-   "F37": {
-    "align": "top",
-    "fmt": "@",
-    "font": "Arial 10",
-    "t": "s",
-    "v": "+91 22 0000 0109"
    },
    "F4": {
     "align": "top",
@@ -1389,6 +1438,20 @@
     "v": "AVG SCORE"
    },
    "F40": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 20 0000 0103"
+   },
+   "F41": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 22 0000 0109"
+   },
+   "F44": {
     "align": "top",
     "fmt": "@",
     "font": "Arial 10",
@@ -1402,56 +1465,56 @@
     "t": "n",
     "v": 52.9
    },
-   "G30": {
+   "G34": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Website"
    },
-   "G31": {
+   "G35": {
     "align": "top",
     "font": "Arial 10 u #0563C1",
     "link": "https://pearlortho.example/",
     "t": "s",
     "v": "pearlortho.example"
    },
-   "G32": {
+   "G36": {
     "align": "top",
     "font": "Arial 10 u #0563C1",
     "link": "https://brightsmile.example/",
     "t": "s",
     "v": "brightsmile.example"
    },
-   "G33": {
+   "G37": {
     "align": "top",
     "font": "Arial 10 u #0563C1",
     "link": "https://saffrontable.example/",
     "t": "s",
     "v": "saffrontable.example"
    },
-   "G34": {
+   "G38": {
     "align": "top",
     "font": "Arial 10 u #0563C1",
     "link": "https://coastalfeast.example/",
     "t": "s",
     "v": "coastalfeast.example"
    },
-   "G35": {
+   "G39": {
     "align": "top",
     "font": "Arial 10 u #0563C1",
     "link": "https://lotusdental.example/",
     "t": "s",
     "v": "lotusdental.example"
    },
-   "G38": {
+   "G42": {
     "align": "top",
     "font": "Arial 10 u #0563C1",
     "link": "https://silverspoon.example/",
     "t": "s",
     "v": "silverspoon.example"
    },
-   "G39": {
+   "G43": {
     "align": "top",
     "font": "Arial 10 u #0563C1",
     "link": "https://harbourdental.example/",
@@ -1460,21 +1523,19 @@
    }
   },
   "conditional": [
-   "B31:B40 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
-   "C59:C67 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
-   "D44:D45 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
-   "D49:D50 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
-   "D54:D55 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']"
+   "B35:B44 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "C63:C71 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D48:D49 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D53:D54 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D58:D59 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']"
   ],
-  "dimensions": "A1:H83",
+  "dimensions": "A1:H87",
   "freeze": null,
   "gridlines": false,
   "merged": [
    "A1:H1",
    "A2:H2",
-   "A83:H83",
-   "B10:H10",
-   "B11:H11",
+   "A87:H87",
    "B12:H12",
    "B13:H13",
    "B14:H14",
@@ -1487,12 +1548,12 @@
    "B21:H21",
    "B22:H22",
    "B23:H23",
+   "B24:H24",
+   "B25:H25",
    "B26:H26",
    "B27:H27",
-   "B70:H70",
-   "B71:H71",
-   "B72:H72",
-   "B73:H73",
+   "B30:H30",
+   "B31:H31",
    "B74:H74",
    "B75:H75",
    "B76:H76",
@@ -1501,12 +1562,10 @@
    "B79:H79",
    "B80:H80",
    "B81:H81",
-   "B8:H8",
-   "B9:H9",
-   "C30:D30",
-   "C31:D31",
-   "C32:D32",
-   "C33:D33",
+   "B82:H82",
+   "B83:H83",
+   "B84:H84",
+   "B85:H85",
    "C34:D34",
    "C35:D35",
    "C36:D36",
@@ -1514,27 +1573,31 @@
    "C38:D38",
    "C39:D39",
    "C40:D40",
-   "D58:H58",
-   "D59:H59",
-   "D60:H60",
-   "D61:H61",
+   "C41:D41",
+   "C42:D42",
+   "C43:D43",
+   "C44:D44",
    "D62:H62",
    "D63:H63",
    "D64:H64",
    "D65:H65",
    "D66:H66",
    "D67:H67",
-   "G30:H30",
-   "G31:H31",
-   "G32:H32",
-   "G33:H33",
+   "D68:H68",
+   "D69:H69",
+   "D70:H70",
+   "D71:H71",
    "G34:H34",
    "G35:H35",
    "G36:H36",
    "G37:H37",
    "G38:H38",
    "G39:H39",
-   "G40:H40"
+   "G40:H40",
+   "G41:H41",
+   "G42:H42",
+   "G43:H43",
+   "G44:H44"
   ],
   "tab": "C00000",
   "widths": {

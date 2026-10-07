@@ -9,9 +9,14 @@ the column legend that used to be tabs of their own).
 
 Rules the workbook keeps:
 
-* every value comes from the database through ``ExportTable`` -- the Overview
-  holds values, not formulas, so it reads the same in Excel, Numbers,
-  LibreOffice, Google Sheets and a file previewer;
+* every value comes from the database through ``ExportTable`` -- the Overview's
+  figures are values, not formulas, so they read the same in Excel, Numbers,
+  LibreOffice, Google Sheets and a file previewer. One small block, "Filtered
+  view", is live formulas over Records (``SUBTOTAL`` counts visible rows only),
+  so it follows the autofilter. Each of those formulas also carries its
+  unfiltered result in the file (openpyxl cannot store one, so ``_stamped``
+  writes it in), so a viewer that never calculates -- Quick Look, a mail
+  preview -- shows the right numbers rather than 0;
 * text is always written as a literal string (a scraped ``=HYPERLINK(...)``
   never becomes a live formula), phones and IDs as text (``@``), so "+91 …"
   can never turn into ``#ERROR!`` the way the Sheets USER_ENTERED sync did;
@@ -224,6 +229,8 @@ class _Overview:
     def __init__(self, table: ExportTable, ws: Worksheet):
         self.table, self.ws = table, ws
         self.row = 1
+        #: cell -> the result its formula has without a filter (written into the file)
+        self.cached: dict[str, float] = {}
         ws.sheet_properties.tabColor = OVERVIEW_TAB
         ws.sheet_view.showGridLines = False
         for col, width in enumerate(OVERVIEW_WIDTHS, start=1):
@@ -279,6 +286,23 @@ class _Overview:
             col += span
         style_header(self.ws, self.row, col - 1, SLATE)
         self.row += 1
+
+    def live(self, items: list[tuple[str, str, str, float]]) -> None:
+        """Formula tiles (label, formula, format, unfiltered result) that follow the filter."""
+        self.section("FILTERED VIEW")
+        note = self.ws.cell(self.row - 1, 2)
+        _literal(note, "follows the filter on Records (recalculated when the workbook opens)")
+        note.font = Font(name=FONT, size=8, italic=True, color=GREY)
+        for col, (label, formula, fmt, value) in enumerate(items, start=1):
+            self.put(self.row, col, label.upper(), font=Font(name=FONT, size=9, color=GREY))
+            cell = self.ws.cell(self.row + 1, col)
+            cell.value = formula            # our own formula over Records, never scraped text
+            cell.number_format = fmt
+            cell.font = Font(name=FONT, size=14, bold=True, color=SLATE)
+            cell.alignment = Alignment(horizontal="left", vertical="center")
+            self.cached[cell.coordinate] = value
+        self.ws.row_dimensions[self.row + 1].height = 22
+        self.row += 3
 
     def kpis(self, items: list[tuple[str, Any, str]]) -> None:
         for col, (label, value, fmt) in enumerate(items, start=1):
@@ -397,7 +421,39 @@ class _Overview:
         self.ws.row_dimensions[self.row].height = 24
 
 
-def write_overview(table: ExportTable, ws: Worksheet, summary: dict[str, Any]) -> None:
+def _live_tiles(table: ExportTable, n: int) -> list[tuple[str, str, str, float]]:
+    """SUBTOTAL formulas over the Records rows (they count only rows the filter shows),
+    each with its result for the unfiltered table."""
+    letters = {c.key: get_column_letter(i) for i, c in enumerate(table.columns, start=1)}
+    last = n + 1
+
+    def rng(key: str) -> str:
+        col = letters[key]
+        return f"Records!${col}$2:${col}${last}"
+
+    def visible_filled(key: str) -> str:
+        col = letters[key]
+        return (f"=SUMPRODUCT(SUBTOTAL(103,OFFSET(Records!${col}$2,"
+                f"ROW({rng(key)})-ROW(Records!${col}$2),0)))")
+
+    def filled(key: str) -> int:
+        column = next(c for c in table.columns if c.key == key)
+        return sum(1 for r in table.records if column.value(r) not in (None, ""))
+
+    scores = [r.score for r in table.records]
+    tiles = [(f"Showing (of {n:,})", f"=SUBTOTAL(103,{rng('name')})", "#,##0", filled("name")),
+             ("Avg score", f'=IFERROR(SUBTOTAL(101,{rng("score")}),"–")', "0.0",
+              sum(scores) / len(scores))]
+    for key, label in (("primary_phone", "With phone"), ("primary_email", "With email"),
+                       ("top_signal", "With signal")):
+        if key in letters:
+            tiles.append((label, visible_filled(key), "#,##0", filled(key)))
+    return tiles
+
+
+def write_overview(table: ExportTable, ws: Worksheet,
+                   summary: dict[str, Any]) -> dict[str, float]:
+    """Fill the Overview; returns the live cells' unfiltered results (see ``_stamped``)."""
     ov = _Overview(table, ws)
     totals = summary["totals"]
     n = totals["records"]
@@ -415,6 +471,8 @@ def write_overview(table: ExportTable, ws: Worksheet, summary: dict[str, Any]) -
     kpis.append(("Avg score", totals["avg_score"] if totals["avg_score"] is not None else "–",
                  "0.0"))
     ov.kpis(kpis[:OVERVIEW_COLS])
+    if n:
+        ov.live(_live_tiles(table, n))
 
     if not n:
         ov.reasons(summary["empty_reasons"])
@@ -442,6 +500,7 @@ def write_overview(table: ExportTable, ws: Worksheet, summary: dict[str, Any]) -
                 "generated; Records holds the rows behind each. Contact details appear only "
                 "where they were published. Re-export at any time from the API or CLI, "
                 "without re-scraping.")
+    return ov.cached
 
 
 # --- the workbook ------------------------------------------------------------------------------
@@ -452,8 +511,10 @@ def to_xlsx(table: ExportTable) -> bytes:
     overview.title = "Overview"
     records = workbook.create_sheet("Records")
     write_records(table, records)
-    write_overview(table, overview, summarise(table))
+    cached = write_overview(table, overview, summarise(table))
     workbook.active = 0
+    # The filtered-view formulas have no stored result: compute them on open.
+    workbook.calculation.fullCalcOnLoad = True
     stamp = table.local(table.generated_at)
     workbook.properties.creator = "Skillminds lead generator"
     workbook.properties.title = f"{table.project.get('name') or 'Leads'} — Lead Book"
@@ -461,11 +522,30 @@ def to_xlsx(table: ExportTable) -> bytes:
     workbook.properties.modified = stamp
     buffer = io.BytesIO()
     workbook.save(buffer)
-    return _stamped(buffer.getvalue(), stamp)
+    return _stamped(buffer.getvalue(), stamp, {OVERVIEW_PART: cached})
 
 
-def _stamped(content: bytes, stamp: datetime) -> bytes:
-    """The same zip with every entry dated `stamp`: same table, same bytes."""
+#: The Overview is the first sheet openpyxl writes.
+OVERVIEW_PART = "xl/worksheets/sheet1.xml"
+
+
+def _with_results(xml: bytes, results: dict[str, float]) -> bytes:
+    """Write each formula cell's result into its empty ``<v></v>`` (openpyxl leaves it empty)."""
+    text = xml.decode("utf-8")
+    for coordinate, value in results.items():
+        number = round(float(value), 6)
+        shown = str(int(number)) if number.is_integer() else repr(number)
+        pattern = re.compile(rf'(<c r="{coordinate}"[^>]*><f>[^<]*</f>)<v\s*/?>(?:</v>)?')
+        text, count = pattern.subn(lambda m, v=shown: f"{m.group(1)}<v>{v}</v>", text, count=1)
+        if not count:
+            raise ValueError(f"no formula cell {coordinate} to give a result")
+    return text.encode("utf-8")
+
+
+def _stamped(content: bytes, stamp: datetime,
+             results: dict[str, dict[str, float]] | None = None) -> bytes:
+    """The same zip with every entry dated `stamp` (same table, same bytes), and the
+    formulas' unfiltered results written in."""
     date_time = (max(stamp.year, 1980), stamp.month, stamp.day, stamp.hour, stamp.minute,
                  stamp.second)
     out = io.BytesIO()
@@ -475,5 +555,8 @@ def _stamped(content: bytes, stamp: datetime) -> bytes:
             info = zipfile.ZipInfo(item.filename, date_time=date_time)
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = item.external_attr
-            target.writestr(info, source.read(item.filename))
+            data = source.read(item.filename)
+            if results and results.get(item.filename):
+                data = _with_results(data, results[item.filename])
+            target.writestr(info, data)
     return out.getvalue()

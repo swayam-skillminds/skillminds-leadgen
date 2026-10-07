@@ -8,107 +8,125 @@
     "t": "s",
     "v": "Sample venues — Lead Book"
    },
-   "A10": {
-    "align": "top",
-    "font": "Arial 10 b",
-    "t": "s",
-    "v": "Run"
-   },
    "A100": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Type Reason"
+    "v": "Intent"
    },
    "A101": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Discovery Bucket"
+    "v": "Reach"
    },
    "A102": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Sources"
+    "v": "Score Reasons"
    },
    "A103": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Change"
+    "v": "Tier Reasons"
    },
    "A104": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Last Seen"
+    "v": "Type Reason"
    },
    "A105": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Org ID"
+    "v": "Discovery Bucket"
+   },
+   "A106": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Sources"
    },
    "A107": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Change"
+   },
+   "A108": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Last Seen"
+   },
+   "A109": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Org ID"
+   },
+   "A11": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "RUN SUMMARY"
+   },
+   "A111": {
     "align": "top wrap",
     "font": "Arial 8 i #7F7F7F",
     "t": "s",
     "v": "Every figure is computed from the project database when the workbook is generated; Records holds the rows behind each. Contact details appear only where they were published. Re-export at any time from the API or CLI, without re-scraping."
    },
-   "A11": {
-    "align": "top",
-    "font": "Arial 10 b",
-    "t": "s",
-    "v": "Date"
-   },
    "A12": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Duration"
+    "v": "Project"
    },
    "A13": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Places"
+    "v": "Config"
    },
    "A14": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Country"
+    "v": "Run"
    },
    "A15": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Lead types"
+    "v": "Date"
    },
    "A16": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Sources used"
+    "v": "Duration"
    },
    "A17": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Work units"
+    "v": "Places"
    },
    "A18": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Depth"
+    "v": "Country"
    },
    "A19": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "AI"
+    "v": "Lead types"
    },
    "A2": {
     "align": "center",
@@ -120,104 +138,110 @@
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Score weights"
+    "v": "Sources used"
    },
    "A21": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "This workbook"
+    "v": "Work units"
    },
    "A22": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Sorted by"
+    "v": "Depth"
    },
    "A23": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Generated"
+    "v": "AI"
+   },
+   "A24": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Score weights"
    },
    "A25": {
     "align": "top",
-    "font": "Arial 11 b #1F3864",
+    "font": "Arial 10 b",
     "t": "s",
-    "v": "RESULTS"
+    "v": "This workbook"
    },
    "A26": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Records"
+    "v": "Sorted by"
    },
    "A27": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Change in this run"
+    "v": "Generated"
    },
    "A29": {
     "align": "top",
     "font": "Arial 11 b #1F3864",
     "t": "s",
-    "v": "TOP 7 LEADS"
+    "v": "RESULTS"
    },
    "A30": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Records"
+   },
+   "A31": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Change in this run"
+   },
+   "A33": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "TOP 7 LEADS"
+   },
+   "A34": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Name"
    },
-   "A31": {
+   "A35": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Vineyard Courtyard Retreat"
    },
-   "A32": {
+   "A36": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Cloudline Hill Villa"
    },
-   "A33": {
+   "A37": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Gangapur Lakeside Lawns"
    },
-   "A34": {
+   "A38": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Trimbak Valley Homestay"
    },
-   "A35": {
+   "A39": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Ridge Estate Plot Sales"
-   },
-   "A36": {
-    "align": "top wrap",
-    "font": "Arial 10 b",
-    "t": "s",
-    "v": "Hilltop Villas Collective"
-   },
-   "A37": {
-    "align": "top wrap",
-    "font": "Arial 10 b",
-    "t": "s",
-    "v": "Misty Peak Farm Stay"
-   },
-   "A39": {
-    "align": "top",
-    "font": "Arial 11 b #1F3864",
-    "t": "s",
-    "v": "BY TIER"
    },
    "A4": {
     "align": "top",
@@ -226,60 +250,59 @@
     "v": "RECORDS"
    },
    "A40": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Hilltop Villas Collective"
+   },
+   "A41": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Misty Peak Farm Stay"
+   },
+   "A43": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "BY TIER"
+   },
+   "A44": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Tier"
    },
-   "A41": {
+   "A45": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Luxury"
    },
-   "A42": {
+   "A46": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Premium"
    },
-   "A43": {
+   "A47": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Standard"
    },
-   "A44": {
+   "A48": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Unverified"
    },
-   "A45": {
-    "align": "top wrap",
-    "font": "Arial 10 b",
-    "t": "s",
-    "v": "Excluded"
-   },
-   "A47": {
-    "align": "top",
-    "font": "Arial 11 b #1F3864",
-    "t": "s",
-    "v": "BY VENUE TYPE"
-   },
-   "A48": {
-    "align": "left center wrap",
-    "fill": "44546A",
-    "font": "Arial 10 b #FFFFFF",
-    "t": "s",
-    "v": "Venue type"
-   },
    "A49": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Banquet / Event Lawn"
+    "v": "Excluded"
    },
    "A5": {
     "align": "left center",
@@ -288,491 +311,509 @@
     "t": "n",
     "v": 7
    },
-   "A50": {
-    "align": "top wrap",
-    "font": "Arial 10 b",
-    "t": "s",
-    "v": "Boutique Stay / Homestay"
-   },
    "A51": {
-    "align": "top wrap",
-    "font": "Arial 10 b",
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
     "t": "s",
-    "v": "Farmhouse / Farm Stay"
+    "v": "BY VENUE TYPE"
    },
    "A52": {
-    "align": "top wrap",
-    "font": "Arial 10 b",
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
     "t": "s",
-    "v": "Not a Venue"
+    "v": "Venue type"
    },
    "A53": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Premium Hotel"
+    "v": "Banquet / Event Lawn"
    },
    "A54": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Private Pool Villa"
+    "v": "Boutique Stay / Homestay"
    },
    "A55": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Villa / Bungalow"
+    "v": "Farmhouse / Farm Stay"
+   },
+   "A56": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Not a Venue"
    },
    "A57": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Premium Hotel"
+   },
+   "A58": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Private Pool Villa"
+   },
+   "A59": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Villa / Bungalow"
+   },
+   "A61": {
     "align": "top",
     "font": "Arial 11 b #1F3864",
     "t": "s",
     "v": "BY LOCALITY"
    },
-   "A58": {
+   "A62": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Locality"
    },
-   "A59": {
+   "A63": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Igatpuri"
    },
-   "A60": {
+   "A64": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Gangapur Dam Belt"
    },
-   "A61": {
+   "A65": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Region-wide"
    },
-   "A62": {
+   "A66": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Trimbakeshwar"
    },
-   "A63": {
+   "A67": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Wine Country (Dindori / Ozar / Niphad)"
    },
-   "A65": {
+   "A69": {
     "align": "top",
     "font": "Arial 11 b #1F3864",
     "t": "s",
     "v": "BY SCORE BAND"
    },
-   "A66": {
+   "A7": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "FILTERED VIEW"
+   },
+   "A70": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Score band"
    },
-   "A67": {
+   "A71": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "60–79"
    },
-   "A68": {
+   "A72": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "40–59"
    },
-   "A69": {
+   "A73": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "20–39"
    },
-   "A7": {
-    "align": "top",
-    "font": "Arial 11 b #1F3864",
-    "t": "s",
-    "v": "RUN SUMMARY"
-   },
-   "A70": {
+   "A74": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "0–19"
    },
-   "A72": {
+   "A76": {
     "align": "top",
     "font": "Arial 11 b #1F3864",
     "t": "s",
     "v": "DATA QUALITY"
    },
-   "A73": {
+   "A77": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Field"
    },
-   "A74": {
+   "A78": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Any contact"
    },
-   "A75": {
+   "A79": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Phone"
    },
-   "A76": {
-    "align": "top",
-    "font": "Arial 10 b",
-    "t": "s",
-    "v": "Email"
-   },
-   "A77": {
-    "align": "top",
-    "font": "Arial 10 b",
-    "t": "s",
-    "v": "Website"
-   },
-   "A78": {
-    "align": "top",
-    "font": "Arial 10 b",
-    "t": "s",
-    "v": "Address"
-   },
-   "A79": {
-    "align": "top",
-    "font": "Arial 10 b",
-    "t": "s",
-    "v": "Social profile"
-   },
    "A8": {
     "align": "top",
-    "font": "Arial 10 b",
+    "font": "Arial 9 #7F7F7F",
     "t": "s",
-    "v": "Project"
+    "v": "SHOWING (OF 7)"
    },
    "A80": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Google Maps listing"
+    "v": "Email"
    },
    "A81": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Decision-maker"
+    "v": "Website"
    },
    "A82": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Rating"
+    "v": "Address"
    },
    "A83": {
     "align": "top",
     "font": "Arial 10 b",
     "t": "s",
-    "v": "Price"
+    "v": "Social profile"
+   },
+   "A84": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Google Maps listing"
    },
    "A85": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Decision-maker"
+   },
+   "A86": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Rating"
+   },
+   "A87": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Price"
+   },
+   "A89": {
     "align": "top",
     "font": "Arial 11 b #1F3864",
     "t": "s",
     "v": "COLUMN LEGEND"
    },
-   "A86": {
+   "A9": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 14 b #44546A",
+    "t": "f",
+    "v": "=SUBTOTAL(103,Records!$B$2:$B$8)"
+   },
+   "A90": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Column"
    },
-   "A87": {
+   "A91": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Score"
    },
-   "A88": {
+   "A92": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Tier"
    },
-   "A89": {
+   "A93": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Record Type"
    },
-   "A9": {
-    "align": "top",
-    "font": "Arial 10 b",
-    "t": "s",
-    "v": "Config"
-   },
-   "A90": {
+   "A94": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Lead Types"
    },
-   "A91": {
+   "A95": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Max Guests"
    },
-   "A92": {
+   "A96": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Event Capacity"
    },
-   "A93": {
+   "A97": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Best Rating"
    },
-   "A94": {
+   "A98": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Listing"
    },
-   "A95": {
+   "A99": {
     "align": "top wrap",
     "font": "Arial 10 b",
     "t": "s",
     "v": "Fit"
    },
-   "A96": {
-    "align": "top wrap",
-    "font": "Arial 10 b",
-    "t": "s",
-    "v": "Intent"
-   },
-   "A97": {
-    "align": "top wrap",
-    "font": "Arial 10 b",
-    "t": "s",
-    "v": "Reach"
-   },
-   "A98": {
-    "align": "top wrap",
-    "font": "Arial 10 b",
-    "t": "s",
-    "v": "Score Reasons"
-   },
-   "A99": {
-    "align": "top wrap",
-    "font": "Arial 10 b",
-    "t": "s",
-    "v": "Tier Reasons"
-   },
-   "B10": {
-    "align": "top wrap",
-    "font": "Arial 10",
-    "t": "s",
-    "v": "#1 · completed"
-   },
    "B100": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
-    "v": "Why the venue type was chosen: a rule, or 'ai'."
+    "v": "Is there a reason to buy now (hiring, funding, tenders…)? 0–100: 0 when nothing was found, blank when no lead type in the run looks for one."
    },
    "B101": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
-    "v": "The run category whose search found the venue."
+    "v": "Can we get hold of someone? 0–100, from the published contact channels."
    },
    "B102": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
-    "v": "Which sources found or enriched it."
+    "v": "Why it ranks where it does: each lead type's reasons, strongest first."
    },
    "B103": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
-    "v": "What this run did: New (first found), Updated (added something), Unchanged (found again, nothing to add)."
+    "v": "The facts that set the tier."
    },
    "B104": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
-    "v": "The last run that found it (or changed it)."
+    "v": "Why the venue type was chosen: a rule, or 'ai'."
    },
    "B105": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
-    "v": "The organisation's id in the API (/organizations/{id})."
+    "v": "The run category whose search found the venue."
    },
-   "B11": {
+   "B106": {
     "align": "top wrap",
-    "font": "Arial 10",
+    "font": "Arial 9 #404040",
     "t": "s",
-    "v": "30 Sep 2026, 15:00 (Asia/Kolkata)"
+    "v": "Which sources found or enriched it."
+   },
+   "B107": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "What this run did: New (first found), Updated (added something), Unchanged (found again, nothing to add)."
+   },
+   "B108": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The last run that found it (or changed it)."
+   },
+   "B109": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The organisation's id in the API (/organizations/{id})."
    },
    "B12": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "1.6 h"
+    "v": "Sample venues"
    },
    "B13": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "Nashik · 10 areas"
+    "v": "Sample venues"
    },
    "B14": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "India (IN)"
+    "v": "#1 · completed"
    },
    "B15": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "Local businesses"
+    "v": "30 Sep 2026, 15:00 (Asia/Kolkata)"
    },
    "B16": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "google_maps (6 found), airbnb (2 found)"
+    "v": "1.6 h"
    },
    "B17": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "4 of 5 done, 1 skipped"
+    "v": "Nashik · 10 areas"
    },
    "B18": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "balanced"
+    "v": "India (IN)"
    },
    "B19": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "on · claude_cli · $0.42 spent of $5.00 (18 calls)"
+    "v": "Local businesses"
    },
    "B20": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "Fit 100% · Intent 0% · Reach 0%"
+    "v": "google_maps (6 found), airbnb (2 found)"
    },
    "B21": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "organisations this run found"
+    "v": "4 of 5 done, 1 skipped"
    },
    "B22": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "score (highest first)"
+    "v": "balanced"
    },
    "B23": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "01 Oct 2026, 15:00 (Asia/Kolkata), from the project database"
+    "v": "on · claude_cli · $0.42 spent of $5.00 (18 calls)"
+   },
+   "B24": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Fit 100% · Intent 0% · Reach 0%"
+   },
+   "B25": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "organisations this run found"
    },
    "B26": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "7"
+    "v": "score (highest first)"
    },
    "B27": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "7 new · 0 updated · 0 found again unchanged"
+    "v": "01 Oct 2026, 15:00 (Asia/Kolkata), from the project database"
    },
    "B30": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "7"
+   },
+   "B31": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "7 new · 0 updated · 0 found again unchanged"
+   },
+   "B34": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Score"
    },
-   "B31": {
+   "B35": {
     "align": "center top",
     "fmt": "0.0",
     "font": "Arial 10",
     "t": "n",
     "v": 70.83
    },
-   "B32": {
+   "B36": {
     "align": "center top",
     "fmt": "0.0",
     "font": "Arial 10",
     "t": "n",
     "v": 63.45
    },
-   "B33": {
+   "B37": {
     "align": "center top",
     "fmt": "0.0",
     "font": "Arial 10",
     "t": "n",
     "v": 48.6
    },
-   "B34": {
+   "B38": {
     "align": "center top",
     "fmt": "0.0",
     "font": "Arial 10",
     "t": "n",
     "v": 25.91
    },
-   "B35": {
+   "B39": {
     "align": "center top",
     "fmt": "0.0",
     "font": "Arial 10",
     "t": "n",
     "v": 22.68
-   },
-   "B36": {
-    "align": "center top",
-    "fmt": "0.0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 21.66
-   },
-   "B37": {
-    "align": "center top",
-    "fmt": "0.0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 13.39
    },
    "B4": {
     "align": "top",
@@ -781,41 +822,41 @@
     "v": "NEW"
    },
    "B40": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 21.66
+   },
+   "B41": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 13.39
+   },
+   "B44": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Records"
    },
-   "B41": {
-    "align": "top",
-    "fmt": "#,##0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 2
-   },
-   "B42": {
-    "align": "top",
-    "fmt": "#,##0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 2
-   },
-   "B43": {
-    "align": "top",
-    "fmt": "#,##0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 1
-   },
-   "B44": {
-    "align": "top",
-    "fmt": "#,##0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 1
-   },
    "B45": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "B46": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "B47": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
@@ -823,11 +864,11 @@
     "v": 1
    },
    "B48": {
-    "align": "left center wrap",
-    "fill": "44546A",
-    "font": "Arial 10 b #FFFFFF",
-    "t": "s",
-    "v": "Records"
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
    },
    "B49": {
     "align": "top",
@@ -843,26 +884,12 @@
     "t": "n",
     "v": 7
    },
-   "B50": {
-    "align": "top",
-    "fmt": "#,##0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 1
-   },
-   "B51": {
-    "align": "top",
-    "fmt": "#,##0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 1
-   },
    "B52": {
-    "align": "top",
-    "fmt": "#,##0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 1
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Records"
    },
    "B53": {
     "align": "top",
@@ -885,28 +912,28 @@
     "t": "n",
     "v": 1
    },
-   "B58": {
-    "align": "left center wrap",
-    "fill": "44546A",
-    "font": "Arial 10 b #FFFFFF",
-    "t": "s",
-    "v": "Records"
-   },
-   "B59": {
-    "align": "top",
-    "fmt": "#,##0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 3
-   },
-   "B60": {
+   "B56": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
     "t": "n",
     "v": 1
    },
-   "B61": {
+   "B57": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B58": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B59": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
@@ -914,13 +941,27 @@
     "v": 1
    },
    "B62": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Records"
+   },
+   "B63": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "B64": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
     "t": "n",
     "v": 1
    },
-   "B63": {
+   "B65": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
@@ -928,34 +969,39 @@
     "v": 1
    },
    "B66": {
-    "align": "left center wrap",
-    "fill": "44546A",
-    "font": "Arial 10 b #FFFFFF",
-    "t": "s",
-    "v": "Records"
-   },
-   "B67": {
-    "align": "top",
-    "fmt": "#,##0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 2
-   },
-   "B68": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
     "t": "n",
     "v": 1
    },
-   "B69": {
+   "B67": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
     "t": "n",
-    "v": 3
+    "v": 1
+   },
+   "B7": {
+    "font": "Arial 8 i #7F7F7F",
+    "t": "s",
+    "v": "follows the filter on Records (recalculated when the workbook opens)"
    },
    "B70": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Records"
+   },
+   "B71": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "B72": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
@@ -963,39 +1009,25 @@
     "v": 1
    },
    "B73": {
-    "align": "left center wrap",
-    "fill": "44546A",
-    "font": "Arial 10 b #FFFFFF",
-    "t": "s",
-    "v": "Filled"
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
    },
    "B74": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
     "t": "n",
-    "v": 7
-   },
-   "B75": {
-    "align": "top",
-    "fmt": "#,##0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 6
-   },
-   "B76": {
-    "align": "top",
-    "fmt": "#,##0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 2
+    "v": 1
    },
    "B77": {
-    "align": "top",
-    "fmt": "#,##0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 2
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Filled"
    },
    "B78": {
     "align": "top",
@@ -1009,177 +1041,170 @@
     "fmt": "#,##0",
     "font": "Arial 10",
     "t": "n",
-    "v": 1
+    "v": 6
    },
    "B8": {
-    "align": "top wrap",
-    "font": "Arial 10",
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
     "t": "s",
-    "v": "Sample venues"
+    "v": "AVG SCORE"
    },
    "B80": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
     "t": "n",
-    "v": 4
+    "v": 2
    },
    "B81": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
     "t": "n",
-    "v": 0
+    "v": 2
    },
    "B82": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
     "t": "n",
-    "v": 5
+    "v": 7
    },
    "B83": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
     "t": "n",
+    "v": 1
+   },
+   "B84": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
     "v": 4
    },
+   "B85": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
    "B86": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 5
+   },
+   "B87": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
+   },
+   "B9": {
+    "align": "left center",
+    "fmt": "0.0",
+    "font": "Arial 14 b #44546A",
+    "t": "f",
+    "v": "=IFERROR(SUBTOTAL(101,Records!$A$2:$A$8),\"–\")"
+   },
+   "B90": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Meaning"
    },
-   "B87": {
+   "B91": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "Overall rank, 0–100: the run's weights over Fit, Intent and Reach. A component no lead type in the run scores is left out and the other weights are scaled up; one that some lead type scores counts 0 for an organisation without it."
    },
-   "B88": {
+   "B92": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "How upscale the venue is (not how good a lead). Operator: a brand running several venues. Luxury: a high-end criterion plus a top price. Premium: one high-end criterion (premium platform or operator, strong rating over many reviews, private pool or 3+ bedrooms, premium hotel). Standard: none met, or a budget price. Unverified: too little known. Excluded: not a venue."
    },
-   "B89": {
+   "B93": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "Property: one venue. Brand: an operator such as a villa-rental company, with its venues under Managed By."
    },
-   "B9": {
-    "align": "top wrap",
-    "font": "Arial 10",
-    "t": "s",
-    "v": "Sample venues"
-   },
-   "B90": {
+   "B94": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "The lead types that found or enriched the organisation."
    },
-   "B91": {
+   "B95": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "Overnight capacity."
    },
-   "B92": {
+   "B96": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "Guests for a function."
    },
-   "B93": {
+   "B97": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "The rating backed by the most reviews across Maps, the directories and every booking platform, on a 5-point scale."
    },
-   "B94": {
+   "B98": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "The first booking-platform page; Platforms lists every platform the venue is on."
    },
-   "B95": {
+   "B99": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "Is it the kind of organisation we sell to? 0–100."
    },
-   "B96": {
-    "align": "top wrap",
-    "font": "Arial 9 #404040",
-    "t": "s",
-    "v": "Is there a reason to buy now (hiring, funding, tenders…)? 0–100: 0 when nothing was found, blank when no lead type in the run looks for one."
-   },
-   "B97": {
-    "align": "top wrap",
-    "font": "Arial 9 #404040",
-    "t": "s",
-    "v": "Can we get hold of someone? 0–100, from the published contact channels."
-   },
-   "B98": {
-    "align": "top wrap",
-    "font": "Arial 9 #404040",
-    "t": "s",
-    "v": "Why it ranks where it does: each lead type's reasons, strongest first."
-   },
-   "B99": {
-    "align": "top wrap",
-    "font": "Arial 9 #404040",
-    "t": "s",
-    "v": "The facts that set the tier."
-   },
-   "C30": {
+   "C34": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Where"
    },
-   "C31": {
+   "C35": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
     "v": "Wine Country (Dindori / Ozar / Niphad), Nashik"
    },
-   "C32": {
+   "C36": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
     "v": "Igatpuri, Nashik"
    },
-   "C33": {
+   "C37": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
     "v": "Gangapur Dam Belt, Nashik"
    },
-   "C34": {
+   "C38": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
     "v": "Trimbakeshwar, Nashik"
    },
-   "C35": {
-    "align": "top wrap",
-    "font": "Arial 10",
-    "t": "s",
-    "v": "Igatpuri, Nashik"
-   },
-   "C36": {
-    "align": "top wrap",
-    "font": "Arial 10",
-    "t": "s",
-    "v": "Region-wide, Nashik"
-   },
-   "C37": {
+   "C39": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
@@ -1192,41 +1217,39 @@
     "v": "UPDATED"
    },
    "C40": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Region-wide, Nashik"
+   },
+   "C41": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Igatpuri, Nashik"
+   },
+   "C44": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Share"
    },
-   "C41": {
-    "align": "top",
-    "fmt": "0.0%",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 0.2857
-   },
-   "C42": {
-    "align": "top",
-    "fmt": "0.0%",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 0.2857
-   },
-   "C43": {
-    "align": "top",
-    "fmt": "0.0%",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 0.1429
-   },
-   "C44": {
-    "align": "top",
-    "fmt": "0.0%",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 0.1429
-   },
    "C45": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.2857
+   },
+   "C46": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.2857
+   },
+   "C47": {
     "align": "top",
     "fmt": "0.0%",
     "font": "Arial 10",
@@ -1234,11 +1257,11 @@
     "v": 0.1429
    },
    "C48": {
-    "align": "left center wrap",
-    "fill": "44546A",
-    "font": "Arial 10 b #FFFFFF",
-    "t": "s",
-    "v": "Share"
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1429
    },
    "C49": {
     "align": "top",
@@ -1254,26 +1277,12 @@
     "t": "n",
     "v": 0
    },
-   "C50": {
-    "align": "top",
-    "fmt": "0.0%",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 0.1429
-   },
-   "C51": {
-    "align": "top",
-    "fmt": "0.0%",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 0.1429
-   },
    "C52": {
-    "align": "top",
-    "fmt": "0.0%",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 0.1429
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Share"
    },
    "C53": {
     "align": "top",
@@ -1296,28 +1305,28 @@
     "t": "n",
     "v": 0.1429
    },
-   "C58": {
-    "align": "left center wrap",
-    "fill": "44546A",
-    "font": "Arial 10 b #FFFFFF",
-    "t": "s",
-    "v": "Share"
-   },
-   "C59": {
-    "align": "top",
-    "fmt": "0.0%",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 0.4286
-   },
-   "C60": {
+   "C56": {
     "align": "top",
     "fmt": "0.0%",
     "font": "Arial 10",
     "t": "n",
     "v": 0.1429
    },
-   "C61": {
+   "C57": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1429
+   },
+   "C58": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1429
+   },
+   "C59": {
     "align": "top",
     "fmt": "0.0%",
     "font": "Arial 10",
@@ -1325,13 +1334,27 @@
     "v": 0.1429
    },
    "C62": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Share"
+   },
+   "C63": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.4286
+   },
+   "C64": {
     "align": "top",
     "fmt": "0.0%",
     "font": "Arial 10",
     "t": "n",
     "v": 0.1429
    },
-   "C63": {
+   "C65": {
     "align": "top",
     "fmt": "0.0%",
     "font": "Arial 10",
@@ -1339,34 +1362,34 @@
     "v": 0.1429
    },
    "C66": {
-    "align": "left center wrap",
-    "fill": "44546A",
-    "font": "Arial 10 b #FFFFFF",
-    "t": "s",
-    "v": "Share"
-   },
-   "C67": {
-    "align": "top",
-    "fmt": "0.0%",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 0.2857
-   },
-   "C68": {
     "align": "top",
     "fmt": "0.0%",
     "font": "Arial 10",
     "t": "n",
     "v": 0.1429
    },
-   "C69": {
+   "C67": {
     "align": "top",
     "fmt": "0.0%",
     "font": "Arial 10",
     "t": "n",
-    "v": 0.4286
+    "v": 0.1429
    },
    "C70": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Share"
+   },
+   "C71": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.2857
+   },
+   "C72": {
     "align": "top",
     "fmt": "0.0%",
     "font": "Arial 10",
@@ -1374,39 +1397,25 @@
     "v": 0.1429
    },
    "C73": {
-    "align": "left center wrap",
-    "fill": "44546A",
-    "font": "Arial 10 b #FFFFFF",
-    "t": "s",
-    "v": "Coverage"
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.4286
    },
    "C74": {
     "align": "top",
     "fmt": "0.0%",
     "font": "Arial 10",
     "t": "n",
-    "v": 1
-   },
-   "C75": {
-    "align": "top",
-    "fmt": "0.0%",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 0.8571
-   },
-   "C76": {
-    "align": "top",
-    "fmt": "0.0%",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 0.2857
+    "v": 0.1429
    },
    "C77": {
-    "align": "top",
-    "fmt": "0.0%",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 0.2857
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Coverage"
    },
    "C78": {
     "align": "top",
@@ -1420,35 +1429,76 @@
     "fmt": "0.0%",
     "font": "Arial 10",
     "t": "n",
-    "v": 0.1429
+    "v": 0.8571
+   },
+   "C8": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "WITH PHONE"
    },
    "C80": {
     "align": "top",
     "fmt": "0.0%",
     "font": "Arial 10",
     "t": "n",
-    "v": 0.5714
+    "v": 0.2857
    },
    "C81": {
     "align": "top",
     "fmt": "0.0%",
     "font": "Arial 10",
     "t": "n",
-    "v": 0
+    "v": 0.2857
    },
    "C82": {
     "align": "top",
     "fmt": "0.0%",
     "font": "Arial 10",
     "t": "n",
-    "v": 0.7143
+    "v": 1
    },
    "C83": {
     "align": "top",
     "fmt": "0.0%",
     "font": "Arial 10",
     "t": "n",
+    "v": 0.1429
+   },
+   "C84": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
     "v": 0.5714
+   },
+   "C85": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "C86": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.7143
+   },
+   "C87": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.5714
+   },
+   "C9": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 14 b #44546A",
+    "t": "f",
+    "v": "=SUMPRODUCT(SUBTOTAL(103,OFFSET(Records!$S$2,ROW(Records!$S$2:$S$8)-ROW(Records!$S$2),0)))"
    },
    "D4": {
     "align": "top",
@@ -1456,61 +1506,47 @@
     "t": "s",
     "v": "WITH PHONE"
    },
-   "D40": {
+   "D44": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Avg score"
-   },
-   "D41": {
-    "align": "top",
-    "fmt": "0.0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 67.1
-   },
-   "D42": {
-    "align": "top",
-    "fmt": "0.0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 31
-   },
-   "D43": {
-    "align": "top",
-    "fmt": "0.0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 25.9
-   },
-   "D44": {
-    "align": "top",
-    "fmt": "0.0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 21.7
    },
    "D45": {
     "align": "top",
     "fmt": "0.0",
     "font": "Arial 10",
     "t": "n",
-    "v": 22.7
+    "v": 67.1
+   },
+   "D46": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 31
+   },
+   "D47": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 25.9
    },
    "D48": {
-    "align": "left center wrap",
-    "fill": "44546A",
-    "font": "Arial 10 b #FFFFFF",
-    "t": "s",
-    "v": "Avg score"
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 21.7
    },
    "D49": {
     "align": "top",
     "fmt": "0.0",
     "font": "Arial 10",
     "t": "n",
-    "v": 48.6
+    "v": 22.7
    },
    "D5": {
     "align": "left center",
@@ -1519,70 +1555,56 @@
     "t": "n",
     "v": 6
    },
-   "D50": {
-    "align": "top",
-    "fmt": "0.0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 25.9
-   },
-   "D51": {
-    "align": "top",
-    "fmt": "0.0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 13.4
-   },
    "D52": {
-    "align": "top",
-    "fmt": "0.0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 22.7
-   },
-   "D53": {
-    "align": "top",
-    "fmt": "0.0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 70.8
-   },
-   "D54": {
-    "align": "top",
-    "fmt": "0.0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 63.5
-   },
-   "D55": {
-    "align": "top",
-    "fmt": "0.0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 21.7
-   },
-   "D58": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Avg score"
    },
-   "D59": {
-    "align": "top",
-    "fmt": "0.0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 33.2
-   },
-   "D60": {
+   "D53": {
     "align": "top",
     "fmt": "0.0",
     "font": "Arial 10",
     "t": "n",
     "v": 48.6
    },
-   "D61": {
+   "D54": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 25.9
+   },
+   "D55": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 13.4
+   },
+   "D56": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 22.7
+   },
+   "D57": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 70.8
+   },
+   "D58": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 63.5
+   },
+   "D59": {
     "align": "top",
     "fmt": "0.0",
     "font": "Arial 10",
@@ -1590,145 +1612,174 @@
     "v": 21.7
    },
    "D62": {
-    "align": "top",
-    "fmt": "0.0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 25.9
-   },
-   "D63": {
-    "align": "top",
-    "fmt": "0.0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 70.8
-   },
-   "D66": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Avg score"
    },
-   "D67": {
+   "D63": {
     "align": "top",
     "fmt": "0.0",
     "font": "Arial 10",
     "t": "n",
-    "v": 67.1
+    "v": 33.2
    },
-   "D68": {
+   "D64": {
     "align": "top",
     "fmt": "0.0",
     "font": "Arial 10",
     "t": "n",
     "v": 48.6
    },
-   "D69": {
+   "D65": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 21.7
+   },
+   "D66": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 25.9
+   },
+   "D67": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 70.8
+   },
+   "D70": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Avg score"
+   },
+   "D71": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 67.1
+   },
+   "D72": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 48.6
+   },
+   "D73": {
     "align": "top",
     "fmt": "0.0",
     "font": "Arial 10",
     "t": "n",
     "v": 23.4
    },
-   "D70": {
+   "D74": {
     "align": "top",
     "fmt": "0.0",
     "font": "Arial 10",
     "t": "n",
     "v": 13.4
    },
-   "D73": {
+   "D77": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Reading"
    },
-   "D74": {
+   "D78": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "A phone, email, website, social profile or booking line."
    },
-   "D75": {
+   "D79": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "Published numbers only."
    },
-   "D76": {
+   "D8": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "WITH EMAIL"
+   },
+   "D80": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "Published addresses only; inferred ones are counted separately."
    },
-   "D77": {
+   "D81": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "The organisation's own site (directory and platform pages excluded)."
    },
-   "D79": {
+   "D83": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "Instagram, Facebook, LinkedIn or WhatsApp."
    },
-   "D81": {
+   "D85": {
     "align": "top wrap",
     "font": "Arial 9 #404040",
     "t": "s",
     "v": "A named person (and title) from a public page."
    },
-   "E30": {
+   "D9": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 14 b #44546A",
+    "t": "f",
+    "v": "=SUMPRODUCT(SUBTOTAL(103,OFFSET(Records!$T$2,ROW(Records!$T$2:$T$8)-ROW(Records!$T$2),0)))"
+   },
+   "E34": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Tier"
    },
-   "E31": {
-    "align": "top wrap",
-    "font": "Arial 10",
-    "t": "s",
-    "v": "Luxury"
-   },
-   "E32": {
-    "align": "top wrap",
-    "font": "Arial 10",
-    "t": "s",
-    "v": "Luxury"
-   },
-   "E33": {
-    "align": "top wrap",
-    "font": "Arial 10",
-    "t": "s",
-    "v": "Premium"
-   },
-   "E34": {
-    "align": "top wrap",
-    "font": "Arial 10",
-    "t": "s",
-    "v": "Standard"
-   },
    "E35": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "Excluded"
+    "v": "Luxury"
    },
    "E36": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
-    "v": "Unverified"
+    "v": "Luxury"
    },
    "E37": {
     "align": "top wrap",
     "font": "Arial 10",
     "t": "s",
     "v": "Premium"
+   },
+   "E38": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Standard"
+   },
+   "E39": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Excluded"
    },
    "E4": {
     "align": "top",
@@ -1737,41 +1788,39 @@
     "v": "WITH EMAIL"
    },
    "E40": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Unverified"
+   },
+   "E41": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Premium"
+   },
+   "E44": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "With phone"
    },
-   "E41": {
+   "E45": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
     "t": "n",
     "v": 2
    },
-   "E42": {
+   "E46": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
     "t": "n",
     "v": 1
    },
-   "E43": {
-    "align": "top",
-    "fmt": "#,##0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 1
-   },
-   "E44": {
-    "align": "top",
-    "fmt": "#,##0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 1
-   },
-   "E45": {
+   "E47": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
@@ -1779,11 +1828,11 @@
     "v": 1
    },
    "E48": {
-    "align": "left center wrap",
-    "fill": "44546A",
-    "font": "Arial 10 b #FFFFFF",
-    "t": "s",
-    "v": "With phone"
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
    },
    "E49": {
     "align": "top",
@@ -1799,26 +1848,12 @@
     "t": "n",
     "v": 2
    },
-   "E50": {
-    "align": "top",
-    "fmt": "#,##0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 1
-   },
-   "E51": {
-    "align": "top",
-    "fmt": "#,##0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 0
-   },
    "E52": {
-    "align": "top",
-    "fmt": "#,##0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 1
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "With phone"
    },
    "E53": {
     "align": "top",
@@ -1839,30 +1874,30 @@
     "fmt": "#,##0",
     "font": "Arial 10",
     "t": "n",
+    "v": 0
+   },
+   "E56": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E57": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
     "v": 1
    },
    "E58": {
-    "align": "left center wrap",
-    "fill": "44546A",
-    "font": "Arial 10 b #FFFFFF",
-    "t": "s",
-    "v": "With phone"
-   },
-   "E59": {
-    "align": "top",
-    "fmt": "#,##0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 2
-   },
-   "E60": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
     "t": "n",
     "v": 1
    },
-   "E61": {
+   "E59": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
@@ -1870,13 +1905,27 @@
     "v": 1
    },
    "E62": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "With phone"
+   },
+   "E63": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "E64": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
     "t": "n",
     "v": 1
    },
-   "E63": {
+   "E65": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
@@ -1884,94 +1933,108 @@
     "v": 1
    },
    "E66": {
-    "align": "left center wrap",
-    "fill": "44546A",
-    "font": "Arial 10 b #FFFFFF",
-    "t": "s",
-    "v": "With phone"
-   },
-   "E67": {
-    "align": "top",
-    "fmt": "#,##0",
-    "font": "Arial 10",
-    "t": "n",
-    "v": 2
-   },
-   "E68": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
     "t": "n",
     "v": 1
    },
-   "E69": {
+   "E67": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E70": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "With phone"
+   },
+   "E71": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "E72": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E73": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
     "t": "n",
     "v": 3
    },
-   "E70": {
+   "E74": {
     "align": "top",
     "fmt": "#,##0",
     "font": "Arial 10",
     "t": "n",
     "v": 0
    },
-   "F30": {
+   "F34": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Phone"
    },
-   "F31": {
+   "F35": {
     "align": "top",
     "fmt": "@",
     "font": "Arial 10",
     "t": "s",
     "v": "+91 253 000 0102"
    },
-   "F32": {
+   "F36": {
     "align": "top",
     "fmt": "@",
     "font": "Arial 10",
     "t": "s",
     "v": "+91 2553 000 101"
    },
-   "F33": {
+   "F37": {
     "align": "top",
     "fmt": "@",
     "font": "Arial 10",
     "t": "s",
     "v": "+91 253 000 0103"
    },
-   "F34": {
+   "F38": {
     "align": "top",
     "fmt": "@",
     "font": "Arial 10",
     "t": "s",
     "v": "+91 2594 000 104"
    },
-   "F35": {
+   "F39": {
     "align": "top",
     "fmt": "@",
     "font": "Arial 10",
     "t": "s",
     "v": "+91 2553 000 111"
    },
-   "F36": {
-    "align": "top",
-    "fmt": "@",
-    "font": "Arial 10",
-    "t": "s",
-    "v": "+91 20 0000 0110"
-   },
    "F4": {
     "align": "top",
     "font": "Arial 9 #7F7F7F",
     "t": "s",
     "v": "AVG SCORE"
+   },
+   "F40": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 20 0000 0110"
    },
    "F5": {
     "align": "left center",
@@ -1980,21 +2043,21 @@
     "t": "n",
     "v": 38.1
    },
-   "G30": {
+   "G34": {
     "align": "left center wrap",
     "fill": "44546A",
     "font": "Arial 10 b #FFFFFF",
     "t": "s",
     "v": "Website"
    },
-   "G31": {
+   "G35": {
     "align": "top",
     "font": "Arial 10 u #0563C1",
     "link": "https://vineyardcourtyard.example/",
     "t": "s",
     "v": "vineyardcourtyard.example"
    },
-   "G36": {
+   "G40": {
     "align": "top",
     "font": "Arial 10 u #0563C1",
     "link": "https://hilltopvillas.example/",
@@ -2003,18 +2066,18 @@
    }
   },
   "conditional": [
-   "B31:B37 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
-   "C74:C83 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
-   "D41:D45 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
-   "D49:D55 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
-   "D59:D63 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
-   "D67:D70 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']"
+   "B35:B41 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "C78:C87 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D45:D49 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D53:D59 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D63:D67 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D71:D74 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']"
   ],
-  "dimensions": "A1:H107",
+  "dimensions": "A1:H111",
   "freeze": null,
   "gridlines": false,
   "merged": [
-   "A107:H107",
+   "A111:H111",
    "A1:H1",
    "A2:H2",
    "B100:H100",
@@ -2023,8 +2086,10 @@
    "B103:H103",
    "B104:H104",
    "B105:H105",
-   "B10:H10",
-   "B11:H11",
+   "B106:H106",
+   "B107:H107",
+   "B108:H108",
+   "B109:H109",
    "B12:H12",
    "B13:H13",
    "B14:H14",
@@ -2037,13 +2102,12 @@
    "B21:H21",
    "B22:H22",
    "B23:H23",
+   "B24:H24",
+   "B25:H25",
    "B26:H26",
    "B27:H27",
-   "B86:H86",
-   "B87:H87",
-   "B88:H88",
-   "B89:H89",
-   "B8:H8",
+   "B30:H30",
+   "B31:H31",
    "B90:H90",
    "B91:H91",
    "B92:H92",
@@ -2054,19 +2118,14 @@
    "B97:H97",
    "B98:H98",
    "B99:H99",
-   "B9:H9",
-   "C30:D30",
-   "C31:D31",
-   "C32:D32",
-   "C33:D33",
    "C34:D34",
    "C35:D35",
    "C36:D36",
    "C37:D37",
-   "D73:H73",
-   "D74:H74",
-   "D75:H75",
-   "D76:H76",
+   "C38:D38",
+   "C39:D39",
+   "C40:D40",
+   "C41:D41",
    "D77:H77",
    "D78:H78",
    "D79:H79",
@@ -2074,14 +2133,18 @@
    "D81:H81",
    "D82:H82",
    "D83:H83",
-   "G30:H30",
-   "G31:H31",
-   "G32:H32",
-   "G33:H33",
+   "D84:H84",
+   "D85:H85",
+   "D86:H86",
+   "D87:H87",
    "G34:H34",
    "G35:H35",
    "G36:H36",
-   "G37:H37"
+   "G37:H37",
+   "G38:H38",
+   "G39:H39",
+   "G40:H40",
+   "G41:H41"
   ],
   "tab": "C00000",
   "widths": {
