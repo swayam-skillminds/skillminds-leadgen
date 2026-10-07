@@ -186,11 +186,12 @@ def estimate(planned: list[Planned], costs: CostModel, sessions: dict[str, Any],
             "discovery_p90_seconds": round(fit_p90, 1),
             "enrichment_seconds_available": round(post_room, 1),
             "enrichment_completes": post_fit <= post_room,
+            # The tail is a reservation for finalising, not time it takes.
             "p50_seconds": round(min(budget_seconds,
-                                     fit_p50 + min(post_fit, post_room) + tail_seconds), 1),
+                                     fit_p50 + min(post_fit, post_room) + FINALISE_SECONDS), 1),
             "p90_seconds": round(min(budget_seconds + tail_seconds,
                                      fit_p90 + min(post_fit + Z90 * post_fit_sd, post_room)
-                                     + tail_seconds), 1),
+                                     + FINALISE_SECONDS), 1),
             "ai": _ai(sessions, fit_new),
         }
     return result
