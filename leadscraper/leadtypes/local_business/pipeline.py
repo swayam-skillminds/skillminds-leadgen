@@ -934,22 +934,57 @@ class Pipeline:
         except Exception as exc:
             log.warning("rescore failed: %s", exc)
 
-        leads = self.store.sorted_leads()
+        leads = self._without_suppressed(self.store.sorted_leads())
         self.leads = leads
         csv_path = self.config.path_for("csv_export", "data/leads.csv")
         try:
             write_csv(leads, csv_path, self.profile, self.config.currency)
+            self._record_file("csv", csv_path, len(leads))
         except Exception as exc:
             log.error("final CSV write failed: %s", exc)
 
         failure_rows = self.failures.rows()
         if len(failure_rows) > 1:
-            write_failures_csv(failure_rows, csv_path.with_name("skipped.csv"))
+            skipped = write_failures_csv(failure_rows, csv_path.with_name("skipped.csv"))
+            self._record_file("skipped_csv", skipped, len(failure_rows) - 1)
         self.sheets.sync(leads)
         self.sheets.sync_failures(failure_rows)
 
         self._close()
         self._report(leads)
+
+    def _without_suppressed(self, leads: list[Lead]) -> list[Lead]:
+        """Drop organisations on the run's "exclude" suppression lists (Phase 3).
+
+        Lists in "flag" mode only mark rows, which the API/CLI exports show;
+        the run's CSV and Sheet keep their fixed column layout.
+        """
+        if getattr(self.store, "engine", None) is None:
+            return leads
+        try:
+            from ...services.suppression import ERASURE_LIST, Matcher
+
+            # Erasure requests apply to every run, attached or not.
+            names = [*(self.config.get("filters.suppression_lists") or []), ERASURE_LIST]
+            matcher = Matcher.for_names(self.store.engine, self.store.workspace_id, names,
+                                        region=self.config.country)
+        except Exception as exc:
+            log.warning("suppression lists not applied: %s", exc)
+            return leads
+        if not matcher:
+            return leads
+        kept = [lead for lead in leads if not matcher.excluded(lead)]
+        if len(kept) != len(leads):
+            log.info("suppression: %d organisation(s) excluded from the output",
+                     len(leads) - len(kept))
+        return kept
+
+    def _record_file(self, kind: str, path, rows: int | None) -> None:
+        run_id = getattr(self.store, "run_id", None)
+        if run_id is not None:
+            from ...db.runs import add_run_file
+
+            add_run_file(self.store.engine, run_id, kind=kind, path=str(path), rows=rows)
 
     def _close(self) -> None:
         closers = [self.browser.close, self.http.close, self.ai.close]

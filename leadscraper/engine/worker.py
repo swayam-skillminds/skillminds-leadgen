@@ -9,7 +9,14 @@
   settles it (``pausing`` -> ``paused``, ``stopping`` -> ``cancelled``);
 * then claims ``queued`` runs, oldest first, one at a time, with an atomic
   conditional UPDATE (several workers can share one database);
-* holds the keep-awake lock while a run is active (``runner.execute`` does).
+* holds the keep-awake lock while a run is active (``runner.execute`` does);
+* between runs (Phase 3): queues the runs of due schedules, purges by the
+  workspace's retention settings (at most hourly), and executes previews
+  queued through the API, storing their sample on the run.
+
+Runs execute in the worker's own database (``--db`` / ``LEADSCRAPER_DB_URL``),
+whatever their config says, and a run queued without a map centre is
+geocoded first.
 
 Stopping it is graceful and needs no POSIX signal: ``leadscraper worker
 stop`` sets ``stop_requested`` in the database, which the worker polls. Ctrl-C,
@@ -73,6 +80,9 @@ class Worker:
         self._control_lock = threading.RLock()   # taken in signal handlers
         self._beat_thread: threading.Thread | None = None
         self.runs_executed: list[int] = []
+        #: Retention purge cadence (seconds); the first poll purges.
+        self.purge_seconds = 3600.0
+        self._last_purge = float("-inf")
 
     # --- registration and heartbeat --------------------------------------------------
 
@@ -194,12 +204,15 @@ class Worker:
             if self.stopping:
                 control.request("shutdown")
 
+        options = dict(executor=self.executor, on_control=keep,
+                       heartbeat_seconds=self.heartbeat_seconds, keep_awake=self.keep_awake,
+                       engine=self.engine)
         try:
-            request = request_from_row(row, executor=self.executor, on_control=keep,
-                                       heartbeat_seconds=self.heartbeat_seconds,
-                                       keep_awake=self.keep_awake)
-            outcome = execute(request)
-            status = outcome.status
+            if row.get("kind") == "preview":
+                status = self._execute_preview(row, options)
+            else:
+                outcome = execute(request_from_row(row, geocode=True, **options))
+                status = outcome.status
         except Exception as exc:  # a run that cannot even start fails; the worker lives on
             log.exception("worker %s: run %s failed to execute", self.name, run_id)
             finish_run(self.engine, run_id, status="failed", stats=row.get("stats") or {},
@@ -214,6 +227,48 @@ class Worker:
         log.info("worker %s: run %s ended %s", self.name, run_id, status)
         return status
 
+    def _execute_preview(self, row: dict[str, Any], options: dict[str, Any]) -> str:
+        """A preview queued through the API: run it, then store its result on the run."""
+        from .preview import run_queued_preview
+
+        outcome, result = run_queued_preview(row, geocode=True, **options)
+        current = get_run(self.engine, int(row["id"])) or {}
+        stats = dict(current.get("stats") or {})
+        stats["preview"] = {"area": result.area, "category": result.category,
+                            "sources": result.sources, "seconds": result.seconds,
+                            "records": result.records, "estimate": result.estimate,
+                            "calibration": result.calibration}
+        update_run(self.engine, int(row["id"]), stats=stats)
+        return outcome.status
+
+    def housekeeping(self, *, now: float | None = None) -> None:
+        """Between runs: queue due schedules; purge by retention at most hourly."""
+        import time as _time
+
+        from ..services.schedules import fire_due
+
+        try:
+            fire_due(self.engine)
+        except Exception as exc:
+            log.warning("worker %s: schedules not checked: %s", self.name, exc)
+        now = _time.monotonic() if now is None else now
+        if now - self._last_purge < self.purge_seconds:
+            return
+        self._last_purge = now
+        try:
+            from sqlalchemy import select as _select
+
+            from ..services.retention import purge
+            from ..services.workspace import WORKSPACES, Workspace
+
+            with self.engine.connect() as conn:
+                spaces = [Workspace(int(r.id), r.name) for r in conn.execute(
+                    _select(WORKSPACES.c.id, WORKSPACES.c.name))]
+            for ws in spaces:
+                purge(self.engine, ws)
+        except Exception as exc:
+            log.warning("worker %s: retention purge failed: %s", self.name, exc)
+
     def run(self, *, once: bool = False, max_runs: int | None = None) -> int:
         """Serve the queue until stopped. ``once``: exit when nothing is queued."""
         self.register()
@@ -224,6 +279,7 @@ class Worker:
         log.info("worker %s ready (poll %.1fs)", self.name, self.poll_seconds)
         try:
             while not self.stopping:
+                self.housekeeping()
                 run_id = self.claim_next()
                 if run_id is not None:
                     self.execute(run_id)

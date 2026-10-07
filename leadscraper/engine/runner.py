@@ -99,6 +99,13 @@ class RunRequest:
     keep_awake: KeepAwake | None = None
     #: Print the dry-run plan (the CLI); False just returns the estimate.
     print_plan: bool = True
+    # --- Phase 3 ---
+    #: The application database (an Engine) to run in: the worker's or the
+    #: API's. Default: the one the config names (``runtime.db_url``, else
+    #: ``LEADSCRAPER_DB_URL``, else the per-user database).
+    engine: Any = None
+    #: Tell the workspace's notification targets how the run ended.
+    notify: bool = True
 
 
 @dataclass
@@ -158,14 +165,24 @@ def _snapshot(config: Config) -> dict[str, Any]:
     return document
 
 
-def config_from_snapshot(snapshot: dict[str, Any], path=None) -> Config:
-    """Rebuild a run's Config from its snapshot (a worker resuming it)."""
+def config_from_snapshot(snapshot: dict[str, Any], path=None, *, geocode: bool = False) -> Config:
+    """Rebuild a run's Config from its snapshot (a worker resuming it).
+
+    ``geocode``: fill a missing map centre / state first (a run queued through
+    the API was never geocoded; the CLI does it before snapshotting).
+    """
     from ..config.compile import compile_run_config
     from ..config.schema import RunConfig
 
     document = {k: v for k, v in snapshot.items() if k != "cli_overrides"}
     if "schema_version" in document:
-        config = compile_run_config(RunConfig.model_validate(document), path=path)
+        run_config = RunConfig.model_validate(document)
+        if geocode:
+            from ..config.geography import needs_geocoding, resolve_geography
+
+            if needs_geocoding(run_config):
+                run_config = resolve_geography(run_config)
+        config = compile_run_config(run_config, path=path)
     else:
         config = Config(document, path)
     for dotted, value in (snapshot.get("cli_overrides") or {}).items():
@@ -187,13 +204,14 @@ def request_document(request: RunRequest) -> dict[str, Any]:
             "config_path": str(config_path) if config_path else None}
 
 
-def request_from_row(row: dict[str, Any], **overrides: Any) -> RunRequest:
+def request_from_row(row: dict[str, Any], *, geocode: bool = False,
+                     **overrides: Any) -> RunRequest:
     """The RunRequest that resumes a stored run."""
     from pathlib import Path
 
     stored = row.get("request") or {}
     path = Path(stored["config_path"]) if stored.get("config_path") else None
-    config = config_from_snapshot(row.get("config_snapshot") or {}, path)
+    config = config_from_snapshot(row.get("config_snapshot") or {}, path, geocode=geocode)
     localities = (config.select_localities(stored["localities"])
                   if stored.get("localities") else None)
     categories = (config.select_categories(stored["categories"])
@@ -274,10 +292,13 @@ class _Run:
                     log.info("depth %s: %s", depth, note)
 
         target, store_kwargs = store_target(config)
+        if request.engine is not None and store_kwargs:
+            target = request.engine                 # a project run: the caller's database
         from ..leadtypes.local_business.scoring import Scorer
 
         store = LeadStore(target, Scorer(config), **store_kwargs)
         self.store = store
+        self._apply_workspace_settings(store)
         outcome = RunOutcome(run_id=None, project=store.project_name)
         self.outcome = outcome
         engine, workspace_id, project_id = store.engine, store.workspace_id, store.project_id
@@ -450,6 +471,15 @@ class _Run:
                 store.close()
         outcome.status, outcome.error = status, error
         return outcome
+
+    def _apply_workspace_settings(self, store: LeadStore) -> None:
+        """Workspace settings (keep-awake, robots.txt) fill what the config leaves unset."""
+        try:
+            from ..services.settings import apply_to_config
+
+            apply_to_config(store.engine, store.workspace_id, self.config)
+        except Exception as exc:  # settings never stop a run
+            log.debug("workspace settings not applied: %s", exc)
 
     def _claim(self, engine, run_id: int, executor: str) -> dict:
         """Take the run for this executor, atomically, or refuse."""
@@ -628,6 +658,27 @@ class _Run:
             spend = None
         if spend:
             self.bus.publish(ev.AISpend(**spend))
+            self._record_ai_usage(session, spend)
+
+    def _record_ai_usage(self, session, spend: dict) -> None:
+        """History: the run's AI usage, one ledger row per lead type (Phase 5 splits it)."""
+        run_id = self.outcome.run_id if self.outcome else None
+        if run_id is None or not spend.get("calls"):
+            return
+        try:
+            from ..db.models import AIUsage
+
+            with self.engine.begin() as conn:
+                conn.execute(AIUsage.__table__.insert().values(
+                    workspace_id=self.store.workspace_id, run_id=run_id,
+                    provider=str(self.config.get("ai.backend") or "auto"),
+                    model=str(self.config.get("ai.model") or ""),
+                    feature=getattr(session, "lead_type", "") or "",
+                    calls=int(spend.get("calls") or 0),
+                    cost_usd=float(spend.get("cost_usd") or 0.0),
+                    created_at=datetime.now(timezone.utc)))
+        except Exception as exc:
+            log.debug("could not record AI usage: %s", exc)
 
     def _skipped(self, planned: Planned, reason: str) -> None:
         self.units_skipped += 1
@@ -841,8 +892,22 @@ class _Run:
 
 
 def execute(request: RunRequest) -> RunOutcome:
-    """Run (or resume) every requested lead type of `request.config` against its project."""
-    return _Run(request).execute()
+    """Run (or resume) every requested lead type of `request.config` against its project.
+
+    Afterwards the workspace's notification targets hear how it ended (Phase 3);
+    a failing notification is logged, never raised.
+    """
+    run = _Run(request)
+    outcome = run.execute()
+    if (request.notify and not request.dry_run and outcome.run_id is not None
+            and request.kind == "run" and outcome.status != "lost"):
+        try:
+            from ..services.notifications import notify_run
+
+            notify_run(run.engine, outcome.run_id)
+        except Exception as exc:
+            log.warning("run %s: notifications failed: %s", outcome.run_id, exc)
+    return outcome
 
 
 def utcnow() -> datetime:

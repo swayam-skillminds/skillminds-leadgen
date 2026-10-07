@@ -46,6 +46,8 @@ dependencies = [
     "python-multipart>=0.0.9",
     # Secrets in the OS keychain in local mode (env / secret files in server mode)
     "keyring>=25",
+    # IANA timezones for schedules; Windows ships no tz database of its own
+    "tzdata; sys_platform == 'win32'",
 ]
 
 [project.optional-dependencies]
@@ -89,6 +91,11 @@ ignore = [
     "B027",   # optional no-op hooks on the lead-type session ABC are intended
     "B905",   # zip() without strict= (3.10+ only; lengths are checked where it matters)
 ]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI declares parameters with these in defaults; they are not mutable state.
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Body", "fastapi.File",
+                          "fastapi.Form", "fastapi.Header", "fastapi.Path"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["E402", "B904"]     # sys.path set-up before imports; test doubles

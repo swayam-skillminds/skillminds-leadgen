@@ -44,7 +44,8 @@ from .models import (
     RunOrganization, SeenUrl, Signal, UnitStat, Workspace,
 )
 
-__all__ = ["LeadStore", "DedupOptions", "UpsertAction", "slugify_project", "store_target"]
+__all__ = ["LeadStore", "DedupOptions", "UpsertAction", "slugify_project", "sort_leads",
+           "store_target"]
 
 log = logging.getLogger(__name__)
 
@@ -753,35 +754,11 @@ class LeadStore:
             self._conn.commit()
 
     def sorted_leads(self) -> list[Lead]:
-        """One running table.
-
-        Vendor run: grouped by locality then category, score desc.
-        Venue run: tier (Luxury first), then score desc -- the best venues in
-        the whole region surface first, and Locality stays a filter column.
-        """
+        """One running table, in the profile's order (see :func:`sort_leads`)."""
         leads = self.all_leads()
         for lead in leads:
             self.scorer.apply(lead)
-        if self.options.sort == "venues":
-            from ..packs.hospitality.venues import TIER_RANK
-
-            return sorted(
-                leads,
-                key=lambda lead: (
-                    TIER_RANK.get(lead.venue_tier, len(TIER_RANK)),
-                    -lead.score,
-                    lead.business_name.lower(),
-                ),
-            )
-        return sorted(
-            leads,
-            key=lambda lead: (
-                lead.locality or "zz-unknown",
-                lead.category or "zz-unknown",
-                -lead.score,
-                lead.business_name.lower(),
-            ),
-        )
+        return sort_leads(leads, self.options.sort)
 
     def website_enrichment_targets(self) -> list[tuple[int, Lead]]:
         """Leads with a website whose email we still don't have."""
@@ -814,6 +791,36 @@ class LeadStore:
             finally:
                 if self._owns_engine:
                     self.engine.dispose()
+
+
+def sort_leads(leads: list[Lead], mode: str = "vendors") -> list[Lead]:
+    """The output order every export shares.
+
+    Vendor run: grouped by locality then category, score desc.
+    Venue run (``mode="venues"``): tier (Luxury first), then score desc -- the
+    best venues in the whole region surface first, and Locality stays a
+    filter column.
+    """
+    if mode == "venues":
+        from ..packs.hospitality.venues import TIER_RANK
+
+        return sorted(
+            leads,
+            key=lambda lead: (
+                TIER_RANK.get(lead.venue_tier, len(TIER_RANK)),
+                -lead.score,
+                lead.business_name.lower(),
+            ),
+        )
+    return sorted(
+        leads,
+        key=lambda lead: (
+            lead.locality or "zz-unknown",
+            lead.category or "zz-unknown",
+            -lead.score,
+            lead.business_name.lower(),
+        ),
+    )
 
 
 def store_target(config) -> tuple[str | Path, dict[str, Any]]:
