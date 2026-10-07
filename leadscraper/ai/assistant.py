@@ -189,8 +189,8 @@ class ClaudeCLIBackend(AIBackend):
             payload = json.loads(completed.stdout)
         except json.JSONDecodeError:
             if is_quota_error(completed.stdout, completed.stderr):
-                raise QuotaExhausted("usage limit reported by the CLI")
-            raise RuntimeError(f"claude CLI returned non-JSON: {completed.stdout[:200]}")
+                raise QuotaExhausted("usage limit reported by the CLI") from None
+            raise RuntimeError(f"claude CLI returned non-JSON: {completed.stdout[:200]}") from None
         if payload.get("is_error"):
             detail = str(payload.get("result") or payload)[:300]
             if is_quota_error(detail, payload.get("subtype", "")):

@@ -40,6 +40,12 @@ dependencies = [
     "tldextract>=5.1",
     # Keep the machine awake while a run is active (macOS, Windows, Linux)
     "wakepy>=0.9",
+    # The HTTP API (Phase 3): FastAPI + an ASGI server; multipart for uploads
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+    "python-multipart>=0.0.9",
+    # Secrets in the OS keychain in local mode (env / secret files in server mode)
+    "keyring>=25",
 ]
 
 [project.optional-dependencies]
@@ -48,7 +54,7 @@ dependencies = [
 ai = ["anthropic>=0.40.0"]
 # Server mode on Postgres.
 postgres = ["psycopg[binary]>=3.1"]
-dev = ["pytest>=8.0.0"]
+dev = ["pytest>=8.0.0", "httpx>=0.27", "ruff>=0.6"]
 
 [project.scripts]
 leadscraper = "leadscraper.cli:main"
@@ -70,3 +76,20 @@ markers = [
     "postgres: needs LEADSCRAPER_TEST_POSTGRES_URL (a throwaway Postgres); skipped otherwise",
 ]
 addopts = "-m 'not live'"
+
+[tool.ruff]
+line-length = 100
+extend-exclude = ["leadscraper/db/migrations/versions"]
+
+[tool.ruff.lint]
+# Errors and likely bugs; style (line length) is not enforced.
+select = ["E4", "E7", "E9", "F", "W", "B"]
+ignore = [
+    "E741",   # `l` in comprehensions
+    "B027",   # optional no-op hooks on the lead-type session ABC are intended
+    "B905",   # zip() without strict= (3.10+ only; lengths are checked where it matters)
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["E402", "B904"]     # sys.path set-up before imports; test doubles
+"tools/**" = ["B023"]             # cell writers defined and called inside one loop pass

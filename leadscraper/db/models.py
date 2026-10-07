@@ -15,7 +15,9 @@ Workspace -> Project -> Run, and the organisation-centric lead database:
 * ``run_events`` -- every run's typed progress stream (Phase 2), persisted so
   history can replay it; ``workers`` -- the worker processes taking runs off
   the DB-backed queue (process infrastructure, so not workspace-owned).
-* ``suppression_*`` and ``schedules`` are created now and used from Phase 3.
+* ``suppression_*``, ``schedules`` and ``notification_targets`` (Phase 3):
+  lists of organisations to exclude or flag, recurring runs of a saved
+  config, and where to tell our own users that a run finished.
 
 Every user-owned table carries ``workspace_id`` (A.2.2): one default
 workspace for now, so authentication can arrive later without a migration
@@ -74,6 +76,8 @@ class Workspace(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(200), unique=True)
     created_at: Mapped[datetime] = _created()
+    #: Workspace settings (Phase 3): retention, keep-awake, robots.txt. Never secrets.
+    settings: Mapped[dict[str, Any]] = mapped_column(JSONType, default=dict)
 
 
 class Project(Base):
@@ -90,6 +94,8 @@ class Project(Base):
     created_at: Mapped[datetime] = _created()
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow,
                                                  onupdate=utcnow)
+    #: Organisations not seen again for this many days are purged; None = keep.
+    retention_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
 
 
 class SavedConfig(Base):
@@ -107,6 +113,8 @@ class SavedConfig(Base):
     schema_version: Mapped[int] = mapped_column(Integer, default=1)
     document: Mapped[dict[str, Any]] = mapped_column(JSONType)
     created_at: Mapped[datetime] = _created()
+    #: What changed in this version (free text).
+    description: Mapped[str] = mapped_column(Text, default="")
 
 
 class Run(Base):
@@ -142,6 +150,8 @@ class Run(Base):
     active_seconds: Mapped[float] = mapped_column(Float, default=0.0)
     #: How many times execution started (1 + resumes).
     attempts: Mapped[int] = mapped_column(Integer, default=0)
+    #: Files the run generated: [{"kind", "path", "rows", "at"}].
+    files: Mapped[list[dict[str, Any]]] = mapped_column(JSONType, default=list)
 
 
 class RunEvent(Base):
@@ -321,7 +331,9 @@ class RunOrganization(Base):
     run_id: Mapped[int] = mapped_column(ForeignKey("runs.id", ondelete="CASCADE"), index=True)
     organization_id: Mapped[int] = mapped_column(
         ForeignKey("organizations.id", ondelete="CASCADE"), index=True)
-    #: new | updated -- the first thing that happened to it in this run.
+    #: new | updated | unchanged -- what the run did to it: "new" stays new
+    #: however often it merges later; "unchanged" (found again, nothing to add)
+    #: becomes "updated" if a later write in the run changes it.
     action: Mapped[str] = mapped_column(String(20))
     lead_type: Mapped[str] = mapped_column(String(50), default="")
 
@@ -422,6 +434,8 @@ class SuppressionEntry(Base):
 
 
 class Schedule(Base):
+    """A recurring run of a saved config (the latest version at each firing)."""
+
     __tablename__ = "schedules"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -434,6 +448,36 @@ class Schedule(Base):
     last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     next_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = _created()
+    name: Mapped[str] = mapped_column(String(200), default="")
+    #: IANA zone the cron expression is read in.
+    timezone: Mapped[str] = mapped_column(String(64), default="UTC")
+    #: Run overrides each firing applies: depth, time_budget_minutes.
+    overrides: Mapped[dict[str, Any]] = mapped_column(JSONType, default=dict)
+    last_run_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+
+class NotificationTarget(Base):
+    """Where to tell our own users about a run: desktop, webhook or email.
+
+    Secrets (an SMTP password) are never stored here: ``config`` names a
+    secret (``password_secret``) that ``core.secrets`` resolves from the OS
+    keychain, an environment variable or a mounted secret file.
+    """
+
+    __tablename__ = "notification_targets"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    workspace_id: Mapped[int] = _workspace_fk()
+    name: Mapped[str] = mapped_column(String(200))
+    #: desktop | webhook | email
+    kind: Mapped[str] = mapped_column(String(20))
+    config: Mapped[dict[str, Any]] = mapped_column(JSONType, default=dict)
+    #: run_completed | run_failed | needs_attention
+    events: Mapped[list[str]] = mapped_column(JSONType, default=list)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = _created()
+    last_sent_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_error: Mapped[str] = mapped_column(Text, default="")
 
 
 # --- operational state carried over from the original store ----------------------

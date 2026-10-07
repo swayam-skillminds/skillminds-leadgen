@@ -292,3 +292,24 @@ def project_id_for(engine: Engine, workspace: str, slug: str) -> int | None:
             .where(Workspace.__table__.c.name == workspace, Project.__table__.c.slug == slug)
         ).first()
     return int(row[0]) if row else None
+
+
+def add_run_file(engine: Engine, run_id: int | None, *, kind: str, path: str,
+                 rows: int | None = None) -> None:
+    """Record a file the run generated (history: "generated files"). Never raises."""
+    if run_id is None:
+        return
+    try:
+        with engine.begin() as conn:
+            row = conn.execute(select(RUNS.c.files).where(RUNS.c.id == run_id)).first()
+            if row is None:
+                return
+            files = [f for f in (row[0] or []) if not (f.get("kind") == kind
+                                                       and f.get("path") == path)]
+            files.append({"kind": kind, "path": str(path), "rows": rows,
+                          "at": utcnow().isoformat(timespec="seconds")})
+            conn.execute(update(RUNS).where(RUNS.c.id == run_id).values(files=files))
+    except Exception:  # bookkeeping never stops a run
+        import logging
+
+        logging.getLogger(__name__).debug("could not record run file %s", path, exc_info=True)

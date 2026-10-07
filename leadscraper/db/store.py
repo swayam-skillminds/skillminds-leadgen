@@ -317,6 +317,9 @@ class LeadStore:
             stamp = None if now is None else max(now, existing.last_updated)
             changed = existing.merge(lead, now=stamp)
             if not changed:
+                # Found again with nothing to add: still one of this run's
+                # organisations ("found in this run", "unchanged" in a diff).
+                self._note_run(match_id, "unchanged")
                 self._conn.commit()
                 self.stats["unchanged"] += 1
                 return match_id, "unchanged", []
@@ -579,10 +582,15 @@ class LeadStore:
         if self.run_id is None:
             return
         # The first thing that happened to an organisation in a run is what
-        # the run did to it: new stays new however often it merges later.
+        # the run did to it: new stays new however often it merges later. A
+        # re-find that added nothing ("unchanged") is upgraded by a later write.
         self._insert_ignore(RUN_ORGS, {"workspace_id": self.workspace_id, "run_id": self.run_id,
                                        "organization_id": lead_id, "action": action,
                                        "lead_type": self.lead_type})
+        if action == "updated":
+            self._conn.execute(update(RUN_ORGS).where(
+                RUN_ORGS.c.run_id == self.run_id, RUN_ORGS.c.organization_id == lead_id,
+                RUN_ORGS.c.action == "unchanged").values(action="updated"))
 
     # --- url memo (resume support) ---------------------------------------------------
 
