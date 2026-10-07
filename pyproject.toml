@@ -76,6 +76,7 @@ markers = [
     "live: hits the real network; opt-in only (pytest -m live)",
     "characterisation: pins current behaviour against frozen baselines",
     "postgres: needs LEADSCRAPER_TEST_POSTGRES_URL (a throwaway Postgres); skipped otherwise",
+    "browser: launches headless Chromium against a local fixture server (skipped without it)",
 ]
 addopts = "-m 'not live'"
 

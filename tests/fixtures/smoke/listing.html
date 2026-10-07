@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Dentists in Baner</title></head>
+<body>
+<h1>Dentists in Baner</h1>
+<div id="results">Loading...</div>
+<script>
+  // Rendered by script, like a JS-heavy directory: plain HTTP would see "Loading...".
+  const listings = [
+    {name: "Smile Dental", phone: "+91 98200 12345"},
+    {name: "Bright Smiles", phone: "098200 54321"},
+  ];
+  document.getElementById("results").innerHTML = listings.map(l =>
+    `<div class="listing"><span class="name">${l.name}</span>` +
+    ` <span class="phone">${l.phone}</span></div>`).join("");
+</script>
+</body>
+</html>

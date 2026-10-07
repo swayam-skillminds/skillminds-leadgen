@@ -1,0 +1,62 @@
+# Server mode: `docker compose up -d` starts the API and a worker on any always-on
+# machine; every device then uses http://<host>:8000/api/v1 (docs: /api/v1/docs).
+#
+#   SQLite (default)  state on the `leadscraper-data` volume
+#   Postgres          docker compose --profile postgres up -d, with
+#                     LEADSCRAPER_DB_URL=postgresql+psycopg://leads:<password>@postgres:5432/leads
+#
+# The API has no login yet: it binds to 127.0.0.1 unless LEADSCRAPER_BIND says
+# otherwise. Read docs/deploy.md before exposing it.
+name: leadscraper
+
+x-app: &app
+  build: .
+  image: skillminds/leadscraper:latest
+  restart: unless-stopped
+  environment:
+    LEADSCRAPER_DB_URL: ${LEADSCRAPER_DB_URL:-sqlite:////data/leadscraper.sqlite3}
+    LEADSCRAPER_CORS_ORIGINS: ${LEADSCRAPER_CORS_ORIGINS:-}
+    # Optional credentials, passed by name (never baked into the image).
+    ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    GOOGLE_SERVICE_ACCOUNT_JSON: ${GOOGLE_SERVICE_ACCOUNT_JSON:-}
+  volumes:
+    - leadscraper-data:/data
+
+services:
+  api:
+    <<: *app
+    command: ["python", "-m", "leadscraper", "api", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "${LEADSCRAPER_BIND:-127.0.0.1}:${LEADSCRAPER_PORT:-8000}:8000"
+
+  worker:
+    <<: *app
+    command: ["python", "-m", "leadscraper", "worker", "--name", "compose-worker"]
+    # The API creates / migrates the schema first; the worker starts after it.
+    depends_on:
+      api:
+        condition: service_healthy
+    # SIGTERM = graceful: in-flight units finish, the run is flushed and requeued.
+    stop_grace_period: 3m
+    healthcheck:
+      test: ["CMD", "python", "-m", "leadscraper", "worker", "list"]
+      interval: 60s
+      timeout: 20s
+
+  postgres:
+    profiles: ["postgres"]
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: leads
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change-me}
+      POSTGRES_DB: leads
+    volumes:
+      - leadscraper-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U leads"]
+      interval: 10s
+
+volumes:
+  leadscraper-data:
+  leadscraper-pg:
