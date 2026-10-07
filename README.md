@@ -172,7 +172,24 @@ honest limits:
 - If the machine sleeps anyway, the run notices on wake, re-validates its
   browsers and connections, doesn't count the gap against its time budget,
   and carries on.
-- For truly unattended runs use server mode (an always-on machine; Phase 3).
+- For truly unattended runs use server mode (an always-on machine): `docker compose up -d`
+  (`docs/deploy.md`).
+
+### The HTTP API, server mode, history
+
+```bash
+python -m leadscraper api                            # http://127.0.0.1:8000/api/v1/docs
+docker compose up -d                                 # API + worker on an always-on machine
+python -m leadscraper status                          # health, active and queued runs
+python -m leadscraper runs diff 43                   # new / updated / unchanged vs the previous run
+python -m leadscraper export --run 43 --scope new    # only what is new, as a workbook
+python -m leadscraper bundle export -o laptop.zip --leads --history   # move to another machine
+```
+
+Everything the API offers -- saved and versioned configs, estimates, previews,
+runs with live progress (Server-Sent Events), organisations with provenance,
+exports, suppression lists, schedules, notifications, settings, bundles -- is
+listed in `docs/api.md`. The CLI covers the same flows.
 
 ### Projects, presets and run configs
 

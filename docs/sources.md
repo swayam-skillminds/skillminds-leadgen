@@ -5,6 +5,11 @@ it needs, how hard it's paced, terms notes, and when it was last checked
 live. A.9.2: re-verify a source live before coding against it, and update
 its row here.
 
+The machine-readable twin of these tables is `leadscraper/sources/notes.py`
+(served by `GET /api/v1/catalog/sources`, with each source's health from
+recent runs); `tests/test_services.py` fails if a registered source has no
+entry there. Keep both in step.
+
 **Pack** decides where a source applies; see `leadscraper/packs/`. A source
 whose pack doesn't apply to a run's country or verticals is reported as not
 built, never as a failure. **Delays** are the defaults (seconds between
@@ -16,7 +21,7 @@ requests to that host, random in the range); a config can change them.
 |---|---|---|---|---|---|---|
 | `google_maps` | `https://www.google.com/maps/search/{query}/@{lat},{lng},{zoom}z?hl=en&gl={country}`, then place pages | Playwright, headless | none | 2.5–6 s, shared `google_maps` budget | Google's terms restrict automated access, and a paid Places API exists. **To review against A.2.4** | Code moved, not changed, in Phase 1; not re-verified |
 | `google_search` | `https://www.google.com/search?q=…&gl={country}`, falling back to `https://html.duckduckgo.com/html/?kl={region}` | requests, then rendered, then DuckDuckGo | none | 12–28 s (Google), shared by every SERP user; circuit breaker after 3 total failures | Google's terms restrict automated queries; DuckDuckGo throttles with HTTP 202. **To review against A.2.4** | Not re-verified in Phase 1 |
-| `website` (enricher) | the business's own site: home, then up to 3 contact/about pages | requests | none | 1.5–4 s per host | The business's public pages. robots.txt support is a Phase 2 item | n/a (any site) |
+| `website` (enricher) | the business's own site: home, then up to 3 contact/about pages | requests | none | 1.5–4 s per host | The business's public pages. **robots.txt honoured** (Phase 3, `net/robots.py`; RFC 9309 statuses; one probe per host per run; workspace setting `robots_txt`, on by default). A disallowed page is recorded as `robots_disallowed` | n/a (any site) |
 | `maps_lookup` (enricher) | Google Maps search by venue name | Playwright | none | 2.5–6 s | As `google_maps` | Not re-verified in Phase 1 |
 | Geocoder (`core/geo.py`) | `https://nominatim.openstreetmap.org/search?q=…&format=jsonv2&limit=1&addressdetails=1&countrycodes={cc}` | requests | none; identifying User-Agent required | at most 1 req/s; every answer, misses included, cached in `<data_dir>/cache/geocode.json` | [Nominatim usage policy](https://operations.osmfoundation.org/policies/nominatim/): ≤ 1 req/s, identify the app, cache results, no bulk geocoding. Used only for the few place names in a config | **2026-10-06**: 200 OK, `[{lat, lon, display_name, boundingbox, address{state, country_code}}]` for "Austin", US |
 

@@ -150,6 +150,16 @@ queued ──► running ──► completed | failed
   first, so several workers can share a database. Stop it with `worker stop`
   (a database flag; no signals needed, so it works the same on Windows),
   Ctrl-C, SIGTERM or Ctrl-Break.
+- **Between runs (Phase 3)** the worker queues the runs of due schedules
+  (`services/schedules.fire_due`; one conditional UPDATE per firing, so two
+  workers never queue the same one) and applies the workspace's retention
+  settings, at most hourly (`services/retention.purge`).
+- **The worker's database.** A worker executes runs in its own database
+  (`RunRequest.engine`), whatever a config says. A run queued through the API
+  without a map centre is geocoded before it starts. After every run,
+  `runner.execute` tells the workspace's notification targets how it ended
+  (`services/notifications`); a failing target is recorded on itself, never on
+  the run.
 - **CLI runs** execute in-process (`cli:<host>:<pid>`). Ctrl-C pauses; a second
   Ctrl-C stops at once. A crashed CLI run is not taken over by a worker; resume
   it with `runs resume` (it goes to a worker) or `run --resume` (in-process).
@@ -222,3 +232,13 @@ project, `<project> (preview)`, which is emptied first. It returns:
   estimate still rests on cold priors.
 
 The preview's units also land in `unit_stats`, under the `@quick` depth key.
+
+Two ways to run one:
+- **In-process:** `run.py --preview`, or `leadscraper preview`.
+- **Queued (Phase 3):** `POST /api/v1/preview` stores the scratch config as the run's snapshot,
+  so a worker rebuilds it with the scratch project's name (`scratch_document`). It also stores
+  the original config in `request.preview.config`, for the full-run estimate. The worker runs
+  it (`run_queued_preview`) and writes the sample and estimate to `runs.stats.preview`.
+
+A dry run (an estimate, the preview's full-run estimate) removes a project it
+had to create if nothing was written to it.
