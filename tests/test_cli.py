@@ -90,3 +90,65 @@ def test_migrate_then_export(tmp_path, capsys):
 def test_db_upgrade_sql_for_postgres(capsys):
     assert main(["db", "upgrade", "--db", "postgresql://u@localhost/x", "--sql"]) == 0
     assert "CREATE TABLE organizations" in capsys.readouterr().out
+
+
+# --- Phase 3: CLI parity over the services ------------------------------------------------------
+
+def test_phase3_cli_configs_exports_diff_bundles_status(tmp_path, capsys, monkeypatch):
+    from leadscraper.db.engine import open_database
+    from leadscraper.db.runs import finish_run, start_run
+    from leadscraper.db.store import LeadStore
+    from leadscraper.paths import default_db_url
+
+    preset = PROJECT_ROOT / "presets" / "nashik-venues.yaml"
+    assert main(["config", "save", str(preset)]) == 0
+    assert "saved config 1: Nashik venues v1" in capsys.readouterr().out
+    assert main(["config", "save", str(preset)]) == 0             # unchanged: still v1
+    assert "v1 (1 version(s))" in capsys.readouterr().out
+    assert main(["config", "list"]) == 0 and "Nashik venues" in capsys.readouterr().out
+    out = tmp_path / "nashik.json"
+    assert main(["config", "export", "1", "--format", "json", "-o", str(out)]) == 0
+    assert json.loads(out.read_text())["name"] == "Nashik venues"
+
+    engine = open_database(default_db_url())
+    store = LeadStore(engine, project="CLI dentists", country="IN")
+    runs = []
+    for names in (["Smile Dental"], ["Smile Dental", "Bright Smiles"]):
+        run_id = start_run(engine, store.workspace_id, store.project_id,
+                           config_snapshot={"schema_version": 1, "name": "CLI dentists",
+                                            "project": "CLI dentists",
+                                            "geography": {"country": "IN", "places": ["Pune"]},
+                                            "lead_types": {"local_business": {
+                                                "categories": [{"name": "Dentists"}]}}})
+        store.run_id = run_id
+        for i, name in enumerate(names):
+            store.upsert(Lead(business_name=name, locality="Baner",
+                              phones=[f"+91982001234{i}"], sources=["google_maps"]))
+        finish_run(engine, run_id, stats={})
+        runs.append(run_id)
+    store.close()
+    engine.dispose()
+    capsys.readouterr()
+
+    assert main(["runs", "diff", str(runs[1])]) == 0
+    assert "1 new, 0 updated, 1 unchanged" in capsys.readouterr().out
+    xlsx = tmp_path / "out.xlsx"
+    assert main(["export", "--run", str(runs[1]), "--scope", "new", "-o", str(xlsx)]) == 0
+    assert "wrote 1 organisations (new)" in capsys.readouterr().out
+    from openpyxl import load_workbook
+
+    assert load_workbook(xlsx).sheetnames == ["Overview", "Records"]
+    assert main(["projects"]) == 0 and "CLI dentists" in capsys.readouterr().out
+    assert main(["status", "--json"]) == 0
+    assert json.loads(capsys.readouterr().out)["health"]["checks"]["database"]["status"] == "ok"
+
+    bundle = tmp_path / "bundle.zip"
+    assert main(["bundle", "export", "-o", str(bundle), "--leads", "--history"]) == 0
+    capsys.readouterr()
+    other = f"sqlite:///{(tmp_path / 'other.sqlite3').as_posix()}"
+    assert main(["bundle", "import", str(bundle), "--db", other, "--json"]) == 0
+    report = json.loads(capsys.readouterr().out)
+    assert report["organizations"]["cli-dentists"] == {"mode": "verbatim", "imported": 2}
+    assert report["runs"] == 2
+    assert main(["runs", "failures", str(runs[0])]) == 0
+    assert "0 failure(s)" in capsys.readouterr().out

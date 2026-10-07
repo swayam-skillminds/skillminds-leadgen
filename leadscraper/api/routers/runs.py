@@ -25,7 +25,13 @@ router = APIRouter()
 #: the last events the run's writer thread is still persisting.
 SETTLE_SECONDS = 5.0
 KEEPALIVE_SECONDS = 15.0
-FINAL_EVENTS = {"run_finished"}
+#: A run_state event with one of these ends the stream: the run stopped
+#: (a resumed run streams again from a new connection with Last-Event-ID).
+STOPPED = frozenset(TERMINAL | {"paused", "queued"})
+
+
+def _stops(event: dict) -> bool:
+    return event["type"] == "run_state" and event.get("status") in STOPPED
 
 
 @router.post("/runs", response_model=s.Run, status_code=201, tags=["runs"],
@@ -166,7 +172,7 @@ async def events(run_id: int, request: Request, after: int = Query(0, ge=0),
                 cursor = event["seq"]
                 last_sent = time.monotonic()
                 yield _sse(event)
-            if any(e["type"] in FINAL_EVENTS for e in batch):
+            if any(_stops(e) for e in batch):
                 return
             if batch:
                 continue

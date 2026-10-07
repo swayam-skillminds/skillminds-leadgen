@@ -11,6 +11,18 @@ Commands:
   runs             list | show | pause | resume | cancel | events
   estimate         how long a config would take; what fits a time budget
   preview          a ~2-minute sample run plus a full-run estimate
+  api              serve the HTTP API (Phase 3; docs at /api/v1/docs)
+  status           health checks, active and queued runs
+  export           a run's or project's results as XLSX / CSV / JSON
+  bundle           export | import: configs, presets, lists, projects (+ leads, history)
+  projects         list projects
+  suppression      list | create | import suppression lists
+  schedules        list | create | delete | run recurring runs
+  purge            apply the retention settings now
+  secrets          set | delete | check secrets in the OS keychain
+
+``config`` also manages saved configs in the database (save | list | show |
+versions | export) and ``runs`` also does rerun | diff | failures.
 """
 
 from __future__ import annotations
@@ -76,6 +88,11 @@ def _cmd_migrate(args: argparse.Namespace) -> int:
 
 def _cmd_config(args: argparse.Namespace) -> int:
     import yaml
+
+    from .app_cmds import SAVED_CONFIG_COMMANDS, cmd_saved_config
+
+    if args.config_cmd in SAVED_CONFIG_COMMANDS:
+        return cmd_saved_config(args)
 
     from ..config.importer import dump_document, import_legacy_file
     from ..config.schema import RunConfig, run_config_json_schema
@@ -208,7 +225,10 @@ def _cmd_runs(args: argparse.Namespace) -> int:
 
     from ..db.runs import TransitionError, get_run, list_runs, request_control, unit_rows
     from ..engine.events import describe, read_events
+    from .app_cmds import RUN_HISTORY_COMMANDS, cmd_run_history
 
+    if args.runs_cmd in RUN_HISTORY_COMMANDS:
+        return cmd_run_history(args)
     engine = _engine(args)
     try:
         if args.runs_cmd == "list":
@@ -345,6 +365,9 @@ def build_parser() -> argparse.ArgumentParser:
     val.add_argument("file")
     schema = config_sub.add_parser("schema", help="print the run-config JSON Schema")
     schema.add_argument("-o", "--output")
+    from .app_cmds import add_config_parsers, add_parsers, add_runs_parsers
+
+    add_config_parsers(config_sub)
 
     sub.add_parser("presets", help="list shipped presets")
 
@@ -391,6 +414,7 @@ def build_parser() -> argparse.ArgumentParser:
     events.add_argument("--follow", action="store_true", help="keep printing new events")
     events.add_argument("--json", action="store_true")
     events.add_argument("--db")
+    add_runs_parsers(runs_sub)
 
     estimate = sub.add_parser("estimate", help="estimate a run config without running it")
     estimate.add_argument("--config", required=True)
@@ -405,6 +429,7 @@ def build_parser() -> argparse.ArgumentParser:
     preview.add_argument("--area")
     preview.add_argument("--category")
     preview.add_argument("--json", action="store_true")
+    parser.set_defaults(_phase3=add_parsers(sub))
     return parser
 
 
@@ -412,10 +437,12 @@ def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if argv and argv[0] == "run":
         return _cmd_run(argv[1:])
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
     handlers = {"migrate-legacy": _cmd_migrate, "config": _cmd_config,
                 "presets": _cmd_presets, "db": _cmd_db, "worker": _cmd_worker,
-                "runs": _cmd_runs, "estimate": _cmd_estimate, "preview": _cmd_preview}
+                "runs": _cmd_runs, "estimate": _cmd_estimate, "preview": _cmd_preview,
+                **args._phase3}
     if args.command not in handlers:
         build_parser().print_help()
         return 2

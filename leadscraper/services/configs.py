@@ -62,7 +62,13 @@ def validate_document(document: Any) -> RunConfig:
 
 
 def canonical(document: dict[str, Any]) -> dict[str, Any]:
-    return validate_document(document).to_document()
+    """The validated document as the database stores it.
+
+    JSON-normalised: the JSON column turns YAML's integer keys (price bands)
+    into strings, so documents are compared -- "is this a new version?" -- in
+    the form they are stored in.
+    """
+    return json.loads(json.dumps(validate_document(document).to_document(), default=str))
 
 
 def parse_text(text: str | bytes, *, filename: str | None = None) -> dict[str, Any]:

@@ -138,6 +138,8 @@ class LeadStore:
         #: the record's first source (which may not be where a value came from).
         self.source_override: str | None = None
         self._lock = threading.RLock()
+        #: This store created its project (a dry run removes it again if unused).
+        self.project_created = False
         if isinstance(db, Engine):
             self.engine, self._owns_engine = db, False
             init_schema(db)
@@ -185,6 +187,7 @@ class LeadStore:
         if row:
             return int(row[0])
         now = utcnow()
+        self.project_created = True
         return int(self._conn.execute(table.insert().values(
             workspace_id=self.workspace_id, name=name, slug=slug, description=description,
             created_at=now, updated_at=now)).inserted_primary_key[0])
@@ -782,6 +785,26 @@ class LeadStore:
             self._conn.execute(delete(SEEN).where(SEEN.c.project_id == self.project_id))
             self._conn.commit()
         return count
+
+    def drop_project_if_unused(self) -> bool:
+        """Remove the project this store created, if nothing was written to it.
+
+        A dry run (an estimate) opens the project to read learned costs; it
+        must not leave an empty project behind.
+        """
+        if not self.project_created:
+            return False
+        from .models import Run
+
+        with self._lock:
+            runs = self._conn.execute(select(func.count()).select_from(Run.__table__).where(
+                Run.__table__.c.project_id == self.project_id)).scalar_one()
+            if runs or self.count():
+                return False
+            self._conn.execute(delete(Project.__table__).where(
+                Project.__table__.c.id == self.project_id))
+            self._conn.commit()
+        return True
 
     def close(self) -> None:
         with self._lock:

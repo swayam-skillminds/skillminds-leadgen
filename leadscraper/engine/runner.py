@@ -468,6 +468,11 @@ class _Run:
                     keep_awake.release()
                 if self.event_writer is not None:
                     self.event_writer.close()
+                if request.dry_run:
+                    try:
+                        store.drop_project_if_unused()
+                    except Exception as exc:
+                        log.debug("could not drop the dry run's project: %s", exc)
                 store.close()
         outcome.status, outcome.error = status, error
         return outcome

@@ -29,8 +29,20 @@ def examples(*items: Any, **config: Any) -> ConfigDict:
     return ConfigDict(json_schema_extra={"examples": list(items)}, **config)
 
 
+def _page_example(schema: dict[str, Any], model: type[BaseModel]) -> None:
+    """A page's example: one item (the item model's own example) and the paging fields."""
+    from typing import get_args
+
+    item_type = (get_args(model.model_fields["items"].annotation) or (None,))[0]
+    extra = (getattr(item_type, "model_config", {}) or {}).get("json_schema_extra") or {}
+    items = (extra.get("examples") or [])[:1] if isinstance(extra, dict) else []
+    schema["examples"] = [{"items": items, "total": 1, "limit": 50, "offset": 0}]
+
+
 class Page(BaseModel, Generic[T]):
     """One page of a list. ``total`` counts every match, not just this page."""
+
+    model_config = ConfigDict(json_schema_extra=_page_example)
 
     items: list[T]
     total: int
