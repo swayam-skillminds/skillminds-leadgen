@@ -63,6 +63,16 @@ class WebsiteEnricher(Enricher):
     def pending_text(self, value: str | None) -> None:
         self._pending.text = value
 
+    @property
+    def pending_source(self) -> str | None:
+        """The original page text + hrefs behind `pending_text`: what AI answers are
+        grounded in (the Markdown handed to the model is a shortened view of it)."""
+        return getattr(self._pending, "source", None)
+
+    @pending_source.setter
+    def pending_source(self, value: str | None) -> None:
+        self._pending.source = value
+
     def _robots(self):
         """One robots.txt cache per enricher (per run); ``runtime.robots_txt`` toggles it."""
         robots = getattr(self, "_robots_cache", None)
@@ -88,8 +98,10 @@ class WebsiteEnricher(Enricher):
         pages_to_try = [lead.website]
         harvested = Lead(business_name=lead.business_name)
         collected_text: list[str] = []
+        collected_pages: list[tuple[str, str]] = []
         fetched = 0
         self.pending_text = None
+        self.pending_source = None
 
         robots = self._robots()
         while pages_to_try and fetched < max_pages:
@@ -111,6 +123,7 @@ class WebsiteEnricher(Enricher):
             soup = self.ctx.http.soup(response.text)
             page_text = visible_text(soup, limit=25_000)
             collected_text.append(page_text)
+            collected_pages.append((response.url, response.text))
             self._harvest(soup, response.text, response.url, harvested, page_text)
 
             # Queue contact-ish pages discovered on the homepage.
@@ -134,14 +147,28 @@ class WebsiteEnricher(Enricher):
                 return harvested
             self.fail("nothing_found", url=lead.website, business=lead.business_name,
                       detail=f"fetched {fetched} page(s), no contact details present")
-            # Hand the raw text to the AI fallback rather than giving up: this
-            # is exactly the case where a redesign broke the regexes.
-            joined = " ".join(collected_text).strip()
-            self.pending_text = joined[:8000] if joined else None
+            # Hand the pages to the AI fallback rather than giving up: this is
+            # exactly the case where a redesign broke the regexes. The model
+            # gets token-lean Markdown (contact links kept); its answers are
+            # grounded in the original text.
+            self._queue_for_ai(collected_pages, collected_text)
             return None
 
         harvested.sources = [self.name]
         return harvested
+
+    def _queue_for_ai(self, pages: list[tuple[str, str]], texts: list[str]) -> None:
+        try:
+            from ..ai.pageprep import prepare
+
+            prepared = [prepare(html, url) for url, html in pages]
+            markdown = "\n\n".join(p.markdown for p in prepared if p.markdown).strip()
+            source = " ".join(p.source_text for p in prepared).strip()
+        except Exception as exc:          # preparation is an optimisation, never a failure
+            log.debug("page preparation failed (raw text used): %s", exc)
+            markdown = source = " ".join(texts).strip()
+        self.pending_text = markdown[:8000] if markdown else None
+        self.pending_source = source or None
 
     # --- helpers ----------------------------------------------------------
 

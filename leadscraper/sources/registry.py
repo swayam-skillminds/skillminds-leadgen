@@ -8,14 +8,18 @@ The values reproduce the order the registry had before packs existed.
 from __future__ import annotations
 
 from ..packs import all_packs
+from .ai_directory import AIDirectorySource
+from .ai_web_search import AIWebSearchSource
 from .base import Enricher, Source
 from .google_maps import GoogleMapsSource
 from .google_search import GoogleSearchSource
 from .maps_lookup import MapsLookupEnricher
 from .website import WebsiteEnricher
 
-#: Sources that apply everywhere.
-CORE_DISCOVERY: tuple[type[Source], ...] = (GoogleMapsSource, GoogleSearchSource)
+#: Sources that apply everywhere. The two AI sources are built only when their
+#: AI feature is on (``ai_task``; see ``planning.select_sources``).
+CORE_DISCOVERY: tuple[type[Source], ...] = (GoogleMapsSource, GoogleSearchSource,
+                                            AIWebSearchSource, AIDirectorySource)
 CORE_ENRICHMENT: tuple[type[Enricher], ...] = (MapsLookupEnricher, WebsiteEnricher)
 
 

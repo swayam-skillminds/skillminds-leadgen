@@ -35,6 +35,7 @@ class LocalBusinessSession(LeadTypeSession):
             events=getattr(context, "events", None),
             engine_driven=True,
             force_enrich=getattr(context, "force_enrich", None),
+            ai_client=getattr(context, "ai", None),
         )
         context.pipeline = self.pipeline
         self._units = self.pipeline.discovery_units()
@@ -92,11 +93,8 @@ class LocalBusinessSession(LeadTypeSession):
         self.pipeline._maybe_flush()
 
     def ai_spend(self) -> dict[str, Any] | None:
-        ai = self.pipeline.ai
-        if not ai.enabled:
-            return None
-        cap = None if ai.max_cost == float("inf") else ai.max_cost
-        return {"cost_usd": round(ai.stats.cost_usd, 4), "cap_usd": cap, "calls": ai.stats.calls}
+        client = self.pipeline.ai.client
+        return client.spend() if client.enabled else None
 
     def post_discovery(self, control: Any) -> None:
         self.pipeline.post_discovery()

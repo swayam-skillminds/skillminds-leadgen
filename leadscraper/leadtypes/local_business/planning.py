@@ -61,9 +61,12 @@ def select_sources(kind: str, registry: dict[str, type], requested: list[str] | 
     asked_for = ", ".join(sorted(wanted)) or "nothing"
     chosen: list[type] = []
     for name, cls in registry.items():
+        ai_task = getattr(cls, "ai_task", None)
         if name not in wanted:
             plan.skipped[name] = f"not requested -- this run asked for {asked_for}"
-        elif not config.source_enabled(name):
+        elif ai_task is not None and (reason := ai_inactive_reason(ai_task, name, config)):
+            plan.skipped[name] = reason
+        elif ai_task is None and not config.source_enabled(name):
             plan.skipped[name] = "disabled in config"
         elif (reason := inactive_reason(cls, config.country, config.verticals)):
             # A pack that does not apply is inactive, not failing: it is
@@ -75,6 +78,24 @@ def select_sources(kind: str, registry: dict[str, type], requested: list[str] | 
             chosen.append(cls)
             plan.built.append(name)
     return chosen, plan
+
+
+def ai_inactive_reason(task: str, name: str, config) -> str | None:
+    """Why an AI source is not built for this run, or None (Phase 5).
+
+    An AI source follows its AI feature, not ``sources.<name>.enabled``: it is
+    on when AI is on and the feature is listed, unless the config switches the
+    source off explicitly.
+    """
+    from ...ai.catalog import feature_of, tasks_for
+
+    if config.get(f"sources.{name}.enabled") is False:
+        return "disabled in config"
+    if not config.get("ai.enabled", False):
+        return f"needs AI (the {feature_of(task)} feature); ai.enabled is false"
+    if task not in tasks_for(list(config.get("ai.features") or [])):
+        return f"needs the AI feature {feature_of(task)} in ai.features"
+    return None
 
 
 def unneeded_reason(source_cls: type, included: set[str]) -> str | None:

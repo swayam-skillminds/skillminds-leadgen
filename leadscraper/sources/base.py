@@ -30,6 +30,9 @@ class SourceContext:
     failures: FailureLog
     browser: BrowserSession
     store: "object"  # LeadStore; typed loosely to avoid a circular import
+    #: The run's AI client (``ai.client.AIClient``), or None: AI-assisted sources
+    #: and enrichers use it; everything else ignores it.
+    ai: "object | None" = None
 
 
 class Source(ABC):
@@ -60,6 +63,9 @@ class Source(ABC):
     #: When a run asks for none of them it is not built (A.8). None: it finds
     #: businesses, so every run needs it.
     fills: frozenset[str] | None = None
+    #: An AI task (``ai.catalog``) this source exists for: it is built only when
+    #: the run's AI features switch that task on. None: not an AI source.
+    ai_task: str | None = None
 
     def __init__(self, ctx: SourceContext):
         self.ctx = ctx

@@ -128,6 +128,9 @@ class LeadTypeContext:
     force_enrich: bool | None = None
     #: Set by local_business: the pipeline it ran (results, stats).
     pipeline: Any = None
+    #: The run's AI client (Phase 5): one budget, cache and ledger for every
+    #: lead type. None when AI is off.
+    ai: Any = None
 
 
 @dataclass
@@ -354,6 +357,7 @@ class _Run:
         keep_awake = request.keep_awake or KEEP_AWAKE
         holding = False
         status, error = "completed", ""
+        self.ai_client = self._ai_client(store)
         try:
             for key in keys:
                 lead_type = registry.get(key)
@@ -370,6 +374,7 @@ class _Run:
                     failure_sink=None if request.dry_run else failure_sink,
                     control=control, events=bus,
                     force_enrich=request.force_enrich or None,
+                    ai=self.ai_client,
                 )
                 outcome.contexts[key] = context
                 try:
@@ -470,6 +475,9 @@ class _Run:
                     keep_awake.release()
                 if self.event_writer is not None:
                     self.event_writer.close()
+                self._flush_ai_usage()
+                if self.ai_client is not None:
+                    self.ai_client.close()
                 if request.dry_run:
                     try:
                         store.drop_project_if_unused()
@@ -658,32 +666,37 @@ class _Run:
         if callable(checkpoint):
             checkpoint()                               # periodic flush, on this thread
 
-    def _publish_ai_spend(self, session) -> None:
+    def _ai_client(self, store):
+        """The run's AI client: config + workspace settings; None when AI is off."""
+        if not self.config.get("ai.enabled", False):
+            return None
         try:
-            spend = session.ai_spend()
-        except Exception:
-            spend = None
-        if spend:
-            self.bus.publish(ev.AISpend(**spend))
-            self._record_ai_usage(session, spend)
+            from ..ai.client import AIClient
+            from ..ai.settings import resolve
+            from ..services.settings import ai_settings
 
-    def _record_ai_usage(self, session, spend: dict) -> None:
-        """History: the run's AI usage, one ledger row per lead type (Phase 5 splits it)."""
+            settings = resolve(self.config, ai_settings(store.engine, store.workspace_id))
+            return AIClient(settings, cache_path=self.config.path_for(
+                "ai_cache", "data/ai_cache.sqlite3"))
+        except Exception as exc:                # AI never stops a run
+            log.warning("AI layer not started (%s) -- continuing without AI", exc)
+            return None
+
+    def _publish_ai_spend(self, session) -> None:
+        client = self.ai_client
+        if client is None or not client.enabled:
+            return
+        self.bus.publish(ev.AISpend(**client.spend()))
+        self._flush_ai_usage()
+
+    def _flush_ai_usage(self) -> None:
+        """History: the run's AI usage per provider, model and feature (``ai_usage``)."""
+        client = getattr(self, "ai_client", None)
         run_id = self.outcome.run_id if self.outcome else None
-        if run_id is None or not spend.get("calls"):
+        if client is None or run_id is None or self.lost:
             return
         try:
-            from ..db.models import AIUsage
-
-            with self.engine.begin() as conn:
-                conn.execute(AIUsage.__table__.insert().values(
-                    workspace_id=self.store.workspace_id, run_id=run_id,
-                    provider=str(self.config.get("ai.backend") or "auto"),
-                    model=str(self.config.get("ai.model") or ""),
-                    feature=getattr(session, "lead_type", "") or "",
-                    calls=int(spend.get("calls") or 0),
-                    cost_usd=float(spend.get("cost_usd") or 0.0),
-                    created_at=datetime.now(timezone.utc)))
+            client.ledger.flush(self.engine, self.store.workspace_id, run_id)
         except Exception as exc:
             log.debug("could not record AI usage: %s", exc)
 

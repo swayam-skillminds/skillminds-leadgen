@@ -40,8 +40,8 @@ from ..core.lead import Lead
 from ..core.normalize import maps_place_key
 from .engine import init_schema, is_sqlite, open_database, url_for
 from .models import (
-    Contact, DeadDomain, EnrichmentMark, Evidence, IdentityKey, Organization, Person, Project,
-    RunOrganization, SeenUrl, Signal, UnitStat, Workspace,
+    Contact, DeadDomain, EnrichmentMark, Evidence, IdentityKey, Organization, OrgAttribute,
+    Person, Project, RunOrganization, SeenUrl, Signal, UnitStat, Workspace,
 )
 
 __all__ = ["LeadStore", "DedupOptions", "UpsertAction", "slugify_project", "sort_leads",
@@ -62,6 +62,7 @@ SEEN = SeenUrl.__table__
 DEAD = DeadDomain.__table__
 UNITS = UnitStat.__table__
 MARKS = EnrichmentMark.__table__
+ATTRS = OrgAttribute.__table__
 
 #: Fields whose change can make a record match another one.
 _IDENTITY_FIELDS = {"phones", "gmaps_url", "website", "registry_ids", "latitude", "business_name"}
@@ -402,6 +403,28 @@ class LeadStore:
                 current = survivor
         return current
 
+    def fold_pair(self, a: int, b: int, *, note: str = "") -> bool:
+        """Merge two records a judge (AI duplicate adjudication) found to be one.
+
+        The identity rules kept them apart, so this is an explicit decision:
+        the lower id survives, as in consolidation, and `note` is kept on it.
+        """
+        if a == b:
+            return False
+        with self._lock:
+            survivor, victim = sorted((a, b))
+            if self.get(survivor) is None or self.get(victim) is None:
+                return False
+            self._fold(survivor, victim)
+            if note:
+                kept = self.get(survivor)
+                if kept is not None and note not in kept.notes:
+                    kept.notes.append(note)
+                    self._update(survivor, kept, source="ai_dedup", url=None,
+                                 changed=["notes"])
+            self._conn.commit()
+            return True
+
     def _fold(self, survivor: int, victim: int) -> None:
         keep, gone = self.get(survivor), self.get(victim)
         if keep is None or gone is None:
@@ -425,6 +448,12 @@ class LeadStore:
         for table in (CONTACTS, PEOPLE, SIGNALS, EVIDENCE):
             conn.execute(update(table).where(table.c.organization_id == victim)
                          .values(organization_id=survivor))
+        # AI attributes: the survivor's own win; the victim's fill its gaps.
+        held_attrs = select(ATTRS.c.key).where(ATTRS.c.organization_id == survivor)
+        conn.execute(delete(ATTRS).where(ATTRS.c.organization_id == victim,
+                                         ATTRS.c.key.in_(held_attrs)))
+        conn.execute(update(ATTRS).where(ATTRS.c.organization_id == victim)
+                     .values(organization_id=survivor))
         runs_held = select(RUN_ORGS.c.run_id).where(RUN_ORGS.c.organization_id == survivor)
         conn.execute(delete(RUN_ORGS).where(RUN_ORGS.c.organization_id == victim,
                                             RUN_ORGS.c.run_id.in_(runs_held)))
@@ -595,6 +624,44 @@ class LeadStore:
             self._conn.execute(update(RUN_ORGS).where(
                 RUN_ORGS.c.run_id == self.run_id, RUN_ORGS.c.organization_id == lead_id,
                 RUN_ORGS.c.action == "unchanged").values(action="updated"))
+
+    # --- attributes (Phase 5: AI industry tags, size estimates, summaries) -------------
+
+    def set_attribute(self, lead_id: int, key: str, value: Any, *, origin: str = "ai",
+                      estimated: bool = False, producer: str = "") -> bool:
+        """Store an attribute that is not a published fact; True if it changed.
+
+        Every write leaves an evidence row naming who produced it ("ai:provider/model").
+        """
+        with self._lock:
+            row = self._conn.execute(select(ATTRS.c.id, ATTRS.c.value).where(
+                ATTRS.c.organization_id == lead_id, ATTRS.c.key == key)).first()
+            now = utcnow()
+            if row is not None and row.value == value:
+                self._conn.commit()
+                return False
+            if row is None:
+                self._conn.execute(ATTRS.insert().values(
+                    workspace_id=self.workspace_id, organization_id=lead_id, key=key[:50],
+                    value=value, origin=origin[:20], estimated=bool(estimated),
+                    producer=producer[:160], lead_type=self.lead_type, run_id=self.run_id,
+                    created_at=now, updated_at=now))
+            else:
+                self._conn.execute(update(ATTRS).where(ATTRS.c.id == row.id).values(
+                    value=value, origin=origin[:20], estimated=bool(estimated),
+                    producer=producer[:160], run_id=self.run_id, updated_at=now))
+            self._evidence(lead_id, f"{origin}:{producer}"[:100] if producer else origin, None,
+                           [f"attribute:{key}"])
+            self._note_run(lead_id, "updated")
+            self._conn.commit()
+            return True
+
+    def attributes(self, lead_id: int) -> dict[str, Any]:
+        with self._lock:
+            rows = self._conn.execute(select(ATTRS.c.key, ATTRS.c.value).where(
+                ATTRS.c.organization_id == lead_id)).all()
+            self._conn.commit()
+        return {row.key: row.value for row in rows}
 
     # --- url memo (resume support) ---------------------------------------------------
 

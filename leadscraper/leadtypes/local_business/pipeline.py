@@ -105,6 +105,7 @@ class Pipeline:
         events=None,
         engine_driven: bool = False,
         force_enrich: bool | None = None,
+        ai_client=None,
     ):
         self.config = config
         self.localities = localities
@@ -180,15 +181,19 @@ class Pipeline:
         )
         self.sheets = SheetsWriter(config, self.failures)
 
+        #: The run's AI client is shared by every lead type (one budget); a
+        #: pipeline used on its own builds one from the config.
+        self.ai = AIAssistant(config, self.failures, client=ai_client)
+        log.info("AI layer: %s", self._ai_status())
+        #: (lead_id, page_text, source_text) queued by enrichers for AI fallback
+        #: extraction; source_text is what the answer must be grounded in.
+        self._ai_extract_queue: list[tuple[int, str, str]] = []
+
         self.ctx = SourceContext(
             config=config, http=self.http, limiter=self.limiter,
             failures=self.failures, browser=self.browser, store=self.store,
+            ai=self.ai.client,
         )
-
-        self.ai = AIAssistant(config, self.failures)
-        log.info("AI layer: %s", self._ai_status())
-        #: (lead_id, page_text) queued by enrichers for AI fallback extraction.
-        self._ai_extract_queue: list[tuple[int, str]] = []
 
         self.sources, self.source_plan = self._build("source", DISCOVERY_SOURCES, source_names)
         if enricher_names is None and not config.get("runtime.enrichment", True):
@@ -261,21 +266,7 @@ class Pipeline:
         works and one that doesn't, so the reason it is off has to be readable
         without a debugger.
         """
-        if self.ai.active:
-            cap = ("no cap" if self.ai.max_cost == float("inf")
-                   else f"${self.ai.max_cost:.2f} cap")
-            features = ", ".join(sorted(self.ai.features)) or "all"
-            return (f"active via {self.ai.backend.name}"
-                    f" (model {self.ai.model}, features: {features}, {cap})")
-        if not self.config.get("ai.enabled", False):
-            return "off -- ai.enabled is false in config"
-        if self.ai.backend is None:
-            return ("off -- ai.enabled is true but no backend is usable"
-                    " (no `claude` CLI on PATH, no ANTHROPIC_API_KEY);"
-                    " continuing exactly as a non-AI run")
-        if self.ai.over_budget:
-            return f"off -- ai.max_cost_usd of ${self.ai.max_cost:.2f} is already spent"
-        return f"off -- {self.ai.stats.shutdown_reason or 'backend unavailable'}"
+        return self.ai.client.status()
 
     # --- lifecycle --------------------------------------------------------
 
@@ -342,6 +333,10 @@ class Pipeline:
             self._enrich()
         if not self._stop_requested:
             self._ai_phase("fallback extraction", self._ai_fallback_extraction)
+        if not self._stop_requested:
+            self._ai_phase("normalisation", self._ai_normalise)
+        if not self._stop_requested:
+            self._ai_phase("lead summary", self._ai_summaries)
 
     def _activity(self, phase: str, text: str) -> None:
         if self.events is None:
@@ -600,9 +595,12 @@ class Pipeline:
 
         pending = getattr(enricher, "pending_text", None)
         if pending and self.ai.uses("extract"):
+            grounding = getattr(enricher, "pending_source", None) or pending
             with self._stats_lock:
-                self._ai_extract_queue.append((lead_id, pending))
+                self._ai_extract_queue.append((lead_id, pending, grounding))
             enricher.pending_text = None
+            if hasattr(enricher, "pending_source"):
+                enricher.pending_source = None
         if not crashed and not TRANSIENT_ENRICH_REASONS.intersection(reasons):
             # Done for good: next run skips this lead unless forced.
             marker = getattr(self.store, "mark_enriched", None)
@@ -774,10 +772,19 @@ class Pipeline:
         return None
 
     def _ai_polish_names(self) -> None:
-        """Clean SERP-derived and keyword-stuffed names; flag non-businesses."""
+        """Clean SERP-derived and keyword-stuffed names; flag non-businesses.
+
+        Names the model did not answer for (AI off, out of budget, a failed
+        call) are cleaned by rule, exactly as without AI: a run whose AI fails
+        ends where a run without AI ends.
+        """
         if not self.ai.uses("names"):
             self._rule_polish_names()
             return
+        answered = self._ai_polish_names_by_model()
+        self._rule_polish_names(skip=answered)
+
+    def _ai_polish_names_by_model(self) -> set[int]:
 
         candidates = []
         for lead_id, lead in self.store.all_with_ids():
@@ -791,7 +798,7 @@ class Pipeline:
                 candidates.append((lead_id, lead))
 
         if not candidates:
-            return
+            return set()
         log.info("AI name polish: %d title-derived leads", len(candidates))
 
         verdicts = self.ai.clean_names([
@@ -800,10 +807,12 @@ class Pipeline:
             for lead_id, lead in candidates
         ])
 
+        answered: set[int] = set()
         for lead_id, lead in candidates:
             verdict = verdicts.get(str(lead_id))
             if not verdict:
                 continue
+            answered.add(lead_id)
             notes = list(lead.notes)
             updates: dict = {}
 
@@ -826,8 +835,9 @@ class Pipeline:
                 updates["notes"] = notes
             if updates:
                 self.stats.ai_updates += len(self.store.update_fields(lead_id, **updates))
+        return answered
 
-    def _rule_polish_names(self) -> None:
+    def _rule_polish_names(self, skip: set[int] = frozenset()) -> None:
         """Without AI, cut keyword-stuffed names back to the name they start with.
 
         "Royal Caterers | Best Caterers in Mumbai" -> "Royal Caterers", by the
@@ -840,6 +850,8 @@ class Pipeline:
 
         renamed = 0
         for lead_id, lead in self.store.all_with_ids():
+            if lead_id in skip:
+                continue
             better = seo_title_head(lead.business_name)
             if not better:
                 continue
@@ -861,32 +873,85 @@ class Pipeline:
             self.stats.ai_updates += renamed
 
     def _ai_fallback_extraction(self) -> None:
-        """Read contacts off pages whose selectors/regexes came up empty."""
+        """Read contacts off pages whose selectors/regexes came up empty.
+
+        Every value the model returns must appear in the page we fetched
+        (``ai.grounding``); the rest is dropped and recorded as a failure.
+        """
         queue = self._ai_extract_queue
         if not queue or not self.ai.uses("extract"):
             return
         log.info("AI fallback extraction: %d pages the scrapers couldn't parse", len(queue))
 
-        results = self.ai.extract_contacts([(str(lead_id), text) for lead_id, text in queue])
-        for lead_id, _ in queue:
+        results = self.ai.extract_contacts([(str(lead_id), text) for lead_id, text, _ in queue])
+        for lead_id, _, source_text in queue:
             record = results.get(str(lead_id))
             if not record:
                 continue
-            partial = self._lead_from_ai_record(record, self.config.country)
+            partial = self._lead_from_ai_record(record, self.config.country,
+                                                source_text=source_text,
+                                                failures=self.failures)
             if partial is None:
                 continue
             if self.store.merge_into(lead_id, partial):
                 self.stats.ai_updates += 1
         self._ai_extract_queue = []
 
+    def _ai_normalise(self) -> None:
+        """Industry tags, size estimates (labelled), judge-tier duplicate adjudication."""
+        from ...ai.features.normalisation import adjudicate_duplicates, tag_organisations
+
+        client = self.ai.client
+        if client.uses("industry") or client.uses("size"):
+            self._activity("ai", "AI normalisation: industry tags and size estimates")
+            self.stats.ai_updates += tag_organisations(
+                client, self.store, batch_size=self.ai.batch_size,
+                stop=lambda: self._stop_requested)
+        if self.ai.uses("dedup") and not self._stop_requested:
+            self.stats.ai_updates += adjudicate_duplicates(self.ai, self.store)
+
+    def _ai_summaries(self) -> None:
+        """One factual line per organisation: what it does, why it matched."""
+        from ...ai.features.summary import summarise
+
+        client = self.ai.client
+        if not client.uses("summary"):
+            return
+        self._activity("ai", "AI lead summaries")
+        categories = ", ".join(c.name for c in self.categories) or "any category"
+        why = f"{categories} in {', '.join(self.config.get('places') or [self.config.city])}"
+        self.stats.ai_updates += summarise(client, self.store, why=why,
+                                           batch_size=self.ai.batch_size,
+                                           stop=lambda: self._stop_requested)
+
     @staticmethod
-    def _lead_from_ai_record(record: dict, region: str | None = None) -> Lead | None:
+    def _lead_from_ai_record(record: dict, region: str | None = None, *,
+                             source_text: str | None = None, failures=None) -> Lead | None:
         """Turn an AI extraction result into a Lead, re-validating every field.
 
         Model output goes through the SAME normalisers as scraped data, so a
-        malformed or hallucinated phone number is rejected here rather than
-        landing in the sheet.
+        malformed phone number is rejected here rather than landing in the
+        sheet. With `source_text` (the pipeline always passes the page), every
+        value must also appear in it: a hallucinated phone or email -- however
+        well-formed -- is dropped (A.2.5, Phase 5.5).
         """
+        if source_text is not None:
+            from ...ai.grounding import SourceText, ground_contacts
+
+            grounded = ground_contacts(record, SourceText(source_text, region))
+            if grounded.dropped and failures is not None:
+                failures.record("ai", "ai_ungrounded_dropped",
+                                business=str(record.get("business_name") or "")[:200],
+                                detail="; ".join(grounded.dropped)[:400])
+            if grounded.empty():
+                return None
+            partial = Lead(business_name="")
+            partial.phones, partial.emails = grounded.phones, grounded.emails
+            partial.address, partial.instagram = grounded.address, grounded.instagram
+            partial.sources = ["ai_extract"]
+            partial.notes = ["contacts read by AI from an unparseable page (each one checked "
+                             "against the page)"]
+            return partial
         from ...core.normalize import clean_text, extract_emails, extract_instagram, extract_phones
 
         def as_text(value) -> str:

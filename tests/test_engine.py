@@ -1064,23 +1064,31 @@ def test_resume_reruns_units_that_were_cut_or_skipped(synthetic, tmp_path):
 
 
 def test_ai_spend_is_reported_after_the_ai_passes(clocked_sources, monkeypatch):
-    from leadscraper.ai import AIAssistant
-    from leadscraper.leadtypes.local_business.session import LocalBusinessSession
+    """The run's one AI client (Phase 5) reports its spend after the AI passes."""
+    from leadscraper.ai import AIBackend, AIResult
+    from leadscraper.ai.assistant import LegacyBackendProvider
+    from leadscraper.ai.client import AIClient
+    from leadscraper.ai.settings import resolve
+    from leadscraper.engine import runner as runner_mod
+
+    class Idle(AIBackend):
+        name = "idle"
+
+        def complete(self, system, user, *, model, max_tokens=4000):
+            return AIResult(text="{}")
 
     registry_ = clocked_sources({"google_maps": clocked_source("google_maps", 10, 1,
                                                                "www.google.com")})
     config = local_business_config("lb-ai", registry_)
     config.set("ai.enabled", True)
     seen: list = []
-    original = LocalBusinessSession.__init__
 
-    def with_spend(self, context):
-        original(self, context)
-        self.pipeline.ai = AIAssistant(config, self.pipeline.failures, backend=None)
-        self.pipeline.ai.enabled = True
-        self.pipeline.ai.stats.cost_usd, self.pipeline.ai.stats.calls = 0.0123, 2
+    def with_spend(self, store):
+        client = AIClient(resolve(config), providers=[LegacyBackendProvider(Idle())])
+        client.stats.cost_usd, client.stats.calls = 0.0123, 2
+        return client
 
-    monkeypatch.setattr(LocalBusinessSession, "__init__", with_spend)
+    monkeypatch.setattr(runner_mod._Run, "_ai_client", with_spend)
     execute(RunRequest(config=config, install_signals=False, clock=CLOCK,
                        discovery_workers=1, sinks=[seen.append]))
     spend = [e for e in seen if e.type == "ai_spend"]

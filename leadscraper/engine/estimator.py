@@ -207,7 +207,11 @@ def _ai(sessions: dict[str, Any], expected_new: float) -> dict[str, Any] | None:
             parts[key] = part
     if not parts:
         return None
-    return {"cost_usd": round(sum(p.get("cost_usd", 0.0) for p in parts.values()), 3),
+    # One run, one AI budget (Phase 5): the lead types share the cap.
+    caps = [p["cap_usd"] for p in parts.values() if p.get("cap_usd") is not None]
+    total = sum(p.get("cost_usd", 0.0) for p in parts.values())
+    return {"cost_usd": round(min(total, caps[0]) if caps else total, 3),
+            "cap_usd": caps[0] if caps else None,
             "calls": sum(p.get("calls", 0) for p in parts.values()), "by_lead_type": parts}
 
 

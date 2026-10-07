@@ -1,0 +1,65 @@
+# What Skillminds sells, as starting points for the ICP builder (Phase 5.4).
+#
+# Each offering is a default target: the categories of local businesses worth
+# finding, the decision-maker roles, the buying signals, and the lead types
+# that find them. The ICP builder starts from one of these when the brief names
+# it (or when no AI provider is available), and the model adapts it to the brief.
+# Lead types not built yet (Phase 6+) are kept as notes, never put in a config.
+
+custom_software:
+  title: Custom software development
+  description: Bespoke business applications, workflow automation and integrations.
+  categories: [manufacturing companies, logistics companies, distributors, wholesalers,
+               healthcare clinics, educational institutes]
+  roles: [Founder, Managing Director, CTO, IT Head, Operations Head]
+  signals: [hiring developers, digital transformation news, outdated website,
+            new office or expansion]
+  industries: [manufacturing, logistics, healthcare, education, distribution]
+  lead_types: [local_business, digital_audit, hiring, funding_news, decision_makers]
+  must_have: [phone]
+
+web_app_dev:
+  title: Website and mobile app development
+  description: New websites, redesigns, e-commerce and mobile apps.
+  categories: [restaurants, clinics, salons, boutiques, real estate agents, gyms,
+               coaching classes, hotels]
+  roles: [Owner, Founder, Marketing Manager]
+  signals: [no website, site not mobile-friendly, no online booking, poor page speed,
+            neglected app]
+  industries: [hospitality, retail, healthcare, real estate, fitness, education]
+  lead_types: [local_business, digital_audit, app_store]
+  must_have: [phone]
+
+erp:
+  title: ERP implementation
+  description: ERP for operations, inventory, accounting and manufacturing.
+  categories: [manufacturing companies, industrial suppliers, distributors, wholesalers,
+               traders, warehouses]
+  roles: [Managing Director, CFO, Operations Head, IT Head, Plant Head]
+  signals: [expansion, new plant or warehouse, hiring operations or accounts staff,
+            outdated technology]
+  industries: [manufacturing, distribution, trading, warehousing]
+  lead_types: [local_business, hiring, funding_news, tech_stack, decision_makers]
+  must_have: [phone]
+
+staff_augmentation:
+  title: IT staff augmentation
+  description: Developers, QA and DevOps engineers on contract for product teams.
+  categories: [software companies, IT services companies, startups, technology companies,
+               digital agencies]
+  roles: [CTO, VP Engineering, Engineering Manager, Founder, HR Head]
+  signals: [several open tech roles, funding round, product launch, new office]
+  industries: [software, IT services, SaaS, fintech, e-commerce]
+  lead_types: [local_business, hiring, funding_news, decision_makers]
+  must_have: []
+
+training:
+  title: IT and corporate training
+  description: Technical and digital-skills training for teams and institutes.
+  categories: [IT companies, engineering colleges, training institutes, corporates,
+               BPO companies]
+  roles: [HR Head, L&D Manager, Training Head, Principal, CTO]
+  signals: [hiring freshers, new technology adoption, expansion, new campus]
+  industries: [IT services, education, BPO, corporate]
+  lead_types: [local_business, hiring, decision_makers]
+  must_have: []

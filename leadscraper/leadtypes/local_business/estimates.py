@@ -43,7 +43,10 @@ SOURCE_KNOBS: dict[str, dict[str, int]] = {
     "stayvista": {"max_properties": 400}, "saffronstays": {"max_properties": 400},
     "elivaas": {"max_properties": 400},
 }
-AI_FEATURES = ("extract", "names", "dedup", "venues")
+#: What an empty ai.features means (ai.catalog.DEFAULT_TASKS), for the quick preset.
+AI_FEATURES = ("extract", "names", "venues")
+#: Features the quick preset drops: the polish passes, not the extraction.
+QUICK_DROPS = ("names", "normalisation", "lead_summary")
 
 
 def apply_depth(config, depth: str) -> list[str]:
@@ -73,7 +76,11 @@ def apply_depth(config, depth: str) -> list[str]:
         put("runtime.enrichment", False)
         if config.get("ai.enabled", False):
             features = list(config.get("ai.features") or AI_FEATURES)
-            put("ai.features", [f for f in features if f != "names"])
+            kept = [f for f in features if f not in QUICK_DROPS]
+            if kept:
+                put("ai.features", kept)
+            else:                   # an empty list would mean the default set
+                put("ai.enabled", False)
     elif depth == "deep" and config.get("sources.instagram") is not None:
         put("sources.instagram.enabled", True)
     return notes
@@ -150,6 +157,9 @@ def post_estimate(pipeline, expected_new: float) -> tuple[float, float]:
         var += (0.5 * wall) ** 2
     if pipeline.ai.active:
         batches = math.ceil(0.5 * expected_new / max(1, pipeline.ai.batch_size))
+        # Phase 5 passes (industry/size, summaries, duplicate judge): a batch each.
+        extra = sum(1 for task in ("industry", "summary", "dedup") if pipeline.ai.uses(task))
+        batches += extra * math.ceil(expected_new / max(1, pipeline.ai.batch_size))
         mean += batches * 15.0
         var += (batches * 8.0) ** 2
     return mean, math.sqrt(var)
@@ -163,27 +173,80 @@ def _pending_targets(pipeline, enricher) -> float:
         return 0.0
 
 
-def ai_estimate(pipeline, expected_new: float) -> dict[str, Any] | None:
-    """Rough AI calls and cost for this run, when AI is on."""
-    ai = pipeline.ai
-    if not ai.active:
-        return None
-    from ...ai.assistant import AnthropicAPIBackend
+#: Per feature: (items per new organisation, prompt tokens per item, answer tokens
+#: per item, tier). Rough on purpose: the cap, not this, is what bounds spend.
+_AI_ITEMS = {
+    "names": (0.35, 150, 60, "worker"),
+    "extract": (0.10, 1500, 120, "worker"),
+    "venues": (0.30, 250, 60, "worker"),
+    "industry": (1.0, 120, 40, "worker"),
+    "summary": (1.0, 150, 50, "worker"),
+    "dedup": (0.02, 300, 80, "judge"),
+}
+#: One call's overhead (system prompt, envelope) per batch.
+_CALL_TOKENS = 1500
 
-    items = 0.0
-    if ai.uses("names"):
-        items += 0.35 * expected_new
-    if ai.uses("extract"):
-        items += 0.10 * expected_new
-    if pipeline.config.is_venue_run and ai.uses("venues"):
-        items += 0.30 * expected_new
-    calls = math.ceil(items / max(1, ai.batch_size)) if items else 0
-    tokens_in = calls * 1500 + items * 150
-    tokens_out = items * 60
-    rate_in, rate_out = AnthropicAPIBackend.PRICES.get(ai.model, (1.0, 5.0))
-    cost = (tokens_in * rate_in + tokens_out * rate_out) / 1_000_000
-    cap = None if ai.max_cost == float("inf") else ai.max_cost
-    return {"calls": calls, "items": round(items), "model": ai.model,
-            "cost_usd": round(min(cost, cap) if cap is not None else cost, 3),
-            "cap_usd": cap, "backend": ai.backend.name if ai.backend else None,
-            "note": "rough; list-price equivalent per million tokens"}
+
+def ai_estimate(pipeline, expected_new: float) -> dict[str, Any] | None:
+    """Expected AI calls and cost for this run, per feature, when AI is on.
+
+    Priced at the first usable provider's rates (``ai.prices`` / the price
+    table), capped by the run's budget: the cap is a hard stop, so the run
+    can't spend more than it whatever this guesses.
+    """
+    ai = pipeline.ai
+    client = ai.client
+    if not client.active:
+        return None
+    provider = client.first()
+    prices = client.prices
+    batch = max(1, ai.batch_size)
+    by_feature: dict[str, dict[str, Any]] = {}
+    for task, (per_org, tokens_in, tokens_out, tier) in _AI_ITEMS.items():
+        if not client.uses(task) or (task == "venues" and not pipeline.config.is_venue_run):
+            continue
+        items = per_org * expected_new
+        if not items:
+            continue
+        calls = math.ceil(items / batch)
+        model = provider.spec.model_for(tier) or ""
+        cost = prices.cost(provider.spec, model, int(calls * _CALL_TOKENS + items * tokens_in),
+                           int(items * tokens_out))
+        _add(by_feature, task, calls, items, cost)
+    units = [u for u in pipeline.discovery_units() if u.source == "ai_web_search"]
+    if units:
+        searcher = next((p for p in client.chain if p.capabilities.web_search), None)
+        if searcher is not None:
+            model = searcher.spec.model_for("worker") or ""
+            searches = int(pipeline.config.get("sources.ai_web_search.max_searches", 3) or 3)
+            cost = len(units) * prices.cost(searcher.spec, model, 6000, 1500, searches)
+            _add(by_feature, "web_search", len(units), len(units), cost)
+    directory = [u for u in pipeline.discovery_units() if u.source == "ai_directory"]
+    if directory and client.uses("ai_directory"):
+        model = provider.spec.model_for("worker") or ""
+        # First contact with a layout: read 2 pages + propose selectors; later runs: 0.
+        cost = 3 * prices.cost(provider.spec, model, 4000, 1200)
+        _add(by_feature, "ai_directory", 3, 0, cost)
+    total = sum(f["cost_usd"] for f in by_feature.values())
+    calls = sum(f["calls"] for f in by_feature.values())
+    items = sum(f["items"] for f in by_feature.values())
+    cap = None if client.cap == float("inf") else client.cap
+    _, _, priced = prices.rates(provider.spec, provider.spec.model_for("worker") or "")
+    return {"calls": calls, "items": round(items), "model": provider.spec.worker_model,
+            "provider": provider.name, "backend": provider.name,
+            "cost_usd": round(min(total, cap) if cap is not None else total, 3),
+            "uncapped_cost_usd": round(total, 3), "cap_usd": cap,
+            "by_feature": by_feature, "priced": priced,
+            "note": "rough; list prices per million tokens from the price table"
+                    + ("" if priced else " (model not in the table: its provider's default "
+                                         "rate)")}
+
+
+def _add(by_feature: dict, task: str, calls: int, items: float, cost: float) -> None:
+    from ...ai.catalog import feature_of
+
+    feature = feature_of(task)
+    row = by_feature.setdefault(feature, {"calls": 0, "items": 0, "cost_usd": 0.0})
+    row["calls"] += calls
+    row["items"] += round(items)
+    row["cost_usd"] = round(row["cost_usd"] + cost, 4)

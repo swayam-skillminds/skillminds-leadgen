@@ -96,7 +96,9 @@ def test_name_noise_comes_from_the_run_not_the_code():
 # --- packs ---------------------------------------------------------------------------------
 
 def test_every_registered_source_belongs_to_core_or_one_pack():
-    core = {"google_maps", "google_search", "website", "maps_lookup"}
+    # ai_web_search and ai_directory are core too, built only when their AI feature is on.
+    core = {"google_maps", "google_search", "website", "maps_lookup", "ai_web_search",
+            "ai_directory"}
     by_pack = {pack.key: {cls.name for cls in pack.sources} for pack in all_packs()}
     assert by_pack == {
         "in": {"justdial", "sulekha", "indiamart"},
@@ -112,7 +114,7 @@ def test_registry_keeps_the_original_run_order():
     assert list(DISCOVERY_SOURCES) == [
         "google_maps", "google_search", "wedmegood", "weddingwire", "indiamart", "justdial",
         "sulekha", "facebook", "linkedin_serp", "stayvista", "saffronstays", "elivaas",
-        "airbnb", "booking"]
+        "airbnb", "booking", "ai_web_search", "ai_directory"]   # AI sources last (Phase 5)
     assert list(ENRICHMENT_SOURCES) == ["maps_lookup", "website", "instagram"]
 
 

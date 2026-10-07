@@ -10,6 +10,21 @@ from __future__ import annotations
 from typing import Any
 
 NOTES: dict[str, dict[str, Any]] = {
+    "ai_web_search": {
+        "endpoint": "the configured AI provider's web search (Anthropic web_search tool, "
+                    "OpenAI web_search tool, Gemini googleSearch), then each result page",
+        "method": "provider API, then requests (robots.txt honoured)",
+        "terms": "Pages the provider's search returned, fetched once each at the site's "
+                 "own pacing; a lead needs its name and contacts on the fetched page. Only "
+                 "with the web_search_discovery AI feature.",
+        "review": False, "last_verified": "2026-10-07 (provider API docs; no live call)"},
+    "ai_directory": {
+        "endpoint": "approved candidate sources (directories a user approved after "
+                    "source_discovery proposed them)",
+        "method": "requests; self-healing CSS selectors, AI only on a new or changed layout",
+        "terms": "Each candidate's terms are the approver's call (its terms_note); robots.txt "
+                 "honoured; never login walls. Only with the source_discovery AI feature.",
+        "review": True, "last_verified": None},
     "google_maps": {
         "endpoint": "https://www.google.com/maps/search/{query}/@{lat},{lng},{zoom}z",
         "method": "Playwright (headless)",
