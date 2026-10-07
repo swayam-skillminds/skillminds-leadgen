@@ -1,0 +1,965 @@
+{
+ "note": "Per-unit durations and yields of two runs of a 4-source x 5-area x 3-category job; generated once with a seeded log-normal (see Phase 2 report) and committed, so every test sees the same 'recording'.",
+ "units": [
+  {
+   "source": "maps",
+   "area": "Andheri",
+   "category": "Caterers",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 444.3,
+     "new": 15
+    },
+    {
+     "seconds": 345.1,
+     "new": 10
+    }
+   ]
+  },
+  {
+   "source": "serp",
+   "area": "Andheri",
+   "category": "Caterers",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 54.7,
+     "new": 3
+    },
+    {
+     "seconds": 84.4,
+     "new": 2
+    }
+   ]
+  },
+  {
+   "source": "directory",
+   "area": "Andheri",
+   "category": "Caterers",
+   "host": "dir.test",
+   "runs": [
+    {
+     "seconds": 29.8,
+     "new": 2
+    },
+    {
+     "seconds": 13.4,
+     "new": 3
+    }
+   ]
+  },
+  {
+   "source": "platform",
+   "area": "Andheri",
+   "category": "Caterers",
+   "host": "platform.test",
+   "runs": [
+    {
+     "seconds": 97.7,
+     "new": 8
+    },
+    {
+     "seconds": 79.8,
+     "new": 7
+    }
+   ]
+  },
+  {
+   "source": "maps",
+   "area": "Andheri",
+   "category": "Decorators",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 173.1,
+     "new": 6
+    },
+    {
+     "seconds": 199.2,
+     "new": 14
+    }
+   ]
+  },
+  {
+   "source": "serp",
+   "area": "Andheri",
+   "category": "Decorators",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 128.1,
+     "new": 2
+    },
+    {
+     "seconds": 78.9,
+     "new": 0
+    }
+   ]
+  },
+  {
+   "source": "directory",
+   "area": "Andheri",
+   "category": "Decorators",
+   "host": "dir.test",
+   "runs": [
+    {
+     "seconds": 11.9,
+     "new": 3
+    },
+    {
+     "seconds": 28.4,
+     "new": 3
+    }
+   ]
+  },
+  {
+   "source": "platform",
+   "area": "Andheri",
+   "category": "Decorators",
+   "host": "platform.test",
+   "runs": [
+    {
+     "seconds": 90.5,
+     "new": 7
+    },
+    {
+     "seconds": 51.3,
+     "new": 5
+    }
+   ]
+  },
+  {
+   "source": "maps",
+   "area": "Andheri",
+   "category": "Photographers",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 156.7,
+     "new": 25
+    },
+    {
+     "seconds": 499.8,
+     "new": 19
+    }
+   ]
+  },
+  {
+   "source": "serp",
+   "area": "Andheri",
+   "category": "Photographers",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 64.6,
+     "new": 3
+    },
+    {
+     "seconds": 77.5,
+     "new": 2
+    }
+   ]
+  },
+  {
+   "source": "directory",
+   "area": "Andheri",
+   "category": "Photographers",
+   "host": "dir.test",
+   "runs": [
+    {
+     "seconds": 31.3,
+     "new": 2
+    },
+    {
+     "seconds": 12.3,
+     "new": 4
+    }
+   ]
+  },
+  {
+   "source": "platform",
+   "area": "Andheri",
+   "category": "Photographers",
+   "host": "platform.test",
+   "runs": [
+    {
+     "seconds": 84.1,
+     "new": 3
+    },
+    {
+     "seconds": 44.8,
+     "new": 5
+    }
+   ]
+  },
+  {
+   "source": "maps",
+   "area": "Bandra",
+   "category": "Caterers",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 183.7,
+     "new": 4
+    },
+    {
+     "seconds": 282.8,
+     "new": 11
+    }
+   ]
+  },
+  {
+   "source": "serp",
+   "area": "Bandra",
+   "category": "Caterers",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 100.7,
+     "new": 2
+    },
+    {
+     "seconds": 33.5,
+     "new": 2
+    }
+   ]
+  },
+  {
+   "source": "directory",
+   "area": "Bandra",
+   "category": "Caterers",
+   "host": "dir.test",
+   "runs": [
+    {
+     "seconds": 29.7,
+     "new": 1
+    },
+    {
+     "seconds": 24.5,
+     "new": 4
+    }
+   ]
+  },
+  {
+   "source": "platform",
+   "area": "Bandra",
+   "category": "Caterers",
+   "host": "platform.test",
+   "runs": [
+    {
+     "seconds": 54.9,
+     "new": 6
+    },
+    {
+     "seconds": 88.7,
+     "new": 9
+    }
+   ]
+  },
+  {
+   "source": "maps",
+   "area": "Bandra",
+   "category": "Decorators",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 275.0,
+     "new": 11
+    },
+    {
+     "seconds": 465.3,
+     "new": 13
+    }
+   ]
+  },
+  {
+   "source": "serp",
+   "area": "Bandra",
+   "category": "Decorators",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 81.7,
+     "new": 3
+    },
+    {
+     "seconds": 39.0,
+     "new": 2
+    }
+   ]
+  },
+  {
+   "source": "directory",
+   "area": "Bandra",
+   "category": "Decorators",
+   "host": "dir.test",
+   "runs": [
+    {
+     "seconds": 59.4,
+     "new": 5
+    },
+    {
+     "seconds": 36.8,
+     "new": 2
+    }
+   ]
+  },
+  {
+   "source": "platform",
+   "area": "Bandra",
+   "category": "Decorators",
+   "host": "platform.test",
+   "runs": [
+    {
+     "seconds": 59.6,
+     "new": 6
+    },
+    {
+     "seconds": 104.8,
+     "new": 9
+    }
+   ]
+  },
+  {
+   "source": "maps",
+   "area": "Bandra",
+   "category": "Photographers",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 225.3,
+     "new": 16
+    },
+    {
+     "seconds": 160.9,
+     "new": 12
+    }
+   ]
+  },
+  {
+   "source": "serp",
+   "area": "Bandra",
+   "category": "Photographers",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 35.1,
+     "new": 3
+    },
+    {
+     "seconds": 43.9,
+     "new": 3
+    }
+   ]
+  },
+  {
+   "source": "directory",
+   "area": "Bandra",
+   "category": "Photographers",
+   "host": "dir.test",
+   "runs": [
+    {
+     "seconds": 13.2,
+     "new": 2
+    },
+    {
+     "seconds": 41.3,
+     "new": 2
+    }
+   ]
+  },
+  {
+   "source": "platform",
+   "area": "Bandra",
+   "category": "Photographers",
+   "host": "platform.test",
+   "runs": [
+    {
+     "seconds": 62.4,
+     "new": 6
+    },
+    {
+     "seconds": 86.8,
+     "new": 9
+    }
+   ]
+  },
+  {
+   "source": "maps",
+   "area": "Dadar",
+   "category": "Caterers",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 219.4,
+     "new": 8
+    },
+    {
+     "seconds": 281.4,
+     "new": 21
+    }
+   ]
+  },
+  {
+   "source": "serp",
+   "area": "Dadar",
+   "category": "Caterers",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 157.1,
+     "new": 1
+    },
+    {
+     "seconds": 47.1,
+     "new": 3
+    }
+   ]
+  },
+  {
+   "source": "directory",
+   "area": "Dadar",
+   "category": "Caterers",
+   "host": "dir.test",
+   "runs": [
+    {
+     "seconds": 12.1,
+     "new": 1
+    },
+    {
+     "seconds": 18.6,
+     "new": 2
+    }
+   ]
+  },
+  {
+   "source": "platform",
+   "area": "Dadar",
+   "category": "Caterers",
+   "host": "platform.test",
+   "runs": [
+    {
+     "seconds": 114.6,
+     "new": 6
+    },
+    {
+     "seconds": 87.6,
+     "new": 5
+    }
+   ]
+  },
+  {
+   "source": "maps",
+   "area": "Dadar",
+   "category": "Decorators",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 220.5,
+     "new": 17
+    },
+    {
+     "seconds": 154.0,
+     "new": 8
+    }
+   ]
+  },
+  {
+   "source": "serp",
+   "area": "Dadar",
+   "category": "Decorators",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 61.0,
+     "new": 2
+    },
+    {
+     "seconds": 77.4,
+     "new": 3
+    }
+   ]
+  },
+  {
+   "source": "directory",
+   "area": "Dadar",
+   "category": "Decorators",
+   "host": "dir.test",
+   "runs": [
+    {
+     "seconds": 35.0,
+     "new": 4
+    },
+    {
+     "seconds": 40.9,
+     "new": 4
+    }
+   ]
+  },
+  {
+   "source": "platform",
+   "area": "Dadar",
+   "category": "Decorators",
+   "host": "platform.test",
+   "runs": [
+    {
+     "seconds": 105.4,
+     "new": 1
+    },
+    {
+     "seconds": 76.7,
+     "new": 6
+    }
+   ]
+  },
+  {
+   "source": "maps",
+   "area": "Dadar",
+   "category": "Photographers",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 246.6,
+     "new": 8
+    },
+    {
+     "seconds": 285.1,
+     "new": 13
+    }
+   ]
+  },
+  {
+   "source": "serp",
+   "area": "Dadar",
+   "category": "Photographers",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 60.0,
+     "new": 2
+    },
+    {
+     "seconds": 107.6,
+     "new": 1
+    }
+   ]
+  },
+  {
+   "source": "directory",
+   "area": "Dadar",
+   "category": "Photographers",
+   "host": "dir.test",
+   "runs": [
+    {
+     "seconds": 17.5,
+     "new": 0
+    },
+    {
+     "seconds": 25.1,
+     "new": 4
+    }
+   ]
+  },
+  {
+   "source": "platform",
+   "area": "Dadar",
+   "category": "Photographers",
+   "host": "platform.test",
+   "runs": [
+    {
+     "seconds": 78.6,
+     "new": 2
+    },
+    {
+     "seconds": 64.6,
+     "new": 3
+    }
+   ]
+  },
+  {
+   "source": "maps",
+   "area": "Powai",
+   "category": "Caterers",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 360.9,
+     "new": 6
+    },
+    {
+     "seconds": 284.0,
+     "new": 10
+    }
+   ]
+  },
+  {
+   "source": "serp",
+   "area": "Powai",
+   "category": "Caterers",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 148.3,
+     "new": 2
+    },
+    {
+     "seconds": 72.5,
+     "new": 2
+    }
+   ]
+  },
+  {
+   "source": "directory",
+   "area": "Powai",
+   "category": "Caterers",
+   "host": "dir.test",
+   "runs": [
+    {
+     "seconds": 23.3,
+     "new": 2
+    },
+    {
+     "seconds": 60.9,
+     "new": 5
+    }
+   ]
+  },
+  {
+   "source": "platform",
+   "area": "Powai",
+   "category": "Caterers",
+   "host": "platform.test",
+   "runs": [
+    {
+     "seconds": 153.9,
+     "new": 6
+    },
+    {
+     "seconds": 75.5,
+     "new": 5
+    }
+   ]
+  },
+  {
+   "source": "maps",
+   "area": "Powai",
+   "category": "Decorators",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 470.0,
+     "new": 11
+    },
+    {
+     "seconds": 179.5,
+     "new": 11
+    }
+   ]
+  },
+  {
+   "source": "serp",
+   "area": "Powai",
+   "category": "Decorators",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 63.7,
+     "new": 3
+    },
+    {
+     "seconds": 72.7,
+     "new": 2
+    }
+   ]
+  },
+  {
+   "source": "directory",
+   "area": "Powai",
+   "category": "Decorators",
+   "host": "dir.test",
+   "runs": [
+    {
+     "seconds": 57.2,
+     "new": 2
+    },
+    {
+     "seconds": 33.3,
+     "new": 5
+    }
+   ]
+  },
+  {
+   "source": "platform",
+   "area": "Powai",
+   "category": "Decorators",
+   "host": "platform.test",
+   "runs": [
+    {
+     "seconds": 155.1,
+     "new": 7
+    },
+    {
+     "seconds": 62.0,
+     "new": 5
+    }
+   ]
+  },
+  {
+   "source": "maps",
+   "area": "Powai",
+   "category": "Photographers",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 366.0,
+     "new": 14
+    },
+    {
+     "seconds": 216.5,
+     "new": 19
+    }
+   ]
+  },
+  {
+   "source": "serp",
+   "area": "Powai",
+   "category": "Photographers",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 182.7,
+     "new": 3
+    },
+    {
+     "seconds": 68.3,
+     "new": 2
+    }
+   ]
+  },
+  {
+   "source": "directory",
+   "area": "Powai",
+   "category": "Photographers",
+   "host": "dir.test",
+   "runs": [
+    {
+     "seconds": 33.0,
+     "new": 3
+    },
+    {
+     "seconds": 41.9,
+     "new": 3
+    }
+   ]
+  },
+  {
+   "source": "platform",
+   "area": "Powai",
+   "category": "Photographers",
+   "host": "platform.test",
+   "runs": [
+    {
+     "seconds": 141.2,
+     "new": 8
+    },
+    {
+     "seconds": 112.8,
+     "new": 5
+    }
+   ]
+  },
+  {
+   "source": "maps",
+   "area": "Thane",
+   "category": "Caterers",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 169.7,
+     "new": 15
+    },
+    {
+     "seconds": 175.3,
+     "new": 16
+    }
+   ]
+  },
+  {
+   "source": "serp",
+   "area": "Thane",
+   "category": "Caterers",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 74.7,
+     "new": 3
+    },
+    {
+     "seconds": 46.0,
+     "new": 2
+    }
+   ]
+  },
+  {
+   "source": "directory",
+   "area": "Thane",
+   "category": "Caterers",
+   "host": "dir.test",
+   "runs": [
+    {
+     "seconds": 62.2,
+     "new": 3
+    },
+    {
+     "seconds": 6.7,
+     "new": 3
+    }
+   ]
+  },
+  {
+   "source": "platform",
+   "area": "Thane",
+   "category": "Caterers",
+   "host": "platform.test",
+   "runs": [
+    {
+     "seconds": 60.7,
+     "new": 7
+    },
+    {
+     "seconds": 107.8,
+     "new": 3
+    }
+   ]
+  },
+  {
+   "source": "maps",
+   "area": "Thane",
+   "category": "Decorators",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 194.5,
+     "new": 17
+    },
+    {
+     "seconds": 192.4,
+     "new": 9
+    }
+   ]
+  },
+  {
+   "source": "serp",
+   "area": "Thane",
+   "category": "Decorators",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 48.0,
+     "new": 2
+    },
+    {
+     "seconds": 91.3,
+     "new": 2
+    }
+   ]
+  },
+  {
+   "source": "directory",
+   "area": "Thane",
+   "category": "Decorators",
+   "host": "dir.test",
+   "runs": [
+    {
+     "seconds": 43.5,
+     "new": 1
+    },
+    {
+     "seconds": 52.2,
+     "new": 4
+    }
+   ]
+  },
+  {
+   "source": "platform",
+   "area": "Thane",
+   "category": "Decorators",
+   "host": "platform.test",
+   "runs": [
+    {
+     "seconds": 91.3,
+     "new": 5
+    },
+    {
+     "seconds": 76.7,
+     "new": 7
+    }
+   ]
+  },
+  {
+   "source": "maps",
+   "area": "Thane",
+   "category": "Photographers",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 316.3,
+     "new": 13
+    },
+    {
+     "seconds": 104.1,
+     "new": 17
+    }
+   ]
+  },
+  {
+   "source": "serp",
+   "area": "Thane",
+   "category": "Photographers",
+   "host": "google",
+   "runs": [
+    {
+     "seconds": 32.1,
+     "new": 2
+    },
+    {
+     "seconds": 38.5,
+     "new": 2
+    }
+   ]
+  },
+  {
+   "source": "directory",
+   "area": "Thane",
+   "category": "Photographers",
+   "host": "dir.test",
+   "runs": [
+    {
+     "seconds": 38.2,
+     "new": 3
+    },
+    {
+     "seconds": 67.9,
+     "new": 2
+    }
+   ]
+  },
+  {
+   "source": "platform",
+   "area": "Thane",
+   "category": "Photographers",
+   "host": "platform.test",
+   "runs": [
+    {
+     "seconds": 55.0,
+     "new": 4
+    },
+    {
+     "seconds": 65.1,
+     "new": 7
+    }
+   ]
+  }
+ ]
+}

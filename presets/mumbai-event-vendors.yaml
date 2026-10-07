@@ -1,0 +1,117 @@
+# Run config (schema_version 1) -- see leadscraper/config/schema.py.
+# Validate: python -m leadscraper config validate <this file>
+schema_version: 1
+name: Mumbai event vendors
+project: Mumbai event vendors
+description: Imported from the legacy config config.yaml.
+geography:
+  country: IN
+  places: [Mumbai]
+  areas:
+  - name: Andheri
+    aliases: [Andheri East Mumbai, Andheri Mumbai]
+  - name: Andheri West
+    aliases: [Andheri West Mumbai, Lokhandwala Andheri West]
+  - name: Powai
+    aliases: [Powai Mumbai, Hiranandani Powai]
+  - name: Marine Lines & Fort
+    aliases: [Marine Lines Mumbai, Fort Mumbai, Churchgate Mumbai]
+  - name: Ghatkopar
+    aliases: [Ghatkopar East Mumbai, Ghatkopar West Mumbai]
+  - name: Dadar
+    aliases: [Dadar East Mumbai, Dadar West Mumbai]
+  - name: Goregaon
+    aliases: [Goregaon East Mumbai, Goregaon West Mumbai, NESCO Goregaon]
+  - name: WEH / Airport Road Corridor
+    aliases: [Western Express Highway Mumbai, Airport Road Mumbai, Marol Naka Mumbai, Saki Naka Mumbai,
+      Asalpha Mumbai, Jogeshwari Mumbai]
+  - name: Kanjur Marg
+    aliases: [Kanjurmarg East Mumbai, Kanjurmarg West Mumbai]
+  center: [19.076, 72.8777]
+  admin_area: Maharashtra
+  place_noise: [mumbai]
+lead_types:
+  local_business:
+    enabled: true
+    verticals: [events]
+    categories:
+    - name: Venues
+      queries: [banquet hall, wedding venue, event venue, party hall, convention centre]
+      directory_slugs: {wedmegood: wedding-venues, weddingwire: wedding-venues}
+      indiamart: false
+    - name: Caterers
+      queries: [catering services, wedding caterers, event catering]
+      directory_slugs: {wedmegood: wedding-catering, weddingwire: wedding-caterers}
+      indiamart: true
+      indiamart_queries: [catering services, wedding catering services]
+    - name: Decorators
+      queries: [event decorators, wedding decorators, balloon decoration, stage decoration]
+      directory_slugs: {wedmegood: wedding-decorators, weddingwire: wedding-decorators}
+      indiamart: true
+      indiamart_queries: [event decoration services, wedding decoration]
+    - name: Photographers
+      queries: [wedding photographer, event photographer, photography studio]
+      directory_slugs: {wedmegood: wedding-photographers, weddingwire: wedding-photographers}
+      indiamart: false
+    - name: DJs / Sound & Lighting
+      queries: [dj services, sound and lighting, event sound system rental, dj for wedding]
+      directory_slugs: {wedmegood: djs, weddingwire: wedding-dj}
+      indiamart: true
+      indiamart_queries: [sound system on rent, dj light rental, event lighting services]
+    - name: Event Planners
+      queries: [event management company, wedding planner, event planner]
+      directory_slugs: {wedmegood: wedding-planners, weddingwire: wedding-planners}
+      indiamart: true
+      indiamart_queries: [event management services]
+    - name: Florists
+      queries: [florist, flower decoration, wedding flowers]
+      directory_slugs: {wedmegood: null, weddingwire: wedding-florists}
+      indiamart: true
+      indiamart_queries: [decorative flowers, artificial flower decoration]
+    - name: Entertainment / Performers
+      queries: [event entertainment, live band for events, anchor for events, dance troupe]
+      directory_slugs: {wedmegood: wedding-entertainment, weddingwire: wedding-entertainment}
+      indiamart: false
+    sources:
+      google_maps: {enabled: true, min_delay: 2.5, max_delay: 6.0, max_results_per_query: 25, scroll_rounds: 8}
+      google_search: {enabled: true, min_delay: 12.0, max_delay: 28.0, results_per_query: 20, pages: 2,
+        fallback_to_duckduckgo: true}
+      wedmegood: {enabled: true, min_delay: 4.0, max_delay: 9.0, max_pages: 3, serp_fallback: false}
+      weddingwire: {enabled: true, min_delay: 4.0, max_delay: 9.0, max_pages: 3, serp_fallback: false}
+      indiamart: {enabled: true, min_delay: 5.0, max_delay: 11.0, max_pages: 2, serp_fallback: false}
+      justdial: {enabled: true, min_delay: 10.0, max_delay: 22.0, max_pages: 1, serp_fallback: false}
+      sulekha: {enabled: true, min_delay: 8.0, max_delay: 18.0, max_pages: 1, serp_fallback: false}
+      facebook: {enabled: true, min_delay: 6.0, max_delay: 14.0}
+      linkedin_serp: {enabled: true, min_delay: 15.0, max_delay: 30.0}
+      instagram: {enabled: true, min_delay: 8.0, max_delay: 20.0, max_profiles_per_run: 150}
+      website: {enabled: true, min_delay: 1.5, max_delay: 4.0, max_pages_per_site: 4}
+    scoring:
+      weights: {maps_popularity: 0.4, source_corroboration: 0.25, directory_signal: 0.2, contact_completeness: 0.15}
+      reviews_saturation: 400.0
+      sources_saturation: 4.0
+      wedmegood_featured_bonus: 0.25
+      completeness_fields: {phones: 0.3, emails: 0.25, website: 0.15, address: 0.1, instagram: 0.08, whatsapp: 0.05,
+        facebook: 0.04, linkedin: 0.03}
+scoring:
+  weights: {fit: 1.0, intent: 0.0, reach: 0.0}
+ai:
+  enabled: true
+  provider: claude_cli
+  features: [extract, names]
+  budget_usd: 5.0
+  allow_billed_api: false
+  model: claude-haiku-4-5
+  judge_model: claude-opus-5
+  batch_size: 12
+  failure_limit: 4
+  timeout: 180
+output:
+  excel: true
+  csv: true
+  json: false
+  google_sheets: true
+  sheets: {spreadsheet_id: 1AIPg53vGw4iKzrvon0M3tlD8ILkJGGgnoAuxN83lLpA, spreadsheet_name: Mumbai Event
+      Industry Leads, worksheet_name: Leads, failures_worksheet_name: Skipped, share_with: ''}
+runtime: {max_retries: 3, backoff_base: 2.0, request_timeout: 30, headless: true, db_path: data/leads.sqlite3,
+  failure_log: logs/failures.jsonl, run_log: logs/run.log, csv_export: data/leads.csv, ai_cache: data/ai_cache.sqlite3,
+  sheets_flush_every: 25, enrich_workers: 8, browser_contexts: 3, skip_enriched: true}

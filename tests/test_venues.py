@@ -12,14 +12,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest
 
-from leadscraper import normalize
+from leadscraper.core import normalize
 from leadscraper.ai import AIAssistant
 from leadscraper.config import Config
-from leadscraper.models import Lead
-from leadscraper.scoring import Scorer
-from leadscraper.sheets import column_letter
-from leadscraper.store import DedupOptions, LeadStore
-from leadscraper.venues import (
+from leadscraper.core.lead import Lead
+from leadscraper.leadtypes.local_business.scoring import Scorer
+from leadscraper.export.sheets import column_letter
+from leadscraper.db.store import DedupOptions, LeadStore
+from leadscraper.packs.hospitality.venues import (
     Brand, VenueSettings, annotate, classify_venue_type, compute_tier, coords_from_maps_url,
     detect_event_friendly, detect_pet_friendly, extract_amenities, nightly_prices,
     own_plate_prices, parse_bedrooms, parse_event_capacity, parse_guests,
@@ -403,7 +403,7 @@ def test_search_terms_use_the_configured_city(tmp_path):
 
 
 def test_mumbai_prompts_are_byte_identical_and_venue_prompts_are_not(tmp_path):
-    mumbai = AIAssistant(Config({"ai": {"enabled": False}}))
+    mumbai = AIAssistant(Config({"city": "Mumbai", "country": "IN", "ai": {"enabled": False}}))
     assert mumbai._prompt(AIAssistant.NAME_SYSTEM) == AIAssistant.NAME_SYSTEM
     nashik = AIAssistant(venue_config(tmp_path))
     prompt = nashik._prompt(AIAssistant.NAME_SYSTEM)

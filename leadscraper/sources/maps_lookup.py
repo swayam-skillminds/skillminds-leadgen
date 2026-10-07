@@ -23,14 +23,14 @@ import re
 
 from rapidfuzz import fuzz
 
-from ..models import Lead
-from ..normalize import (
+from ..core.lead import Lead
+from ..core.normalize import (
     clean_text, extract_instagram, extract_phones, is_vendor_website, name_key, normalize_url,
     parse_rating,
     parse_review_count,
 )
-from ..ratelimit import BlockedError
-from ..venues import coords_from_maps_url, haversine_km
+from ..net.ratelimit import BlockedError
+from ..core.geo import coords_from_maps_url, haversine_km
 from .base import Enricher
 from .google_maps import GoogleMapsSource
 
@@ -42,26 +42,44 @@ _GENERIC = {
     "villa", "villas", "luxury", "private", "pool", "with", "and", "the", "in", "near", "by",
     "bhk", "bedroom", "bedrooms", "home", "homestay", "stay", "stays", "farmhouse", "farm",
     "house", "cottage", "resort", "view", "views", "lake", "mountain", "valley", "hill",
-    "hills", "retreat", "garden", "family", "premium", "entire", "room", "rooms", "nashik",
-    "igatpuri", "trimbakeshwar", "trimbak", "bungalow", "independent", "beautiful", "cozy",
+    "hills", "retreat", "garden", "family", "premium", "entire", "room", "rooms",
+    "bungalow", "independent", "beautiful", "cozy",
     "w", "a", "of", "for", "your", "our", "new", "best", "jacuzzi", "lawn", "infinity",
-    "hotel", "suite", "suites", "dam", "side", "maharashtra", "india", "at",
+    "hotel", "suite", "suites", "dam", "side", "at",
 }
 
 
-def distinctive_words(name: str) -> list[str]:
+def run_stop_words(config) -> frozenset[str]:
+    """`_GENERIC` plus the run's own place names and name noise.
+
+    The city, state and country ("nashik", "maharashtra", "india") and the
+    words the run already treats as name noise ("igatpuri", "trimbak", ...)
+    say where a venue is, not which one it is.
+    """
+    region, extra = config.name_noise()
+    words = set(_GENERIC)
+    for phrase in (*region, *extra, *config.place_words):
+        words.update(re.findall(r"[a-z0-9]+", str(phrase).lower()))
+    return frozenset(words)
+
+
+def distinctive_words(name: str, stop_words: frozenset[str] | set[str] | None = None) -> list[str]:
+    stop = _GENERIC if stop_words is None else stop_words
     return [w for w in re.findall(r"[a-z0-9]+", (name or "").lower())
-            if w not in _GENERIC and not w.isdigit() and not re.fullmatch(r"\d+(?:bhk|br|bdr)", w)
+            if w not in stop and not w.isdigit() and not re.fullmatch(r"\d+(?:bhk|br|bdr)", w)
             and len(w) > 1]
 
 
 class MapsLookupEnricher(Enricher):
     name = "maps_lookup"
+    priority = 10
+    fills = frozenset({"phones", "website", "address", "ratings"})
 
     def __init__(self, ctx):
         super().__init__(ctx)
         self.maps = GoogleMapsSource(ctx)
         self.min_similarity = float(self.cfg.get("min_name_similarity", 85))
+        self.stop_words = run_stop_words(ctx.config)
         self.max_km = float(self.cfg.get("max_distance_km", 20))
         self.candidates = int(self.cfg.get("candidates", 3))
         self._blocked = False
@@ -81,7 +99,7 @@ class MapsLookupEnricher(Enricher):
                 continue
             if store.is_enriched(lead_id, self.name):
                 continue
-            if not distinctive_words(lead.business_name):
+            if not distinctive_words(lead.business_name, self.stop_words):
                 # Nothing to search on that would single this venue out.
                 continue
             out.append((lead_id, lead))
@@ -148,8 +166,8 @@ class MapsLookupEnricher(Enricher):
         similarity = max(fuzz.token_set_ratio(ours, theirs), fuzz.token_sort_ratio(ours, theirs))
         # The words that make the name THIS venue must be in the Maps name too:
         # "Saukhya Farm" must not match "Saukhya Residency" on similarity alone.
-        needed = distinctive_words(lead.business_name)
-        found = set(distinctive_words(maps_name))
+        needed = distinctive_words(lead.business_name, self.stop_words)
+        found = set(distinctive_words(maps_name, self.stop_words))
         if similarity < self.min_similarity or not all(w in found for w in needed):
             return f"name '{maps_name}' ({similarity:.0f})"
 
@@ -157,7 +175,7 @@ class MapsLookupEnricher(Enricher):
         if not self._same_place(lead, data, point):
             return f"'{maps_name}' is elsewhere"
 
-        phones = extract_phones(data.get("phone") or "")
+        phones = extract_phones(data.get("phone") or "", self.region)
         link = normalize_url(data.get("website")) if data.get("website") else None
         # A managed villa's Maps "website" is its StayVista / SaffronStays page:
         # a listing, not a way to reach the venue.

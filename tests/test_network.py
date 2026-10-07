@@ -15,9 +15,9 @@ import pytest
 import requests
 from urllib3.exceptions import MaxRetryError, NameResolutionError
 
-from leadscraper import http as http_mod
-from leadscraper.http import DeadDomainError, HttpClient
-from leadscraper.ratelimit import PermanentError, RateLimiter
+from leadscraper.net import http as http_mod
+from leadscraper.net.http import DeadDomainError, HttpClient
+from leadscraper.net.ratelimit import PermanentError, RateLimiter
 
 LIVE_ADDRINFO = [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", 0))]
 LOOPBACK_ADDRINFO = [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.0", 0))]

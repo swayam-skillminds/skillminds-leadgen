@@ -1,14 +1,17 @@
-# Mumbai Event-Industry Lead Scraper
+# Skillminds Lead Generation
 
-Finds venues and event vendors across nine Mumbai localities, merges what it
-learns from ten free sources into one deduplicated record per business, ranks
-them by a legitimacy score, and writes the running table to a Google Sheet.
+Finds businesses by category and place, in any country, from free public
+sources. It merges what it learns into one deduplicated record per
+organisation in a **project**, ranks them with explainable scores, and
+exports the table to CSV and a Google Sheet.
 
 **No paid APIs.** Everything here uses public pages, a headless browser, and
 the free tier of the Google Sheets API.
 
-A second run profile, **Nashik high-end venues**, lives in `config.nashik.yaml`
-— see [Nashik venue run](#nashik-venue-run) below.
+It started as a Mumbai event-vendor scraper. That run and the **Nashik
+high-end venues** run now ship as presets (`presets/`); see
+[Nashik venue run](#nashik-venue-run) below. Being built into a backend
+application: see `APP-BUILD-PROMPT.md` and `docs/phase-1-report.md`.
 
 ---
 
@@ -89,11 +92,17 @@ the path that actually works.
 ## Usage
 
 ```bash
-# See the plan and a time estimate without making any requests
+# See the plan and a time estimate (p50-p90) without making any requests
 python run.py --dry-run
 
 # Start small — one locality, one category, one source
 python run.py --locality Andheri --category Caterers --source google_maps
+
+# The best leads obtainable in a time budget (here 15 minutes, a fast skim)
+python run.py --time-budget 15 --depth quick
+
+# A ~2-minute sample (one area x one category x top sources) + full-run estimate
+python run.py --preview
 
 # A full run (long: budget 12+ hours at the default polite delays)
 python run.py
@@ -111,9 +120,99 @@ python run.py --export-only
 Useful flags: `--no-sheets`, `--no-headless` (watch the browser), `--fast`
 (halves every delay — raises your odds of being blocked), `-v` for debug logs.
 
-Run it repeatedly. The SQLite database persists between runs, so a second run
-merges into the first rather than duplicating, and `Ctrl-C` flushes everything
-gathered so far before exiting.
+Run it repeatedly. The project's records persist between runs, so a second run
+merges into the first rather than duplicating, and enrichment skips leads it
+already went through (`--force-enrich` redoes them).
+
+`Ctrl-C` **pauses**: the work in flight finishes, everything is flushed, and the
+run can be resumed from where it stopped (`python run.py --resume <run id>`).
+A second `Ctrl-C` stops at once; at most the units in flight are redone on resume.
+
+### Time budget, depth, estimates
+
+- `--time-budget MINUTES` returns the best leads obtainable in that window, not
+  an arbitrary prefix: units with the best expected new-leads-per-second go
+  first, a unit that can't finish in the time left is never started, and the
+  last 90 s are reserved for flushing, scoring and export. The end-of-run report
+  lists every skipped unit and why.
+- `--depth quick | balanced | deep` scales per-unit thoroughness (results per
+  query, scroll rounds, pages; quick also skips enrichment and AI name polish;
+  deep adds Instagram). `balanced` is the config's own settings.
+- Estimates (`--dry-run`, `python -m leadscraper estimate --config …`) give
+  units per source, a p50–p90 range, what fits the budget and what would be
+  skipped, and the AI cost. They start from built-in priors and learn from
+  every unit you run, so they sharpen with use.
+- Units run in parallel across hosts (`--workers`, default 3), never two on the
+  same host; enrichment fetches up to 8 vendor sites at once
+  (`runtime.enrich_workers`).
+
+### Background runs: the worker
+
+```bash
+python run.py --config my-run.yaml --queue          # queue it
+python -m leadscraper worker                        # executes queued runs (leave it running)
+python -m leadscraper runs list                     # history and status
+python -m leadscraper runs events 42 --follow       # live progress (ETA, units, failures)
+python -m leadscraper runs pause 42                 # graceful; then: runs resume 42
+python -m leadscraper runs cancel 42
+python -m leadscraper worker stop                   # graceful; works on every OS
+```
+
+A worker that is killed (or a machine that reboots) loses at most the units
+that were in flight: restart the worker and it resumes the run from its last
+checkpoint.
+
+While a run is active the machine is kept awake (`wakepy`; set
+`LEADSCRAPER_KEEP_AWAKE=0` or `worker --no-keep-awake` to turn it off). The
+honest limits:
+
+- A sleeping machine runs nothing. The lock only prevents *idle* sleep.
+- On macOS, closing the lid on battery forces sleep regardless; so does
+  choosing Sleep from the menu, on every OS.
+- If the machine sleeps anyway, the run notices on wake, re-validates its
+  browsers and connections, doesn't count the gap against its time budget,
+  and carries on.
+- For truly unattended runs use server mode (an always-on machine; Phase 3).
+
+### Projects, presets and run configs
+
+A **run config** (`leadscraper/config/schema.py`, JSON Schema via
+`python -m leadscraper config schema`) says where to look, what to look for,
+which sources to use and how to score. A country, a place and one category
+are enough:
+
+```yaml
+schema_version: 1
+name: Austin dentists
+project: austin-dentists
+geography: {country: US, places: [Austin]}
+lead_types:
+  local_business:
+    categories: [{name: Dentists}]
+```
+
+```bash
+python run.py --config my-run.yaml --dry-run          # plan; no requests
+python run.py --config presets/nashik-venues.yaml     # a shipped preset
+python -m leadscraper presets                         # list presets
+python -m leadscraper config validate my-run.yaml
+python -m leadscraper db info                         # projects and sizes
+```
+
+Each run merges into its **project**, which lives in the application database:
+SQLite under your user data directory (WAL mode), or Postgres via
+`LEADSCRAPER_DB_URL`. `LEADSCRAPER_DATA_DIR` moves the whole data directory.
+The country drives phone parsing, currency, locale and which **packs** of
+sources apply. For example, Justdial, Sulekha and IndiaMART run only in India.
+
+The old `config.yaml` / `config.nashik.yaml` still work: they run as the
+presets they import to. Their old SQLite stores are imported once, from a
+copy (the original is never modified):
+
+```bash
+python -m leadscraper migrate-legacy --config config.yaml          # -> "Mumbai event vendors"
+python -m leadscraper migrate-legacy --config config.nashik.yaml   # -> "Nashik venues"
+```
 
 ---
 
@@ -154,10 +253,20 @@ In priority order:
    "Sharma Caterers Pvt. Ltd." matches "Sharma Catering Services". Applied only
    when the phones don't contradict and the locality agrees.
 4. **Fuzzy name ≥ 92%** within the same locality.
+5. **Venue runs:** pins within 250 m with loosely similar names.
+6. **Same website domain** (registrable domain; social sites, link-in-bio
+   pages, site builders' shared hosts, marketplaces and free email domains
+   never count). Applied when phones don't contradict and names are similar.
+   Off for venue runs, where an operator's villas share its domain.
+
+A **registry ID** (company number, GSTIN), when a source provides one, comes
+before all of these. The rules live in `leadscraper/core/identity.py`.
 
 On a match, fields are **merged into the existing row**: lists are unioned,
 empty fields filled, and conflicting ratings resolved in favour of whichever
-is backed by more reviews. Nothing is overwritten with a blank.
+is backed by more reviews. Nothing is overwritten with a blank. When
+enrichment (or an AI rename) gives a record a phone, place or name that
+another record has, the two are **consolidated** into one.
 
 ---
 
@@ -205,10 +314,14 @@ where they are because Justdial, Instagram and Google SERP all block quickly.
 python -m pytest tests/ -q
 ```
 
-Covers normalisation (phones, emails, names, ratings), merge semantics, the
-dedup rules, scoring behaviour, the pipeline's failure handling, and the AI
-layer (budget cap, caching, malformed output, backend failure). The pipeline
-and AI tests use stubs, so the whole suite runs offline in about a second.
+Covers normalisation (phones, emails, names, ratings) in several countries,
+merge semantics and the dedup rules, scoring, the run-config schema and the
+legacy importer, the database (migrations, Postgres DDL, provenance, the
+legacy-store import), packs, the pipeline's failure handling, and the AI
+layer. Everything runs offline against stubs and fixtures in about 12 seconds.
+`tests/characterisation/` replays the frozen Mumbai and Nashik stores through
+the migration and checks that every score, tier, row and dedup decision is
+unchanged.
 
 ---
 
@@ -343,7 +456,9 @@ python run.py --config config.nashik.yaml --export-only  # re-tier / re-sort, no
 
 Venues only, across Nashik district plus Bhandardara, Saputara and Jawhar /
 Mokhada. Everything that holds state is separate from the Mumbai run: its own
-database (`data/nashik/`), logs (`logs/nashik/`), and **two tabs of its own —
+project ("Nashik venues"; the pre-Phase-1 store in `data/nashik/` is imported
+once with `migrate-legacy`), CSV and logs (`data/nashik/`, `logs/nashik/`),
+and **two tabs of its own —
 `Nashik Venues` and `Nashik Skipped` — in the same spreadsheet**. The Mumbai
 `Leads` / `Skipped` tabs are never written.
 

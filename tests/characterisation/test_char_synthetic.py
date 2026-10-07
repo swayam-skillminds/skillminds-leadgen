@@ -19,9 +19,9 @@ import pytest
 from snapshot_lib import (
     TIMESTAMP_COLUMNS, apply_name_noise, check_golden, comparable_row, load_config, open_store,
 )
-from leadscraper.export import write_csv
-from leadscraper.models import Lead
-from leadscraper.scoring import Scorer
+from leadscraper.export.csv_writer import write_csv
+from leadscraper.core.lead import Lead
+from leadscraper.leadtypes.local_business.scoring import Scorer
 
 pytestmark = pytest.mark.characterisation
 

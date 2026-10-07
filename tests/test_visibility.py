@@ -16,9 +16,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest
 
-from leadscraper import pipeline as pipeline_mod
-from leadscraper.http import HttpClient
-from leadscraper.pipeline import Pipeline
+from leadscraper.leadtypes.local_business import pipeline as pipeline_mod
+from leadscraper.net.http import HttpClient
+from leadscraper.leadtypes.local_business.pipeline import Pipeline
 from leadscraper.sources.base import Enricher, Source
 from test_pipeline import make_config
 

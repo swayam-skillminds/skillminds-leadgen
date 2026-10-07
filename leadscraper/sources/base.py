@@ -7,14 +7,17 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Iterator
 
-from ..browser import BrowserSession
+from ..net.browser import BrowserSession
 from ..config import Category, Config, Locality
-from ..failures import FailureLog
-from ..http import HttpClient
-from ..models import Lead
-from ..ratelimit import RateLimiter
+from ..engine.failures import FailureLog
+from ..net.http import HttpClient
+from ..core.lead import Lead
+from ..net.ratelimit import RateLimiter
 
 log = logging.getLogger(__name__)
+
+#: Search-engine hosts shared by every SERP-based source.
+SERP_HOSTS = frozenset({"www.google.com", "duckduckgo.com"})
 
 
 @dataclass
@@ -47,6 +50,16 @@ class Source(ABC):
     #:   "run"      -- once per run, locality=None and category=None (a sitemap
     #:                 lists the whole region in one go)
     scope: str = "combo"
+    #: Run order within a unit of work; lower runs first (see sources/registry.py).
+    priority: int = 100
+    #: Key of the pack this class belongs to, set by the pack; None for core.
+    pack: str | None = None
+    #: Narrows where this class applies, on top of its pack's own reach.
+    applicable_countries: frozenset[str] | None = None
+    #: The run-config fields (``fields.include``) this class exists to fill.
+    #: When a run asks for none of them it is not built (A.8). None: it finds
+    #: businesses, so every run needs it.
+    fills: frozenset[str] | None = None
 
     def __init__(self, ctx: SourceContext):
         self.ctx = ctx
@@ -58,6 +71,39 @@ class Source(ABC):
     def rate_keys(self) -> list[str]:
         """Hostnames this source hits, for rate-limiter configuration."""
         return [self.name]
+
+    def hosts(self) -> list[str]:
+        """Hosts a unit of this source mainly hits. Units sharing a host never
+        run at the same time (the engine parallelises across hosts only).
+
+        Defaults to the rate-limiter keys. Directories list Google and
+        DuckDuckGo among those for their opt-in ``site:`` fallback; they drop
+        them here unless the fallback is on, so a directory unit can run
+        beside a Maps unit.
+        """
+        keys = self.rate_keys()
+        if self.cfg.get("serp_fallback", False) or not self.serp_is_fallback:
+            return keys
+        return [k for k in keys if k not in SERP_HOSTS] or keys
+
+    #: True when the SERP hosts among the rate keys are only an opt-in fallback.
+    serp_is_fallback: bool = False
+
+    # --- the run's country, as every parser needs it ---------------------
+
+    @property
+    def region(self) -> str:
+        """Phone-parsing region: the run's country."""
+        return self.ctx.config.country
+
+    @property
+    def currency(self) -> str:
+        return self.ctx.config.currency
+
+    @property
+    def place_words(self) -> list[str]:
+        """Country / region words that never distinguish one business from another."""
+        return self.ctx.config.place_words
 
     @abstractmethod
     def discover(self, locality: Locality | None, category: Category | None) -> Iterator[Lead]:
@@ -92,10 +138,10 @@ class Source(ABC):
         Shahapur and Bhiwandi farm stays that carry no coordinates at all.
         """
         radius = self.ctx.config.region_radius_km
-        if radius and lead.latitude is not None and lead.longitude is not None:
-            from ..venues import haversine_km
+        center = self.ctx.config.geo_center
+        if radius and center and lead.latitude is not None and lead.longitude is not None:
+            from ..core.geo import haversine_km
 
-            center = self.ctx.config.geo_center
             return haversine_km(lead.latitude, lead.longitude, *center) > radius
         excluded = [str(k).lower() for k in (self.ctx.config.get("geo.exclude_keywords") or [])]
         if not excluded:
@@ -121,6 +167,16 @@ class Enricher(ABC):
     """Base class for per-lead enrichment (website contact pages, Instagram)."""
 
     name: str = "enricher"
+    #: Run order within a unit of work; lower runs first (see sources/registry.py).
+    priority: int = 100
+    #: Key of the pack this class belongs to, set by the pack; None for core.
+    pack: str | None = None
+    #: Narrows where this class applies, on top of its pack's own reach.
+    applicable_countries: frozenset[str] | None = None
+    #: The run-config fields (``fields.include``) this class exists to fill.
+    #: When a run asks for none of them it is not built (A.8). None: it finds
+    #: businesses, so every run needs it.
+    fills: frozenset[str] | None = None
 
     def __init__(self, ctx: SourceContext):
         self.ctx = ctx
@@ -132,6 +188,15 @@ class Enricher(ABC):
     def rate_keys(self) -> list[str]:
         return [self.name]
 
+    @property
+    def region(self) -> str:
+        """Phone-parsing region: the run's country."""
+        return self.ctx.config.country
+
+    @property
+    def currency(self) -> str:
+        return self.ctx.config.currency
+
     def targets(self, store) -> list[tuple[int, Lead]]:
         """Which stored leads this enricher wants, as (lead_id, Lead) pairs.
 
@@ -140,6 +205,11 @@ class Enricher(ABC):
         names.
         """
         return store.all_with_ids()
+
+    def target_host(self, lead: Lead) -> str:
+        """The host enriching `lead` hits. Leads on different hosts are enriched
+        concurrently; leads on one host (every Instagram profile) take turns."""
+        return self.name
 
     @abstractmethod
     def enrich(self, lead: Lead) -> Lead | None:

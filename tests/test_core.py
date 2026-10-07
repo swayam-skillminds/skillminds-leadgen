@@ -8,15 +8,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest
 
-from leadscraper.models import Lead
-from leadscraper.normalize import (
+from leadscraper.core.lead import Lead
+from leadscraper.core.normalize import (
     extract_emails, extract_facebook, extract_instagram, extract_linkedin,
     extract_phones, extract_whatsapp, is_vendor_website, looks_like_seo_title,
     maps_place_key, name_key,
     normalize_phone, normalize_url, parse_rating, parse_review_count,
 )
-from leadscraper.scoring import Scorer
-from leadscraper.store import LeadStore
+from leadscraper.leadtypes.local_business.scoring import Scorer
+from leadscraper.db.store import LeadStore
 
 
 # --- phones ----------------------------------------------------------------
@@ -29,24 +29,24 @@ from leadscraper.store import LeadStore
     ("022 2345 6789", "+912223456789"),
 ])
 def test_normalize_phone_variants(raw, expected):
-    assert normalize_phone(raw) == expected
+    assert normalize_phone(raw, "IN") == expected
 
 
 @pytest.mark.parametrize("raw", ["", "abc", "12", "0000000000", "99"])
 def test_normalize_phone_rejects_junk(raw):
-    assert normalize_phone(raw) is None
+    assert normalize_phone(raw, "IN") is None
 
 
 def test_extract_phones_from_contact_blob():
     text = "Call us: +91 98200 12345 or 022-23456789. Fax 1234"
-    found = extract_phones(text)
+    found = extract_phones(text, "IN")
     assert "+919820012345" in found
     assert "+912223456789" in found
 
 
 def test_extract_phones_dedupes_same_number_written_differently():
     text = "Ring 9820012345 or +91 98200 12345"
-    assert extract_phones(text).count("+919820012345") == 1
+    assert extract_phones(text, "IN").count("+919820012345") == 1
 
 
 # --- emails ----------------------------------------------------------------
@@ -235,21 +235,9 @@ def test_a_place_learned_through_a_merge_is_indexed(store):
     assert store.count() == 1
 
 
-def test_place_index_is_backfilled_for_a_store_written_before_it(tmp_path):
-    path = tmp_path / "old.sqlite3"
-    old = LeadStore(path)
-    old.upsert(Lead(business_name="Aayoni Banquet", locality="Andheri", gmaps_url=PLACE_URL))
-    old._conn.execute("DELETE FROM place_index")       # as written by the old code
-    old.close()
-
-    reopened = LeadStore(path)
-    try:
-        _, action, _ = reopened.upsert(Lead(business_name="Aayoni Banquet", locality="Powai",
-                                            gmaps_url=PLACE_URL))
-        assert action in ("merged", "unchanged")
-        assert reopened.count() == 1
-    finally:
-        reopened.close()
+# test_place_index_is_backfilled_for_a_store_written_before_it moved to test_db.py
+# (test_place_is_indexed_for_a_store_written_before_place_index): stores in the
+# original format are now imported, not opened.
 
 
 def test_upsert_rejects_nameless_lead(store):
@@ -345,7 +333,7 @@ def test_merge_rejects_an_seo_title_that_starts_with_our_name():
 
 def test_shared_host_keeps_the_most_cautious_delay():
     """A source with short delays must not undo another's long ones."""
-    from leadscraper.ratelimit import RateLimiter
+    from leadscraper.net.ratelimit import RateLimiter
     limiter = RateLimiter()
     limiter.configure("www.google.com", 12.0, 28.0)   # google_search
     limiter.configure("www.google.com", 4.0, 9.0)     # a directory's fallback
@@ -353,7 +341,7 @@ def test_shared_host_keeps_the_most_cautious_delay():
 
 
 def test_rate_limiter_penalty_escalates_and_decays():
-    from leadscraper.ratelimit import RateLimiter
+    from leadscraper.net.ratelimit import RateLimiter
     limiter = RateLimiter()
     limiter.penalise("x", 30.0)
     limiter.penalise("x", 30.0)
@@ -372,6 +360,10 @@ def test_title_parser_extracts_a_real_business_name():
     ) == "Studio Fine Arts"
 
 
+#: What a Mumbai run passes as its place words (country, state, city).
+MUMBAI_PLACE_WORDS = ("india", "maharashtra", "mumbai")
+
+
 def test_title_parser_rejects_pure_keyword_pages():
     """These are category pages, not businesses -- they must be rejected."""
     from leadscraper.sources.google_search import business_name_from_title
@@ -381,7 +373,20 @@ def test_title_parser_rejects_pure_keyword_pages():
                  "Corporate & Event Photographer Mumbai",
                  "Verified Corporate event Photographer Mumbai",
                  "Best Wedding Photographers in Powai - Contact Number"]:
-        assert business_name_from_title(junk, "Powai", terms) == "", junk
+        assert business_name_from_title(junk, "Powai", terms, MUMBAI_PLACE_WORDS) == "", junk
+
+
+def test_title_parser_place_words_come_from_the_run_not_the_code():
+    """Nothing about Mumbai is built in: another city's run brings its own words."""
+    from leadscraper.sources.google_search import business_name_from_title
+    terms = ("dentist",)
+    assert business_name_from_title("Dentist in Austin", "Austin", terms,
+                                    ("usa", "united states", "texas")) == ""
+    assert business_name_from_title("Dentist Texas", "Austin", terms,
+                                    ("usa", "united states", "texas")) == ""
+    # Without the run's place words "Mumbai" is just a word.
+    assert business_name_from_title("Event Photographer Mumbai", "Powai",
+                                    ("event photographer",)) == "Event Photographer Mumbai"
 
 
 def test_title_parser_keeps_a_brand_that_contains_category_words():
@@ -412,3 +417,18 @@ def test_serp_breaker_resets_on_any_success():
     health.record_success()
     health.record_failure()
     assert health.disabled is False, "a success must clear the failure streak"
+
+
+@pytest.mark.parametrize("title,head", [
+    ("Royal Caterers | Best Caterers in Mumbai", "Royal Caterers"),
+    ("ayaan photography |Best Wedding Photographers in Mumbai", "ayaan photography"),
+    ("Ram Caterers (South Indian Caterers in Mumbai | Veg Caterers", "Ram Caterers"),
+    ("1517 Greek House By Kaz Stays | 3 BHK Villa in Igatpuri", "1517 Greek House By Kaz Stays"),
+    ("Homefood Kravings - Best Tiffin Service in Andheri", "Homefood Kravings"),
+    ("Galaxy Caterers - St. Arnold's Lawns", None),        # a real name, not stuffed
+    ("Royal Caterers", None),
+])
+def test_seo_title_head_only_cuts(title, head):
+    from leadscraper.core.normalize import seo_title_head
+
+    assert seo_title_head(title) == head
