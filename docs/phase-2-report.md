@@ -5,7 +5,7 @@ Date: 2026-10-06 · Branch: `phase-2/engine` · Plan: `APP-BUILD-PROMPT.md` Sect
 **Result:** Phase 2 is complete.
 - The suite is green: 429 passed, 8 skipped (it was 381 passed, 6 skipped).
 - The two new skips are opt-in Postgres tests. They pass against a real PostgreSQL 16.2 server, and so does the whole engine suite (section 12).
-- The five acceptance checks pass offline (section 10). One part can't be confirmed from here: "in CI on all three OSes". The workflow is committed but has never run, because nothing was pushed.
+- The five acceptance checks pass (section 10), and so does the suite in CI on macOS, Windows and Linux (run 37563766674, after the merge to `main`).
 - The characterisation baselines are untouched (`git diff c21c737 -- tests/characterisation/golden` is empty).
 
 **About the branch.** `main` holds Phase 0 only; Phase 1 was never merged into it. A branch cut from `main` would have dropped Phase 1, which this phase builds on, so `phase-2/engine` starts from the tip of `phase-1/core-refactor`, which contains `main`. Merging is yours to do (section 15).
@@ -182,7 +182,7 @@ They're numbered per run, persisted in a new `run_events` table by a writer thre
 | A 15-minute budget run finishes within budget + tail and its report lists the skipped units | **Pass** | `test_a_15_minute_budget_run_finishes_within_budget_plus_tail`: a fake clock, one unit overrunning its estimate; elapsed ≤ 990 s; every skipped unit in `stats.engine`, `work_units` and the printed report. `test_a_unit_that_overruns_into_the_tail_is_cut` and `test_local_business_runs_through_the_engine_within_a_budget` (the real pipeline, Maps first) cover the rest. |
 | Estimator p50 within ±35% of actual on a recorded-fixture run | **Pass: +5.1%** | `test_estimator_p50_is_within_35_percent_on_a_recorded_fixture_run`. See the note below. |
 | Pause / resume / cancel are tested | **Pass** | `test_pause_then_resume_runs_every_unit_exactly_once` (through the database and the heartbeat), `test_cancel_finishes_in_flight_work_then_flushes`, the Ctrl-C tests, the worker hand-over, `test_a_cancel_recorded_while_the_run_finishes_wins`. |
-| Keep-awake is acquired and released correctly (mocked) on all three OSes in CI | **Pass offline; CI not yet run** | `test_keep_awake_is_held_while_runs_are_active_and_released_after[Darwin, Windows, Linux]`: wakepy is mocked, so the test checks reference counting, held during the run, and released after. Also `…_that_fails_never_fails_the_run` and `…_toggle_is_respected`. `.github/workflows/tests.yml` runs the suite on macOS, Windows and Linux (3.12; plus 3.14 on Linux) but hasn't run: nothing was pushed. |
+| Keep-awake is acquired and released correctly (mocked) on all three OSes in CI | **Pass, in CI** | `test_keep_awake_is_held_while_runs_are_active_and_released_after[Darwin, Windows, Linux]`: wakepy is mocked, so the test checks reference counting, held during the run, and released after. Also `…_that_fails_never_fails_the_run` and `…_toggle_is_respected`. `.github/workflows/tests.yml` runs the suite on macOS, Windows and Linux (3.12; plus 3.14 on Linux); all four jobs passed (run 37563766674). |
 
 **Note on the "recorded fixture".** No real per-unit timings exist yet (see section 3), so `tests/fixtures/recorded_units.json` is a fixed recording of a 4-source × 5-area × 3-category job:
 - generated once with a seeded log-normal and committed;
@@ -254,11 +254,11 @@ None of these touch the characterisation results.
 
 ## 15. Open issues, carried forward
 
-- **Merge Phase 1 (and this branch) into `main`.** `main` still lacks Phase 1. This branch contains it, so merging `phase-2/engine` brings both.
+- **Merged:** Phases 1 and 2 are on `main` (merge commit "Merge Phases 1 and 2"), and every branch is pushed.
 - **No live run yet.** Nothing in Phase 2 made a network request:
   - the priors, the real speed-ups, the block rate under parallel discovery and keep-awake over a long run are unmeasured;
   - a first real run (e.g. `python run.py --config presets/nashik-venues.yaml --time-budget 30`) would populate `unit_stats` and show how far the cold estimate was off.
-- **CI has never run.** The workflow is committed, not pushed. Windows has never executed this suite; the two Ctrl-C tests skip there (`os.kill(SIGINT)` isn't Ctrl-C on Windows).
+- **CI passes on all three OSes**, Windows included. The two Ctrl-C tests skip on Windows (`os.kill(SIGINT)` isn't Ctrl-C there), so Windows Ctrl-C/Ctrl-Break is covered only by the shared stop-path tests. GitHub warns that `actions/checkout@v4` and `setup-python@v5` target the deprecated Node 20; bump them when v5/v6 are current.
 - **Maps beside SERP (decided):** new configs pace Maps on its own key (section 4). Watch the block rate on the first live runs; setting `rate_key: www.google.com` on `google_maps` restores the shared pacing.
 - **Abandoned units.** A unit abandoned after the grace period keeps its daemon thread until the process exits. Its writes, if it ever wakes, are contained, but the unit re-runs on resume.
 - **From Phase 1, still open and still yours:**
