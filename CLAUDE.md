@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A failure-tolerant Python lead generator. It discovers businesses from free public sources (Playwright + `requests`, no paid APIs), merges them into one deduplicated **organisation** per business inside a **project**, scores and ranks them, and exports to XLSX / CSV / JSON / Google Sheets. It is a backend application with an HTTP API, a CLI and a worker over one services layer (`APP-BUILD-PROMPT.md`; Phases 0–3 are done, see `docs/phase-*-report.md`; the API is documented in `docs/api.md`, deployment in `docs/deploy.md`). Despite the directory name it does **not** use LangGraph; orchestration is plain Python (`engine/runner.py` drives each lead type's session unit by unit; `docs/engine.md`).
+A failure-tolerant Python lead generator. It discovers businesses from free public sources (Playwright + `requests`, no paid APIs), merges them into one deduplicated **organisation** per business inside a **project**, scores and ranks them, and exports to XLSX / CSV / JSON / Google Sheets. It is a backend application with an HTTP API, a CLI and a worker over one services layer (`APP-BUILD-PROMPT.md`; Phases 0–4 are done, see `docs/phase-*-report.md`; the API is documented in `docs/api.md`, deployment in `docs/deploy.md`). Despite the directory name it does **not** use LangGraph; orchestration is plain Python (`engine/runner.py` drives each lead type's session unit by unit; `docs/engine.md`).
 
 Runs are described by **run configs** (`config/schema.py`, `schema_version: 1`). Two presets reproduce the original runs:
 - `presets/mumbai-event-vendors.yaml` (Mumbai event vendors), imported from `config.yaml`.
@@ -65,9 +65,13 @@ python -m leadscraper db info | db upgrade [--sql --db URL]
 python -m leadscraper config validate FILE | config schema | config import-legacy SRC -o OUT
 python -m leadscraper presets
 
-# Formatted Excel workbooks from the local CSVs (Phase 4 replaces these)
-.venv/bin/python tools/build_leads_workbook.py
-.venv/bin/python tools/build_nashik_workbook.py
+# The workbook (Phase 4): every run writes it; regenerate from the DB at any time
+python run.py --export-only                                   # the project's workbook (+ legacy CSV if output.csv)
+python -m leadscraper export --run ID --format xlsx           # one run's Overview + Records
+.venv/bin/python tools/build_sample_workbooks.py              # docs/samples/ from fixtures (never real leads)
+WORKBOOK_UPDATE=1 python -m pytest tests/test_workbook.py -q  # accept an INTENDED workbook change (then rebuild samples)
+# Superseded 4-tab books from the local CSVs (kept as the style reference)
+.venv/bin/python tools/build_leads_workbook.py | tools/build_nashik_workbook.py
 ```
 
 Full runs take many hours at the default polite delays (`--dry-run` estimates them). Don't run several copies in parallel, and don't lower delays casually (Justdial, Instagram and Google SERP block quickly). Tests isolate app state via `LEADSCRAPER_DATA_DIR` (`tests/conftest.py`); when you smoke-test by hand, point it at a scratch directory so you never touch the real per-user database.
@@ -92,7 +96,10 @@ packs/       in/ (justdial, sulekha, indiamart), events/ (wedmegood, weddingwire
              hospitality/ (stay platforms + venues.py), social/ (facebook, instagram, linkedin_serp)
 sources/     base.py (Source/Enricher contract), registry.py, core sources: google_maps, google_search, website, maps_lookup
 net/         http.py (+ get_once), browser.py, ratelimit.py, robots.py (robots.txt, RFC 9309)
-export/      csv_writer.py, sheets.py            ai/  assistant.py (Phase 5 splits it)
+export/      excel.py (Overview + Records), table.py (ExportTable, CSV, JSON), columns.py (column model),
+             records.py (score/place/sort), summary.py (Overview numbers), outputs.py (run files),
+             csv_writer.py + sheets.py (the run's legacy-layout CSV and Sheet)
+ai/          assistant.py (Phase 5 splits it)
 services/    the one core under API, CLI and worker (Phase 3): projects, configs (versioned), runs
              (queue/control/rerun/diff/events), organizations (filter/provenance/erase), exports, suppression,
              schedules, notifications, settings, retention, health, catalog (+ source health), schema_hints,
@@ -107,7 +114,8 @@ cli/         python -m leadscraper …; run.py is a shim over cli/run_cmd.py; ap
 - for venue runs, AI venue classification and the brand roll-up;
 - name polish (AI, or the rule fallback when AI is off);
 - enrichment, then AI fallback extraction;
-- finalise: rescore, write the CSV, sync Sheets, report.
+- finalise: rescore, write the legacy CSV (`output.csv`), sync Sheets, report;
+- then `runner.execute` writes the workbook / JSON from the database (`output.excel`, on by default; `output.json`) and records them in `runs.files`.
 
 Output is flushed periodically and on exit. Ctrl-C pauses (in-flight units finish, then flush; resumable); a second Ctrl-C stops at once.
 
@@ -127,11 +135,19 @@ Output is flushed periodically and on exit. Ctrl-C pauses (in-flight units finis
 - The API never scrapes. `POST /runs` and `POST /preview` insert queued runs. The worker executes them in its own database (`RunRequest.engine`), geocodes API-queued configs, fires due schedules, purges by retention hourly, and stores a preview's sample on the run (`stats.preview`). `runner.execute` notifies the workspace's targets after a run; a failure there is logged, never raised.
 - A dry run (estimate) drops the project it created if nothing was written (`LeadStore.drop_project_if_unused`).
 - Run membership: `run_organizations.action` is new / updated / **unchanged** (found again with nothing to add; upgraded to updated by a later write). It powers `GET /runs/{id}/diff` and `scope=new` exports.
-- Exports are rebuilt from the DB with the run's own config and the shared order `db.store.sort_leads`. Suppression lists named in `filters.suppression_lists`, plus the workspace's "Erasure requests" list, apply to exports and to the run's CSV/Sheet (exclude only; flags are API/CLI-export columns).
+- Exports are rebuilt from the DB with the run's own config. Suppression lists named in `filters.suppression_lists`, plus the workspace's "Erasure requests" list, apply to exports and to the run's CSV/Sheet (exclude only; flags are API/CLI-export columns).
 - Secrets never reach the DB, logs, bundles or exports: `core/secrets.py` (env `LEADSCRAPER_SECRET_<NAME>` → `/run/secrets` / `LEADSCRAPER_SECRETS_DIR` → keyring). Configs refer to secrets by name (`*_secret_name`); `scrub()` removes secret-looking keys from exported documents.
 - Saved configs are compared in their stored (JSON) form: YAML integer keys become strings in the JSON column (venue price bands; `venues.py` reads them with `float(k)`).
 - Workspace settings (`keep_awake`, `robots_txt`, `retention`) fill what a run config leaves unset (`services/settings.apply_to_config`). robots.txt is honoured by the website enricher (`net/robots.py`), on by default.
 - SQLite migrations run with foreign keys off (`db/engine.init_schema`): batch mode rebuilds tables, and a DROP with FKs on cascade-deleted child rows.
+
+**Workbook and exports (Phase 4, `docs/api.md` "Exports"):**
+- One `ExportTable` (`services/exports.build_table`: records with contacts, people, signals, inferred contacts, run change, plus the run's facts) is rendered three ways: the workbook (`export/excel.py`), CSV and JSON (`export/table.py`). They share the column model (`export/columns.py`), so a value never differs between formats.
+- The workbook has exactly two tabs. **Records**: one row per organisation, in the reference style of `tools/build_nashik_workbook.py` (Arial, navy header, banding, score colour scales, frozen header + score + name, autofilter, short clickable links). **Overview**: run summary, results (totals, new/updated, breakdowns, top 10), data quality, column legend; an empty export says why. Overview figures are values computed from the DB, never formulas.
+- Columns: core ones (name, lead types, place/locality, published contacts, maps, address, decision-makers, Fit/Intent/Reach + reasons, top signal, provenance, Org ID) plus each lead type's own `columns()` / `column_values()`, placed by `ColumnSpec.placement`. `fields.include` drops columns; optional columns (lead-type ones, socials, signals, people, inferred) drop when empty everywhere. Inferred contacts only ever appear in `Inferred Email (unverified)`.
+- Text cells are literal strings (never formulas), phones/IDs text (`@`), links http(s) only. The Sheets sync writes `RAW` (USER_ENTERED turned "+91 …" into `#ERROR!`).
+- Rows follow `output.sort` (`auto`: score desc, grouped by place when several places; `score`, `place`, `area`, `category`, `legacy` = `db.store.sort_leads`). The run's legacy CSV and its Sheet keep `Lead.row_for` and `sort_leads`, which the characterisation suite pins.
+- Golden structure files: `tests/golden/workbooks/*.json` (fixtures in `tests/workbook_fixtures.py`, fictional data, two fixture lead types `demo_hiring`/`demo_funding`). `docs/samples/*.xlsx` must match them (`tools/build_sample_workbooks.py`); `.gitignore` excepts only that folder.
 
 **Core invariant: nothing crashes the run.**
 - `Source.discover` yields partial `Lead`s and must never raise; problems go to `ctx.failures` with a reason code (`login_wall`, `phone_hidden`, `no_businesses_parsed`, …). That's the JSONL, `skipped.csv`, the Sheet's Skipped tab and, inside a run, the `failures` table.
@@ -180,6 +196,7 @@ Keep this property when you add or modify sources.
   - which vertical packs apply;
   - the venue logic in `packs/hospitality/venues.py`: price parsing, venue-type classification, brand detection, tiers Operator / Luxury / Premium / Standard / Unverified.
 - Scoring (`leadtypes/local_business/scoring.py`) is the legacy component score as **fit**, plus contact completeness as **reach**, combined with the run's `scoring.weights` (`core/scoring.py`). Legacy presets weight fit only, so rankings are unchanged.
+- In exports, every lead type an organisation belongs to scores it (`export/records.score_records`). Weights renormalise per run (a component some lead type scores counts 0 where missing), and reach is core (`core.scoring.contact_reach`) for organisations no reach-scoring lead type found. With `local_business` alone this equals the legacy score.
 - Weights and `venue_tiers` changes only need `--export-only`.
 
 **AI layer** (`ai/assistant.py`):
@@ -193,7 +210,7 @@ Keep this property when you add or modify sources.
 - `Config` (`config/legacy.py`) is the compiled runtime view: dotted `get`/`set` (CLI flags mutate it and are recorded in the run's snapshot).
 - Localities (areas) have aliases, keywords and centres; categories have queries and directory slugs. Anything added there flows through every source.
 - A run config leaving out `lead_types.local_business.sources` gets every applicable source at polite defaults (`DEFAULT_SOURCES`).
-- The schema holds the whole A.8 shape, but `filters`, `icp` and `output.excel/json` aren't acted on yet (`depth` and `time_budget_minutes` are, since Phase 2). `RunConfig.unapplied()` names each one a config sets; the runner logs them and `config validate` prints them. Drop a note there when you implement one.
+- The schema holds the whole A.8 shape, but `filters.exclude_chains` and `icp` aren't acted on yet (`depth` and `time_budget_minutes` are, since Phase 2; `output.*` and `filters.min_rating`/`must_have` (exports only) since Phase 4). `RunConfig.unapplied()` names each one a config sets; the runner logs them and `config validate` prints them. Drop a note there when you implement one.
 
 ## Credentials
 
@@ -213,6 +230,6 @@ The Google service-account key is looked up as: `GOOGLE_SERVICE_ACCOUNT_JSON` (i
 
 ## Scope notes
 
-`APP-BUILD-PROMPT.md` is the build plan (Section A context + Phases 0–8, one phase per session; Phases 0–3 are done). It supersedes `REBUILD-PROMPT.md`, of which only Parts 0, 2 and 3 still apply. Follow them only when asked to do that work.
+`APP-BUILD-PROMPT.md` is the build plan (Section A context + Phases 0–8, one phase per session; Phases 0–4 are done). It supersedes `REBUILD-PROMPT.md`, of which only Parts 0, 2 and 3 still apply. Follow them only when asked to do that work.
 
 The hard boundary applies to the project generally: this tool **generates** leads and must not grow outreach/CRM features (contact status, email sending, sequences, and so on). LinkedIn is never logged into or crawled; only search-indexed public profile URLs are recorded. `docs/sources.md` lists every external endpoint with its terms note and last live check; several inherited sources are flagged for review against A.2.4.

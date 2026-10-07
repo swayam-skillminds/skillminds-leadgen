@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """Build the Nashik venue workbook, styled like Pheraas-Leads-Formatted.xlsx.
 
+Superseded (Phase 4): every run now writes its workbook from the database
+(Overview + Records, ``leadscraper/export/excel.py``), and ``python run.py
+--export-only`` or ``python -m leadscraper export`` regenerates it at any time.
+This script stays as the reference for the visual language and for its
+editorial extras (zones), and it still reads the legacy CSV.
+
 Same reason as tools/build_leads_workbook.py for reading the local CSV rather
 than the Google Sheets export: the sync writes USER_ENTERED, so Sheets parses
 "+91 93200 22422" as a formula and the export's Phones column is all #ERROR!.

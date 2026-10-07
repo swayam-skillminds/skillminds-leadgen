@@ -99,11 +99,14 @@ A saved config's `id` is its first version's row id, stable across versions and 
 | `GET` | `/runs/{id}/export.{csv\|json\|xlsx}?scope=run\|new\|project&against=` | Regenerated from the database at any time; re-exporting never re-scrapes. The default scope is `run`, or `new` for a scheduled "only new" run. |
 | `POST` | `/runs/{id}/export/google-sheets` | Writes to the run's configured sheet through the service-account flow. 409 with the reason when Sheets is unavailable. |
 
-**Exports.**
-- CSV keeps the run profile's legacy column layout (vendors or venues).
-- JSON adds organisation ids and scores.
-- XLSX has the two required tabs, **Overview** (run summary) and **Records**: phones are written as text, links are clickable, the header is frozen and filtered. Phase 4 replaces the styling with the formatted deliverable.
-- Suppression lists attached to the config, plus Erasure requests, apply to all three. `exclude` drops rows; `flag` adds a `Suppressed` column naming the lists.
+**Exports** (Phase 4). All three formats render one table through one column model (`export/columns.py`), so a value never differs between them:
+- **XLSX** is the deliverable workbook, exactly two tabs. **Records**: one row per organisation; core columns (score, name, lead types, place, locality, published contacts, maps link, address, decision-makers), each lead type's own columns, Fit / Intent / Reach and score reasons, the top signal, provenance (sources, first and last seen, the run's change), the organisation id. **Overview**: run summary, results (totals, new vs updated, breakdowns, top 10), data quality (coverage per field) and the column legend; for an empty export, why it is empty. Phones are text, links clickable (http(s) only), text never a formula. Samples: `docs/samples/`.
+- **CSV** has the Records headers and values (dates in the run's local time, formula-looking text quoted with `'`).
+- **JSON** has `columns` (key, header, kind, group), `records` (`id`, `values` keyed by column key, `scores` with reasons and per-lead-type contributions, `signals`, `people`, `inferred_contacts`, `change`, `suppressed`) and `summary` (the Overview's numbers).
+- Columns the run's `fields.include` leaves out are absent; optional columns (socials, signals, decision-makers, a lead type's columns) appear only when some record has a value.
+- Rows follow `output.sort` (default `auto`: score, highest first, grouped by place when the run covers several places).
+- Suppression lists attached to the config, plus Erasure requests, apply to all three. `exclude` drops rows; `flag` fills a `Suppressed` column naming the lists. `filters.min_rating` and `filters.must_have` leave organisations out too (the Overview counts them).
+- The run's own CSV (`output.csv`, the legacy layout) and its Google Sheet keep the layout the Mumbai and Nashik tabs use.
 
 ### Suppression, schedules, notifications
 

@@ -22,7 +22,8 @@ class LeadType(ABC):
     def sources(self, cfg, geo=None) -> dict[str, list[str]]   # {"discovery": [...], "enrichment": [...]}
     def plan(self, cfg, geo=None, depth="balanced") -> list[WorkUnit]
     def signal_specs(self) -> list[SignalSpec]   # type, title, default strength, half-life
-    def columns(self, cfg) -> list[ColumnSpec]   # Records-tab columns, with kind and fields toggle
+    def columns(self, cfg) -> list[ColumnSpec]   # its own Records columns (not the core ones)
+    def column_values(self, org, cfg) -> dict    # Phase 4: values for them, keyed by ColumnSpec.key
     def score(self, org, signals, cfg) -> ScoreParts   # fit / intent / reach, 0..1, with reasons
     def run(self, context) -> LeadTypeResult     # execute its units; must not raise
     # Phase 2: how the engine drives it
@@ -47,7 +48,7 @@ class LeadTypeSession(ABC):                    # one lead type's share of one ru
 |---|---|
 | `WorkUnit` | `lead_type`, `source`, `area`, `category`, `scope` (`run` / `locality` / `combo`). `key` is a stable id. |
 | `SignalSpec` | `type`, `title`, `default_strength` (0..1), `half_life_days` (None = never ages), `description` |
-| `ColumnSpec` | `key`, `header`, `kind` (`text` `number` `url` `phone` `email` `date` `score` `flag` `money`), `description`, `field` (the `fields.include` toggle, or None) |
+| `ColumnSpec` | `key`, `header`, `kind` (`text` `number` `url` `phone` `email` `date` `score` `flag` `money`), `description` (the Overview legend), `field` (the `fields.include` toggle, or None), `placement` (`front` after the name, `body` before the contacts, `contacts` after them, `tail` after scores and signals), `width`, `number_format`, `breakdown` (the Overview counts by it), `palette` (value → font colour), `link_label` |
 | `ScoreParts` (`core/scoring.py`) | `lead_type`, `fit`, `intent`, `reach` (each 0..1 or None = "not my concern"), `reasons` |
 | `LeadTypeResult` | `units_planned`, `units_done`, `new`, `merged`, `failed`, `error`, `stats` |
 | `UnitOutcome` | `found`, `new`, `merged`, `status` (`done` / `partial` / `failed`), `error` |
@@ -155,9 +156,39 @@ lead_types:
   suite pins every score). Reasons look like "Google rating 4.6 from 310
   reviews", "listed by 3 sources (google_maps, justdial, wedmegood)" and
   "reachable by phone, email, website".
-- **Columns:** the vendor layout (`Lead.to_row`) or the venue layout
-  (`Lead.to_venue_row`). Prices are in the run's currency. Phase 4 assembles
-  the Records tab from these `ColumnSpec`s.
+- **Columns** (`local_business/columns.py`): only its own. A vendor run
+  contributes Category (front, a breakdown) and the Maps ratings, plus the
+  WedMeGood columns when the events vertical is on. A venue run contributes the
+  venue: Tier (front, coloured per tier, a breakdown), Venue Type, Record Type,
+  Managed By, distance, prices in the run's currency, size, flags, ratings,
+  booking contact, listing and platforms, then amenities, tier reasons and the
+  rest at the tail. Values come from the legacy row (`Lead.row_for`), so the
+  workbook and the run's CSV never disagree. The legacy run CSV keeps the full
+  `Lead.to_row` / `Lead.to_venue_row` layouts.
+
+## The export (Phase 4)
+
+`export/columns.py` assembles the Records columns for each export: the core
+columns every lead type shares (score, name, lead types, place, locality,
+published contacts, the maps link, address, decision-makers; Fit, Intent,
+Reach and reasons; the top signal; provenance), and each lead type's own
+columns where its `placement` puts them. Keys are namespaced
+(`local_business.tier`); a header two lead types share gets the lead type's
+title appended. Optional columns -- every lead type's, socials, signals,
+decision-makers, inferred contacts -- are left out of an export where no
+record has a value.
+
+Scoring in an export: every lead type an organisation belongs to scores it,
+and `combine` folds the parts with the run's weights. Weights renormalise per
+*run*: a component some lead type in the export scores counts 0 for an
+organisation without it. Reach is a property of every organisation, so an
+organisation no reach-scoring lead type found gets the core
+`contact_reach` (the same channel weights `local_business` uses by
+default). With only `local_business`, this is exactly its legacy score.
+
+Signals in an export: the strongest unexpired one leads ("Top Signal"); a
+signal's strength halves every `half_life_days` of age. `ScoreParts` from a
+lead type's `score()` get only that lead type's signals.
 
 ## Adding a lead type
 
@@ -169,5 +200,9 @@ lead_types:
 3. Put its sources in `leadscraper/sources/` if they apply everywhere, or in
    a pack if they only make sense in some countries or verticals.
 4. Write through `context.store`; the store tags rows with the key.
-5. Tests: fixture-based tests for its sources, signals, columns and score,
+5. Give it `columns()` and `column_values()` for its own facts (not names,
+   contacts or scores: those are core), with `description`s for the legend.
+6. Tests: fixture-based tests for its sources, signals, columns and score,
    plus an isolation test like `test_enabling_or_disabling_a_lead_type_leaves_local_business_unchanged`.
+   To see it in the workbook, add it to a scenario in `tests/workbook_fixtures.py`
+   (the `demo_hiring` / `demo_funding` fixture lead types show the shape).

@@ -12,8 +12,9 @@ config ──► depth preset (each lead type's apply_depth)
        ──► work_units rows, all "pending"                            (the checkpoint)
        ──► discovery: scheduler + dispatcher                          (unit_started / unit_finished / progress)
        ──► post-discovery: enrichment, AI                             (unless stopping)
-       ──► finalise: rescore, CSV, Sheets                             (always)
+       ──► finalise: rescore, legacy CSV (output.csv), Sheets        (always)
        ──► runs.status + stats.engine summary                         ("run_finished")
+       ──► workbook / JSON from the database (output.excel/json)      (runs.files)
 ```
 
 ## Work units and the scheduler (`scheduler.py`, `costs.py`)
@@ -157,9 +158,14 @@ queued ──► running ──► completed | failed
 - **The worker's database.** A worker executes runs in its own database
   (`RunRequest.engine`), whatever a config says. A run queued through the API
   without a map centre is geocoded before it starts. After every run,
-  `runner.execute` tells the workspace's notification targets how it ended
-  (`services/notifications`); a failing target is recorded on itself, never on
-  the run.
+  `runner.execute` writes the run's files from the database -- the workbook
+  (`output.excel`, on by default) and JSON (`output.json`) -- next to the CSV or
+  in `runtime.export_dir`, and records them in `runs.files`
+  (`services/exports.write_run_outputs`; Phase 4). A paused, cancelled or failed
+  run gets one too (what it has); a preview or dry run does not. Then it tells
+  the workspace's notification targets how it ended (`services/notifications`).
+  A failure in either is logged, never raised: a failing target is recorded on
+  itself, never on the run.
 - **CLI runs** execute in-process (`cli:<host>:<pid>`). Ctrl-C pauses; a second
   Ctrl-C stops at once. A crashed CLI run is not taken over by a worker; resume
   it with `runs resume` (it goes to a worker) or `run --resume` (in-process).

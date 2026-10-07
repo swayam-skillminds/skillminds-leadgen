@@ -1,6 +1,12 @@
 #!/usr/bin/env python3
 """Build a presentation-grade Excel workbook from the scraper's CSV export.
 
+Superseded (Phase 4): every run now writes its workbook from the database
+(Overview + Records, ``leadscraper/export/excel.py``), and ``python run.py
+--export-only`` or ``python -m leadscraper export`` regenerates it at any time.
+This script stays as the reference for the visual language and for its
+editorial extras (zones), and it still reads the legacy CSV.
+
 Why this exists
 ---------------
 The Google Sheets sync writes with ``value_input_option="USER_ENTERED"``

@@ -175,6 +175,22 @@ honest limits:
 - For truly unattended runs use server mode (an always-on machine): `docker compose up -d`
   (`docs/deploy.md`).
 
+### The workbook
+
+Every run ends with a workbook built from the database: exactly two tabs.
+
+- **Records**: one row per organisation, best first, grouped by place when the run covers several places (`output.sort`), with clickable links, phones as text, and colour scales on the scores.
+- **Overview**: what the run did, what it found (new vs updated, breakdowns, the top 10), how complete the data is, and what each column means. When nothing was found, it says why.
+
+It lands next to the run's CSV (`runtime.csv_export`'s folder) as `<project>-run<N>.xlsx`. You can regenerate it at any time without re-scraping:
+
+```bash
+python run.py --export-only                          # the whole project's workbook
+python -m leadscraper export --run 43                # one run's (also --format csv|json)
+```
+
+`output.excel` / `output.json` / `output.csv` in a run config choose the files (the presets keep the legacy CSV). Samples built from fictional data are in `docs/samples/`.
+
 ### The HTTP API, server mode, history
 
 ```bash
