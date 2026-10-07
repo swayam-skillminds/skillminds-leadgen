@@ -63,9 +63,12 @@ events and in the CLI report.
 `run_across_hosts` runs units on `runtime.discovery_workers` threads (default
 3). A unit's hosts come from its source (`Source.hosts()`, which defaults to
 its rate-limiter keys), and two units that share a host never run at the same
-time. Maps, Google Search, Facebook and LinkedIn discovery all go through
+time. Google Search, Facebook and LinkedIn discovery all go through
 google.com, so they take turns; Justdial, Sulekha, IndiaMART, WedMeGood,
-WeddingWire and the stay platforms run beside them. The dispatcher is the
+WeddingWire and the stay platforms run beside them. Maps paces on its own key
+(`rate_key: google_maps`) in new configs and the Nashik preset, so it runs
+beside the SERP sources too (Google throttles the two separately); the Mumbai
+preset keeps its original shared google.com pacing. The dispatcher is the
 calling thread: checkpoints, events and CSV/Sheets flushes happen there, in
 order. With one worker everything runs inline, in plan order.
 

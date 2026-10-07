@@ -3,7 +3,7 @@
 Date: 2026-10-06 · Branch: `phase-2/engine` · Plan: `APP-BUILD-PROMPT.md` Section A + Phase 2
 
 **Result:** Phase 2 is complete.
-- The suite is green: 428 passed, 8 skipped (it was 381 passed, 6 skipped).
+- The suite is green: 429 passed, 8 skipped (it was 381 passed, 6 skipped).
 - The two new skips are opt-in Postgres tests. They pass against a real PostgreSQL 16.2 server, and so does the whole engine suite (section 12).
 - The five acceptance checks pass offline (section 10). One part can't be confirmed from here: "in CI on all three OSes". The workflow is committed but has never run, because nothing was pushed.
 - The characterisation baselines are untouched (`git diff c21c737 -- tests/characterisation/golden` is empty).
@@ -100,10 +100,17 @@ The Mumbai full-run figure is a sanity check, not a validation: the original run
 | Enrichment, 120 simulated sites (3 pages each, delays scaled 1/100) | 15.6 s | 2.05 s (8 workers) / 1.08 s (16) | **7.6×** / 14.4× |
 | Discovery, Mumbai preset (estimator model) | 15.4 h | 12.5 h (3 workers) | **1.23×** |
 | Discovery, Nashik preset (estimator model) | 5.4 h | 3.0 h | **1.82×** |
+| Discovery, a new config with default sources ("dentists in Austin", 5 areas × 2 categories) | 42 min | 22.5 min | **1.87×** (after the follow-up below; 1.0× before) |
 
 **Against Part 2's targets (≥10× enrichment, ≥3× discovery), both fall short, for stated reasons:**
 - **Enrichment is bounded by the worker count.** At the default of 8 the gain is 7.6×. `runtime.enrich_workers: 16` gives ~14×. Re-runs also skip what's already enriched, which is where the "5 hours" mostly went.
-- **Discovery is bounded by one host.** In the Mumbai preset, Maps, Google Search, Facebook and LinkedIn discovery all go through google.com. "Never within one host" serialises them, and they are most of the work. The Nashik preset paces Maps on its own key (`rate_key: google_maps`), hence its 1.8×. Going further means running Maps and SERP against Google at the same time, which is a block-rate decision (section 15).
+- **Discovery is bounded by one host.** In the Mumbai preset, Maps, Google Search, Facebook and LinkedIn discovery all go through google.com. "Never within one host" serialises them, and they are most of the work. The Nashik preset paces Maps on its own key (`rate_key: google_maps`), hence its 1.8×.
+- **Follow-up (decided after this report's first draft): Maps paces on its own key by default.**
+  - New configs that leave `sources` out now get `rate_key: google_maps` (`DEFAULT_SOURCES`), as the Nashik preset already had.
+  - The Nashik run is the evidence: Google throttles Maps and web search separately, and a shared key let a SERP CAPTCHA penalty slow every Maps page.
+  - Maps then runs beside the SERP sources, each with its own polite delays; for the Austin example above that's 1.87×.
+  - The Mumbai preset sets its sources explicitly, so its original pacing is unchanged; adding `rate_key: google_maps` to its `google_maps` section would opt it in.
+  - Pinned by `test_maps_paces_apart_from_search_by_default_but_the_legacy_preset_is_unchanged`.
 
 ## 5. Worker and lifecycle (2.5)
 
@@ -252,7 +259,7 @@ None of these touch the characterisation results.
   - the priors, the real speed-ups, the block rate under parallel discovery and keep-awake over a long run are unmeasured;
   - a first real run (e.g. `python run.py --config presets/nashik-venues.yaml --time-budget 30`) would populate `unit_stats` and show how far the cold estimate was off.
 - **CI has never run.** The workflow is committed, not pushed. Windows has never executed this suite; the two Ctrl-C tests skip there (`os.kill(SIGINT)` isn't Ctrl-C on Windows).
-- **Your call: let Maps and SERP run concurrently?** Treating Maps' pacing key as its own host (as the Nashik preset already does) would let Maps run beside Google Search. That raises discovery throughput on Google-heavy configs, at some risk of CAPTCHAs.
+- **Maps beside SERP (decided):** new configs pace Maps on its own key (section 4). Watch the block rate on the first live runs; setting `rate_key: www.google.com` on `google_maps` restores the shared pacing.
 - **Abandoned units.** A unit abandoned after the grace period keeps its daemon thread until the process exits. Its writes, if it ever wakes, are contained, but the unit re-runs on resume.
 - **From Phase 1, still open and still yours:**
   - the terms-of-service review of the inherited sources;

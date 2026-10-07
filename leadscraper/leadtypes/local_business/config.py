@@ -133,8 +133,11 @@ class LocalBusinessConfig(BaseModel):
 #: Delays are the ones the original runs settled on; sources whose pack does
 #: not apply to the run's country / verticals are skipped regardless.
 DEFAULT_SOURCES: dict[str, dict[str, Any]] = {
+    # Maps paces on its own key, as the Nashik run does: Google throttles Maps
+    # and web search separately, and a shared key let a SERP CAPTCHA penalty
+    # slow every Maps page. It also lets Maps run beside the SERP sources.
     "google_maps": {"enabled": True, "min_delay": 2.5, "max_delay": 6.0,
-                    "max_results_per_query": 20, "scroll_rounds": 6},
+                    "max_results_per_query": 20, "scroll_rounds": 6, "rate_key": "google_maps"},
     "google_search": {"enabled": True, "min_delay": 12.0, "max_delay": 28.0,
                       "results_per_query": 20, "pages": 1, "fallback_to_duckduckgo": True},
     "website": {"enabled": True, "min_delay": 1.5, "max_delay": 4.0, "max_pages_per_site": 4},

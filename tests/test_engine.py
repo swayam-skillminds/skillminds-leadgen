@@ -1086,3 +1086,23 @@ def test_ai_spend_is_reported_after_the_ai_passes(clocked_sources, monkeypatch):
                        discovery_workers=1, sinks=[seen.append]))
     spend = [e for e in seen if e.type == "ai_spend"]
     assert spend and spend[0].cost_usd == 0.0123 and spend[0].calls == 2
+
+
+def test_maps_paces_apart_from_search_by_default_but_the_legacy_preset_is_unchanged():
+    from leadscraper.leadtypes.local_business.session import LocalBusinessSession
+    from leadscraper.engine.runner import LeadTypeContext
+
+    def maps_hosts(config):
+        session = LocalBusinessSession(LeadTypeContext(config=config, store=None, run_id=None,
+                                                       dry_run=True))
+        unit = next(u for u in session.units() if u.source == "google_maps")
+        hosts = session.hosts(unit)
+        session.close()
+        return hosts
+
+    fresh = compiled({"name": "Austin", "project": "austin-hosts",
+                      "geography": {"country": "US", "places": ["Austin"],
+                                    "center": [30.27, -97.74], "admin_area": "Texas"},
+                      "lead_types": {"local_business": {"categories": [{"name": "Dentists"}]}}})
+    assert "www.google.com" not in maps_hosts(fresh)              # runs beside SERP sources
+    assert "www.google.com" in maps_hosts(Config.load(MUMBAI))     # the original pacing

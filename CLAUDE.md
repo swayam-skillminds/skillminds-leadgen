@@ -96,7 +96,7 @@ Output is flushed periodically and on exit. Ctrl-C pauses (in-flight units finis
 **Engine (Phase 2, `docs/engine.md`):**
 - Lead types expose a `LeadTypeSession` (`leadtypes/base.py`): `units()`, `run_unit()` (may run on a worker thread; never raises), `hosts()`, `prior()`, `post_discovery(control)`, `finalize(complete=)`. A lead type with only `run()` is one unit.
 - Without a time budget units run in plan order (legacy presets unchanged); with one, by expected new orgs per second, never starting a unit that can't finish, keeping a 90 s tail and a share for enrichment. Skipped units are reported.
-- Units sharing a host never run at once (`Source.hosts()`; directories drop Google/DDG unless `serp_fallback`). `runtime.discovery_workers` (3), `runtime.enrich_workers` (8).
+- Units sharing a host never run at once (`Source.hosts()`; directories drop Google/DDG unless `serp_fallback`; Maps with `rate_key: google_maps`, the default for new configs, runs beside SERP; the Mumbai preset keeps shared google.com pacing). `runtime.discovery_workers` (3), `runtime.enrich_workers` (8).
 - Enrichment marks leads done per enricher and skips them later unless `--force-enrich`; transient failures (`blocked`, `fetch_failed`, …) aren't marked.
 - Lifecycle: queued → running → pausing/paused, stopping/cancelled, completed/failed. Requests go through `runs.status`; the runner heartbeats, claims runs atomically, and only writes while it owns the run. Workers recover runs with a stale heartbeat from their checkpoint.
 - Depth presets live in each lead type's `apply_depth`; `balanced` changes nothing. Learned `unit_stats` keys carry `@quick`/`@deep`.
