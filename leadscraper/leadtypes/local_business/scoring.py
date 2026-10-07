@@ -33,7 +33,9 @@ import math
 from dataclasses import dataclass
 
 from ...core.lead import Lead
-from ...core.scoring import LEGACY_WEIGHTS, OverallScore, ScoreParts, combine
+from ...core.scoring import (
+    CONTACT_WEIGHTS, LEGACY_WEIGHTS, OverallScore, ScoreParts, combine,
+)
 from ...packs.hospitality.venues import VenueSettings, annotate, best_rating
 
 DEFAULT_WEIGHTS = {
@@ -43,16 +45,7 @@ DEFAULT_WEIGHTS = {
     "contact_completeness": 0.15,
 }
 
-DEFAULT_COMPLETENESS_FIELDS = {
-    "phones": 0.30,
-    "emails": 0.25,
-    "website": 0.15,
-    "address": 0.10,
-    "instagram": 0.08,
-    "whatsapp": 0.05,
-    "facebook": 0.04,
-    "linkedin": 0.03,
-}
+DEFAULT_COMPLETENESS_FIELDS = CONTACT_WEIGHTS
 
 
 @dataclass

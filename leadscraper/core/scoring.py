@@ -91,3 +91,29 @@ def combine(parts: Iterable[ScoreParts], weights: Mapping[str, float] | None) ->
         fit=combined["fit"], intent=combined["intent"], reach=combined["reach"],
         reasons=reasons, contributions=contributions,
     )
+
+
+#: Published contact channels and how much each says about reachability.
+#: ``local_business`` scores its reach with the same weights by default.
+CONTACT_WEIGHTS: dict[str, float] = {
+    "phones": 0.30,
+    "emails": 0.25,
+    "website": 0.15,
+    "address": 0.10,
+    "instagram": 0.08,
+    "whatsapp": 0.05,
+    "facebook": 0.04,
+    "linkedin": 0.03,
+}
+
+
+def contact_reach(record, weights: Mapping[str, float] | None = None) -> float:
+    """Reach, 0..1: the weighted share of published contact channels a record has.
+
+    A property of every organisation, whichever lead type found it, so the
+    export scores it for all (``export/records.score_records``).
+    """
+    weights = weights or CONTACT_WEIGHTS
+    possible = sum(float(w) for w in weights.values())
+    have = sum(float(w) for name, w in weights.items() if getattr(record, name, None))
+    return have / possible if possible else 0.0

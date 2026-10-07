@@ -17,25 +17,12 @@ from .planning import plan_discovery, select_sources
 
 log = logging.getLogger(__name__)
 
-#: Kind and `fields.include` toggle for the columns whose meaning isn't text.
-_COLUMN_META: dict[str, tuple[str, str | None]] = {
-    "Score": ("score", None), "Tier": ("text", None),
-    "Phones": ("phone", "phones"), "Booking Contact": ("text", "phones"),
-    "Emails": ("email", "emails"), "Website": ("url", "website"),
-    "Instagram": ("url", "socials"), "LinkedIn": ("url", "socials"),
-    "Facebook": ("url", "socials"), "WhatsApp": ("url", "socials"),
-    "Google Maps URL": ("url", None), "Address": ("text", "address"),
-    "Contact Name": ("text", "decision_makers"),
-    "Maps Rating": ("number", "ratings"), "Maps Reviews": ("number", "ratings"),
-    "WedMeGood Rating": ("number", "ratings"), "WedMeGood Reviews": ("number", "ratings"),
-    "Best Rating": ("number", "ratings"), "Total Reviews": ("number", "ratings"),
-    "Platform Ratings": ("text", "ratings"),
-    "Listing URLs": ("url", None), "Photo URL": ("url", None),
-    "Latitude": ("number", None), "Longitude": ("number", None),
-    "Distance from City (km)": ("number", None),
-    "Source Count": ("number", None),
-    "First Seen": ("date", None), "Last Updated": ("date", None),
-}
+def _verticals(cfg: Any) -> list[str] | None:
+    """The run's verticals, or None when the config can't say (then: everything)."""
+    try:
+        return list(cfg.verticals)
+    except Exception:
+        return None
 
 
 class LocalBusinessLeadType(LeadType):
@@ -69,24 +56,36 @@ class LocalBusinessLeadType(LeadType):
         return []
 
     def columns(self, cfg: Any) -> list[ColumnSpec]:
-        from ...core.lead import Lead
+        from .columns import column_table
 
         profile = getattr(cfg, "profile", "vendors")
         currency = getattr(cfg, "currency", "") or "INR"
-        specs = []
-        for header in Lead.row_headers(profile, currency):
-            kind, field = _COLUMN_META.get(header, ("text", None))
-            if header.startswith("Price "):
-                kind, field = "money", "prices"
-            specs.append(ColumnSpec(key=header.lower().replace(" ", "_"), header=header,
-                                    kind=kind, field=field))  # type: ignore[arg-type]
-        return specs
+        return [spec for _, spec in column_table(profile, currency, _verticals(cfg))]
+
+    def column_values(self, org: Any, cfg: Any) -> dict[str, Any]:
+        from .columns import values
+
+        lead = getattr(org, "lead", org)
+        return values(lead, getattr(cfg, "profile", "vendors"),
+                      getattr(cfg, "currency", "") or "INR", _verticals(cfg))
 
     def score(self, org: Any, signals: list, cfg: Any) -> ScoreParts:
+        """``org`` is the merged ``Lead``; venue fields must already be annotated
+        (``Scorer.apply``), as every store write and export does."""
+        scorer = cfg if hasattr(cfg, "parts") else self._scorer(cfg)
+        return scorer.parts(getattr(org, "lead", org))
+
+    _cached: tuple[Any, Any] | None = None
+
+    def _scorer(self, cfg: Any):
+        """One Scorer per config: an export scores thousands of organisations."""
         from .scoring import Scorer
 
-        scorer = cfg if hasattr(cfg, "parts") else Scorer(cfg)
-        return scorer.parts(org)
+        cached = self._cached
+        if cached is None or cached[0] is not cfg:
+            cached = (cfg, Scorer(cfg))
+            self._cached = cached
+        return cached[1]
 
     # --- execution ------------------------------------------------------------
 

@@ -31,6 +31,8 @@ from ..core.scoring import ScoreParts
 from ..engine.costs import UnitCost, prior_cost
 
 ColumnKind = Literal["text", "number", "url", "phone", "email", "date", "score", "flag", "money"]
+ColumnPlacement = Literal["front", "body", "contacts", "tail"]
+ColumnPlacement = Literal["front", "body", "contacts", "tail"]
 
 
 @dataclass(frozen=True)
@@ -48,14 +50,34 @@ class SignalSpec:
 
 @dataclass(frozen=True)
 class ColumnSpec:
-    """One Records-tab column a lead type contributes."""
+    """One Records-tab column a lead type contributes (Phase 4: ``export/columns.py``).
+
+    The workbook, CSV and JSON exports all render these. Values come from the
+    lead type's ``column_values()``; a column that is empty on every row of an
+    export is left out of it.
+    """
 
     key: str
     header: str
     kind: ColumnKind = "text"
+    #: Shown in the Overview's column legend; leave empty for self-explanatory columns.
     description: str = ""
     #: The `fields.include` entry that switches this column on; None = always.
     field: str | None = None
+    #: Where it sits in Records: "front" (right after the name: classification),
+    #: "body" (before the contacts: the main attributes), "contacts" (after the
+    #: published contacts) or "tail" (after scores and signals: detail).
+    placement: ColumnPlacement = "body"
+    #: Excel width in characters; None = the default for its kind.
+    width: float | None = None
+    #: Excel number format; None = the default for its kind.
+    number_format: str | None = None
+    #: The Overview counts records by this column's values ("By tier").
+    breakdown: bool = False
+    #: Value -> font colour (hex) in the workbook, e.g. one colour per tier.
+    palette: tuple[tuple[str, str], ...] = ()
+    #: Display text for a link column ("View map"); None = a short form of the URL.
+    link_label: str | None = None
 
 
 @dataclass
@@ -108,7 +130,20 @@ class LeadType(ABC):
 
     @abstractmethod
     def columns(self, cfg: Any) -> list[ColumnSpec]:
-        """Records-tab columns it contributes, in order."""
+        """Records-tab columns it contributes, in order.
+
+        Only its own: the core columns (name, location, published contacts,
+        scores, signals, decision-makers, provenance) belong to the export.
+        """
+
+    def column_values(self, org: Any, cfg: Any) -> dict[str, Any]:
+        """One organisation's values for its ``columns()``, keyed by ``ColumnSpec.key``.
+
+        ``org`` is an ``export.records.ExportRecord``: the merged record
+        (``org.lead``), its signals, people and provenance. Values are plain:
+        str, int, float, bool, datetime or None (blank).
+        """
+        return {}
 
     @abstractmethod
     def score(self, org: Any, signals: list, cfg: Any) -> ScoreParts:
