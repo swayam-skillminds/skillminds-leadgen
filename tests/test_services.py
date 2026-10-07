@@ -159,9 +159,11 @@ def test_suppression_lists_exclude_and_flag_in_exports(engine, ws):
     data = json.loads(content)
     assert data["count"] == 1 and data["excluded_by_suppression"] == 2
     assert data["records"][0]["suppressed"] == ["Competitors"]
-    assert data["columns"][-1] == "Suppressed"
+    headers = [c["header"] for c in data["columns"]]
+    assert "Suppressed" in headers
+    assert data["records"][0]["values"]["suppressed"] == "Competitors"
     csv_text = exports.export(engine, ws, "csv", run_id=run_id)[1].decode("utf-8-sig")
-    assert csv_text.splitlines()[0].endswith(",Suppressed")
+    assert ",Suppressed," in csv_text.splitlines()[0]
     assert "Bright Smiles" in csv_text and "Smile Dental" not in csv_text
 
 
@@ -362,7 +364,9 @@ def test_every_source_has_catalog_notes_and_applicability():
     assert us["linkedin_serp"]["fills"] == ["decision_makers"]
     [local] = catalog.lead_types("US")
     assert local["key"] == "local_business" and local["applicable"]
-    assert any(c["header"] == "Phones" for c in local["columns"])
+    headers = [c["header"] for c in local["columns"]]
+    # Its own columns only: phones, emails and the rest are the export's core columns.
+    assert "Category" in headers and "Phones" not in headers
 
 
 def test_source_health_flags_a_source_that_keeps_finding_nothing(engine, ws):
@@ -506,7 +510,7 @@ def test_exports_never_carry_live_formulas(engine, ws):
     book = load_workbook(io.BytesIO(exports.export(engine, ws, "xlsx", run_id=run_id)[1]))
     sheet = book["Records"]
     headers = [c.value for c in sheet[1]]
-    name = sheet.cell(2, headers.index("Business Name") + 1)
+    name = sheet.cell(2, headers.index("Name") + 1)
     assert name.data_type == "s" and name.value == evil
     assert exports.safe_cell("+91 98200 12345") == "+91 98200 12345"
     assert exports.safe_cell("-3.5") == "-3.5"

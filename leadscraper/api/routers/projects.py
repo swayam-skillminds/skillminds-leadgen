@@ -15,11 +15,22 @@ from ..deps import current_workspace, get_engine
 
 router = APIRouter()
 
-EXPORT_RESPONSES = {200: {"description": "The export file.", "content": {
-    "text/csv": {"example": "Score,Business Name,Category,Locality,Phones\n"
-                            "78.5,Smile Dental,Dentists,Baner,+919820012345\n"},
-    "application/json": {"example": {"project": {"id": 3, "name": "Pune dentists"},
-                                      "scope": "project", "count": 1, "records": []}},
+EXPORT_RESPONSES = {200: {"description": "The export file: the Records column model in "
+                                         "every format.", "content": {
+    "text/csv": {"example": "Score,Name,Category,Lead Types,Locality,Primary Phone\n"
+                            "78.5,Smile Dental,Dentists,Local businesses,Baner,+91 98200 12345\n"},
+    "application/json": {"example": {
+        "project": {"id": 3, "name": "Pune dentists"}, "run_id": 7, "scope": "run",
+        "sorted_by": "score (highest first)", "count": 1,
+        "columns": [{"key": "score", "header": "Score", "kind": "score", "group": "core"},
+                    {"key": "name", "header": "Name", "kind": "text", "group": "core"}],
+        "records": [{"id": 12, "score": 78.5, "values": {"score": 78.5, "name": "Smile Dental"},
+                     "lead_types": ["local_business"],
+                     "scores": {"total": 78.5, "fit": 0.79, "intent": None, "reach": 0.78,
+                                "reasons": ["Google rating 4.7 from 210 reviews"]},
+                     "signals": [], "people": [], "inferred_contacts": [], "change": "new",
+                     "suppressed": []}],
+        "summary": {"totals": {"records": 1, "new": 1, "updated": 0}}}},
     exports.MEDIA_TYPES["xlsx"]: {"example": "<xlsx workbook: Overview, Records>"}}}}
 
 

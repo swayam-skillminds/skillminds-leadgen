@@ -50,7 +50,13 @@ def test_config_schema_and_validate(tmp_path, capsys):
     assert main(["config", "validate", str(PROJECT_ROOT / "presets" / "nashik-venues.yaml")]) == 0
     printed = capsys.readouterr().out
     assert "valid run config 'Nashik venues'" in printed
-    assert "not applied yet: output.excel" in printed
+    # Phase 4 acts on every setting the preset uses (the workbook among them).
+    assert "not applied yet" not in printed
+    loud = tmp_path / "loud.yaml"
+    loud.write_text((PROJECT_ROOT / "presets" / "nashik-venues.yaml").read_text()
+                    + "icp: {industries: [hospitality]}\n")
+    assert main(["config", "validate", str(loud)]) == 0
+    assert "not applied yet: icp" in capsys.readouterr().out
 
 
 def test_config_import_legacy_writes_the_preset(tmp_path):

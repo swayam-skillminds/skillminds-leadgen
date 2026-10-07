@@ -1,48 +1,63 @@
-"""Exports, regenerated from the database at any time (Phase 3.1).
+"""Exports, regenerated from the database at any time (Phase 3.1, Phase 4).
 
 Re-exporting never needs a re-scrape: every format is built from the stored
-organisations, rescored with the run's own config, in the shared output
-order (``db.store.sort_leads``). Scopes:
+organisations, rescored with the run's own config. Scopes:
 
 * ``run`` -- the organisations this run created, updated or found again;
 * ``new`` -- only those new against an earlier run (default: the previous
   one; a scheduled "only new" run compares with its schedule's last run);
-* ``project`` -- the project's whole table, as the run's CSV has it.
+* ``project`` -- the project's whole table.
 
 Suppression lists attached to the config (``filters.suppression_lists``),
 plus the workspace's "Erasure requests" list, apply to every export:
-``exclude`` lists drop rows, ``flag`` lists add a ``Suppressed`` column.
+``exclude`` lists drop rows, ``flag`` lists fill a ``Suppressed`` column.
 
-Formats: CSV (the legacy column layout of the run's profile), JSON (rows
-plus ids and scores) and XLSX. The XLSX here has the two required tabs,
-Overview and Records, with plain styling; Phase 4 replaces it with the
-formatted deliverable workbook.
+Formats (Phase 4): the **workbook** (``export/excel.py``: Overview + Records),
+**CSV** and **JSON** all render one ``ExportTable`` through one column model
+(``export/columns.py``). This module only reads the database into it: the
+records with their contacts, people, signals and run membership, and the
+run's facts for the Overview (sources, units, failures, AI spend).
+
+The run's own CSV (``runtime.csv_export``) and its Google Sheet keep the
+legacy column layout (``Lead.row_for``) that the Mumbai and Nashik tabs use.
 """
 
 from __future__ import annotations
 
-import csv
-import io
-import json
-import re
-from dataclasses import dataclass, field
+from collections import Counter, defaultdict
 from datetime import datetime, timezone
+from types import SimpleNamespace
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.engine import Engine
 
 from ..core.lead import Lead
-from ..db.models import Organization, Project, Run, RunOrganization
-from ..db.store import sort_leads
+from ..db.models import (
+    AIUsage, Contact, FailureRow, Organization, Person, Project, Run, RunOrganization, Signal,
+    WorkUnitRow,
+)
+from ..export.columns import assemble
+from ..export.excel import to_xlsx
+from ..export.records import SORTS, ExportRecord, place_of, score_records, sort_records
+from ..export.table import ExportTable, safe_cell, to_csv, to_json
 from .errors import Conflict, Invalid, NotFound
 from .query import aware
 from .workspace import Workspace
+
+__all__ = ["ExportTable", "build_table", "export", "to_google_sheets", "safe_cell",
+           "FORMATS", "SCOPES", "MEDIA_TYPES", "RENDERERS"]
 
 ORGS = Organization.__table__
 RUNS = Run.__table__
 PROJECTS = Project.__table__
 MEMBERS = RunOrganization.__table__
+SIGNALS = Signal.__table__
+PEOPLE = Person.__table__
+CONTACTS = Contact.__table__
+UNITS = WorkUnitRow.__table__
+FAILURES = FailureRow.__table__
+AI_USAGE = AIUsage.__table__
 
 SCOPES = ("run", "new", "project")
 FORMATS = ("csv", "json", "xlsx")
@@ -51,31 +66,6 @@ MEDIA_TYPES = {
     "json": "application/json",
     "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 }
-SUPPRESSED = "Suppressed"
-
-
-@dataclass
-class ExportTable:
-    """What every format is rendered from."""
-
-    project: dict[str, Any]
-    run: dict[str, Any] | None
-    scope: str
-    profile: str
-    currency: str
-    headers: list[str]
-    #: (organisation id, Lead, suppression flags)
-    rows: list[tuple[int, Lead, list[str]]] = field(default_factory=list)
-    excluded: int = 0
-    against: int | None = None
-    generated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-
-    def record(self, lead: Lead, flags: list[str]) -> dict[str, Any]:
-        row = lead.row_for(self.profile, self.currency)
-        out = {header: row.get(header, "") for header in self.headers if header != SUPPRESSED}
-        if SUPPRESSED in self.headers:
-            out[SUPPRESSED] = ", ".join(flags)
-        return out
 
 
 # --- assembling the table -------------------------------------------------------------------
@@ -100,10 +90,178 @@ def _latest_snapshot(engine: Engine, project_id: int) -> dict[str, Any] | None:
     return dict(row[0]) if row and row[0] else None
 
 
+def _epoch(value: Any) -> datetime | None:
+    try:
+        return datetime.fromtimestamp(float(value), tz=timezone.utc)
+    except (TypeError, ValueError, OverflowError, OSError):
+        return None
+
+
+def _lead_type_keys(config: Any, records: list[ExportRecord]) -> list[str]:
+    """The run's enabled lead types, then any other the records carry; registered ones only."""
+    from ..engine.runner import enabled_lead_types
+    from ..leadtypes import registry
+
+    keys = list(enabled_lead_types(config)) if config is not None else ["local_business"]
+    extra = sorted({k for r in records for k in r.lead_types} - set(keys))
+    return [k for k in [*keys, *extra] if registry.get(k) is not None]
+
+
+def _places(config: Any) -> tuple[list[str], list[str]]:
+    """(places, areas) the run covered."""
+    if config is None:
+        return [], []
+    places = [str(p) for p in (config.get("places") or []) if p] or \
+        ([config.city] if config.city else [])
+    areas = [str(item.get("name") if isinstance(item, dict) else getattr(item, "name", item))
+             for item in (config.get("localities") or [])]
+    return places, [a for a in areas if a and a not in places]
+
+
+def _money_prefix(config: Any, currency: str) -> str:
+    from ..core.country import country as country_info, is_known_region
+
+    code = config.country if config is not None else ""
+    if code and is_known_region(code):
+        info = country_info(code)
+        if info.currency == currency:
+            return info.money_prefix
+    return f"{currency} " if currency else ""
+
+
+def _timezone(config: Any) -> str:
+    if config is None:
+        return "UTC"
+    zone = config.get("geo.timezone")
+    if zone:
+        return str(zone)
+    try:
+        return config.country_info.timezone or "UTC"
+    except Exception:
+        return "UTC"
+
+
+_MUST_HAVE = {"phone": lambda lead: bool(lead.phones), "email": lambda lead: bool(lead.emails),
+              "website": lambda lead: bool(lead.website)}
+
+
+def _filter(config: Any):
+    """``filters.min_rating`` / ``must_have`` as a test a lead must pass to be exported."""
+    from ..core.ratings import best_rating
+
+    min_rating = config.get("filters.min_rating") if config is not None else None
+    must_have = [_MUST_HAVE[k] for k in ((config.get("filters.must_have") if config is not None
+                                          else None) or []) if k in _MUST_HAVE]
+
+    def keep(lead: Lead) -> bool:
+        if not all(test(lead) for test in must_have):
+            return False
+        if min_rating is not None:
+            rating, _ = best_rating(lead)
+            if rating is not None and rating < float(min_rating):
+                return False
+        return True
+    return keep
+
+
+def _filter_text(config: Any) -> str:
+    if config is None:
+        return ""
+    parts = []
+    if config.get("filters.min_rating") is not None:
+        parts.append(f"rating at least {float(config.get('filters.min_rating')):g}")
+    for item in config.get("filters.must_have") or []:
+        parts.append(f"has a {item}")
+    return ", ".join(parts)
+
+
+def _facts(conn, ws: Workspace, project_id: int, ids: list[int]) -> dict[str, Any]:
+    """Signals, people, inferred contacts and last-seen times, by organisation id."""
+    in_project = select(ORGS.c.id).where(ORGS.c.project_id == project_id)
+    wanted = set(ids)
+    signals: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    for row in conn.execute(select(SIGNALS).where(SIGNALS.c.organization_id.in_(in_project))
+                            .order_by(SIGNALS.c.id)).mappings():
+        if row["organization_id"] in wanted:
+            signals[row["organization_id"]].append({
+                "type": row["type"], "lead_type": row["lead_type"], "title": row["title"],
+                "payload": dict(row["payload"] or {}), "observed_at": aware(row["observed_at"]),
+                "published_at": aware(row["published_at"]),
+                "expires_at": aware(row["expires_at"]), "strength": row["strength"],
+                "source_url": row["source_url"]})
+    people: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    for row in conn.execute(select(PEOPLE).where(PEOPLE.c.organization_id.in_(in_project))
+                            .order_by(PEOPLE.c.id)).mappings():
+        if row["organization_id"] in wanted:
+            people[row["organization_id"]].append({
+                "name": row["name"], "title": row["title"] or "",
+                "profile_url": row["profile_url"], "source": row["source"]})
+    inferred: dict[int, list[dict[str, Any]]] = defaultdict(list)
+    for row in conn.execute(select(CONTACTS).where(
+            CONTACTS.c.organization_id.in_(in_project), CONTACTS.c.kind == "inferred")
+            .order_by(CONTACTS.c.id)).mappings():
+        if row["organization_id"] in wanted:
+            inferred[row["organization_id"]].append({
+                "channel": row["channel"], "value": row["value"], "source": row["source"],
+                "confidence": row["confidence"]})
+    seen = func.max(func.coalesce(RUNS.c.started_at, RUNS.c.created_at))
+    last_seen = {int(org_id): aware(when) for org_id, when in conn.execute(
+        select(MEMBERS.c.organization_id, seen)
+        .join(RUNS, RUNS.c.id == MEMBERS.c.run_id)
+        .where(MEMBERS.c.organization_id.in_(in_project), RUNS.c.workspace_id == ws.id)
+        .group_by(MEMBERS.c.organization_id))}
+    return {"signals": signals, "people": people, "inferred": inferred, "last_seen": last_seen}
+
+
+def _run_context(conn, run: dict[str, Any]) -> dict[str, Any]:
+    """What the Overview says about a run: sources, units, failures, AI spend."""
+    run_id = run["id"]
+    sources: dict[tuple[str, str], dict[str, Any]] = {}
+    units: Counter = Counter()
+    skip_reasons: Counter = Counter()
+    for row in conn.execute(select(UNITS.c.lead_type, UNITS.c.source, UNITS.c.status,
+                                   UNITS.c.found, UNITS.c.new, UNITS.c.skip_reason)
+                            .where(UNITS.c.run_id == run_id).order_by(UNITS.c.id)).mappings():
+        item = sources.setdefault((row["lead_type"], row["source"]), {
+            "lead_type": row["lead_type"], "source": row["source"], "units": 0, "done": 0,
+            "failed": 0, "skipped": 0, "found": 0, "new": 0})
+        item["units"] += 1
+        status = row["status"]
+        if status in ("done", "failed", "skipped"):
+            item[status] += 1
+            units[status] += 1
+        item["found"] += int(row["found"] or 0)
+        item["new"] += int(row["new"] or 0)
+        units["total"] += 1
+        if status == "skipped" and row["skip_reason"]:
+            skip_reasons[row["skip_reason"]] += 1
+    count = func.count()
+    failures = [{"reason": reason, "source": source, "count": int(n)} for reason, source, n
+                in conn.execute(select(FAILURES.c.reason, FAILURES.c.source, count)
+                                .where(FAILURES.c.run_id == run_id)
+                                .group_by(FAILURES.c.reason, FAILURES.c.source)
+                                .order_by(count.desc(), FAILURES.c.reason, FAILURES.c.source)
+                                .limit(10))]
+    spend = conn.execute(select(func.coalesce(func.sum(AI_USAGE.c.cost_usd), 0.0),
+                                func.coalesce(func.sum(AI_USAGE.c.calls), 0))
+                         .where(AI_USAGE.c.run_id == run_id)).first()
+    found = conn.execute(select(func.count()).select_from(MEMBERS)
+                         .where(MEMBERS.c.run_id == run_id)).scalar() or 0
+    unit_facts: dict[str, Any] = dict(units)
+    if skip_reasons:
+        unit_facts["skip_reason"] = skip_reasons.most_common(1)[0][0]
+    return {"sources": list(sources.values()), "units": unit_facts, "failures": failures,
+            "ai_spend": float(spend[0] or 0.0), "ai_calls": int(spend[1] or 0),
+            "run_found": int(found), "started_at": aware(run.get("started_at")),
+            "duration_seconds": float(run.get("active_seconds") or 0.0)}
+
+
 def build_table(engine: Engine, ws: Workspace, *, run_id: int | None = None,
                 project_id: int | None = None, scope: str | None = None,
-                against: int | None = None) -> ExportTable:
+                against: int | None = None,
+                generated_at: datetime | None = None) -> ExportTable:
     from ..core.identity import DedupOptions
+    from ..leadtypes import registry
     from ..leadtypes.local_business.scoring import Scorer
     from .runs import diff_items, run_row
     from .suppression import ERASURE_LIST, Matcher
@@ -130,14 +288,19 @@ def build_table(engine: Engine, ws: Workspace, *, run_id: int | None = None,
     if project is None:
         raise NotFound(f"no project {project_id}")
     project = dict(project)
+    now = generated_at or datetime.now(timezone.utc)
 
-    config = config_for(run["config_snapshot"] if run else _latest_snapshot(engine, project_id))
-    profile = str(config.get("profile") or "vendors") if config is not None else "vendors"
+    snapshot = run["config_snapshot"] if run else _latest_snapshot(engine, project_id)
+    config = config_for(snapshot)
+    profile = config.profile if config is not None else "vendors"
     currency = config.currency if config is not None else "INR"
     if config is not None:
         config.apply_name_noise()
+    cfg = config if config is not None else SimpleNamespace(
+        profile=profile, currency=currency, get=lambda key, default=None: default)
 
-    query = select(ORGS.c.id, ORGS.c.record).where(ORGS.c.project_id == project_id)
+    query = select(ORGS.c.id, ORGS.c.record, ORGS.c.lead_types).where(
+        ORGS.c.project_id == project_id)
     used_against = None
     if scope == "run":
         query = query.where(ORGS.c.id.in_(select(MEMBERS.c.organization_id).where(
@@ -148,187 +311,113 @@ def build_table(engine: Engine, ws: Workspace, *, run_id: int | None = None,
         query = query.where(ORGS.c.id.in_(new_ids))
     with engine.connect() as conn:
         rows = conn.execute(query.order_by(ORGS.c.id)).all()
+        facts = _facts(conn, ws, project_id, [int(r[0]) for r in rows])
+        actions = {int(o): a for o, a in conn.execute(
+            select(MEMBERS.c.organization_id, MEMBERS.c.action)
+            .where(MEMBERS.c.run_id == run_id))} if run is not None else {}
+        context = _run_context(conn, run) if run is not None else {}
 
+    # Rescore with the run's own config (venue tiers included), then fold
+    # every lead type's parts with the run's weights.
     scorer = Scorer(config) if config is not None else Scorer()
-    ids: dict[int, int] = {}
-    leads: list[Lead] = []
-    for org_id, record in rows:
-        lead = Lead.from_dict(record)
-        scorer.apply(lead)
-        ids[id(lead)] = int(org_id)
-        leads.append(lead)
-    mode = DedupOptions.from_config(config).sort if config is not None else "vendors"
-    ordered = sort_leads(leads, mode)
-
+    places, areas = _places(config)
     names = list((config.get("filters.suppression_lists") if config is not None else None) or [])
     matcher = Matcher.for_names(engine, ws.id, [*names, ERASURE_LIST],
                                 region=config.country if config is not None else None)
-    headers = list(Lead.row_headers(profile, currency))
-    table = ExportTable(project=project, run=run, scope=scope, profile=profile,
-                        currency=currency, headers=headers, against=used_against)
-    any_flag = False
-    for lead in ordered:
+    keep = _filter(config)
+    records: list[ExportRecord] = []
+    excluded = filtered = 0
+    for org_id, record, lead_types in rows:
+        lead = Lead.from_dict(record)
+        scorer.apply(lead)
         if matcher.excluded(lead):
-            table.excluded += 1
+            excluded += 1
             continue
-        flags = matcher.flags(lead)
-        any_flag = any_flag or bool(flags)
-        table.rows.append((ids[id(lead)], lead, flags))
-    if any_flag:
-        table.headers.append(SUPPRESSED)
-    return table
+        if not keep(lead):
+            filtered += 1
+            continue
+        seen = [d for d in (facts["last_seen"].get(int(org_id)), _epoch(lead.last_updated)) if d]
+        records.append(ExportRecord(
+            id=int(org_id), lead=lead, lead_types=list(lead_types or []) or ["local_business"],
+            signals=facts["signals"].get(org_id, []), people=facts["people"].get(org_id, []),
+            inferred=facts["inferred"].get(org_id, []), first_seen=_epoch(lead.first_seen),
+            last_seen=max(seen) if seen else None,
+            change="new" if scope == "new" else actions.get(int(org_id)),
+            flags=matcher.flags(lead), place=place_of(lead, places)))
+    score_records(records, cfg, scorer.score_weights)
+
+    keys = _lead_type_keys(config, records)
+    lead_types = [registry.get(k) for k in keys]
+    signal_specs = {(lt.key, spec.type): spec for lt in lead_types for spec in lt.signal_specs()}
+    fields = config.get("fields.include") if config is not None else None
+    columns = assemble(records, cfg=cfg, lead_type_keys=keys, fields=fields,
+                       places=len(places), has_run=run is not None,
+                       signal_specs=signal_specs, now=now)
+    mode = str((config.get("output.sort") if config is not None else None) or "auto")
+    category = next((c.key for c in columns if c.breakdown
+                     and c.key not in ("place", "locality")), None)
+    legacy_mode = DedupOptions.from_config(config).sort if config is not None else "vendors"
+    ordered, sort_label = sort_records(records, mode if mode in SORTS else "auto", places,
+                                       legacy_mode, category)
+
+    ai = None
+    country = ""
+    if config is not None:
+        ai = {"enabled": bool(config.get("ai.enabled")), "provider": config.get("ai.backend"),
+              "cap_usd": config.get("ai.max_cost_usd"),
+              "spend_usd": context.get("ai_spend", 0.0), "calls": context.get("ai_calls", 0)}
+        try:
+            country = f"{config.country_info.name} ({config.country})"
+        except Exception:
+            country = config.country
+    context.update({
+        "config_name": (snapshot or {}).get("name") or "",
+        "places": places, "areas": areas, "country": country,
+        "lead_types": [(lt.key, lt.title) for lt in lead_types],
+        "depth": config.get("depth") if config is not None else None,
+        "time_budget_minutes": config.get("time_budget_minutes") if config is not None else None,
+        "ai": ai, "weights": dict(scorer.score_weights), "fields": fields,
+        "signal_types": {key: spec.title for key, spec in signal_specs.items()},
+        "filtered": filtered, "filters": _filter_text(config),
+    })
+    return ExportTable(project=project, run=run, scope=scope, profile=profile, currency=currency,
+                       columns=columns, records=ordered, excluded=excluded, against=used_against,
+                       generated_at=now, sort_label=sort_label, timezone=_timezone(config),
+                       money_prefix=_money_prefix(config, currency), context=context)
 
 
 # --- formats ------------------------------------------------------------------------------
 
-#: A scraped value that a spreadsheet would run as a formula (CSV/formula injection):
-#: it starts with = or @ (or a tab / CR), or with + / - and then something that is
-#: not a number -- "+91 98200 12345" stays as it is, "+HYPERLINK(...)" does not.
-_FORMULA = re.compile(r"^(?:[=@\t\r]|[+-](?![\d\s().+-]*$))")
-
-
-def safe_cell(value: Any) -> Any:
-    """Neutralise formula-looking text for CSV (a leading apostrophe, as Excel shows it)."""
-    if isinstance(value, str) and value and _FORMULA.match(value):
-        return "'" + value
-    return value
-
-def to_csv(table: ExportTable) -> bytes:
-    buffer = io.StringIO()
-    writer = csv.writer(buffer)
-    writer.writerow(table.headers)
-    for _, lead, flags in table.rows:
-        record = table.record(lead, flags)
-        writer.writerow([safe_cell(record.get(h, "")) for h in table.headers])
-    return buffer.getvalue().encode("utf-8-sig")
-
-
-def to_json(table: ExportTable) -> bytes:
-    records = [{"id": org_id, "score": lead.score, "suppressed": flags,
-                "row": table.record(lead, flags)} for org_id, lead, flags in table.rows]
-    document = {
-        "project": {"id": table.project["id"], "name": table.project["name"]},
-        "run_id": table.run["id"] if table.run else None, "scope": table.scope,
-        "against": table.against, "profile": table.profile, "currency": table.currency,
-        "generated_at": table.generated_at.isoformat(), "columns": table.headers,
-        "count": len(records), "excluded_by_suppression": table.excluded, "records": records,
-    }
-    return json.dumps(document, ensure_ascii=False, indent=1, default=str).encode("utf-8")
-
-
-#: Columns written as text even when they look numeric (phones): Excel would
-#: otherwise drop a leading "+" or turn them into numbers.
-_TEXT_COLUMNS = {"Phones", "Booking Contact", "WhatsApp"}
-_URL_COLUMNS = {"Website", "Instagram", "LinkedIn", "Facebook", "Google Maps URL",
-                "Photo URL", "WhatsApp"}
-
-
-def _overview(table: ExportTable) -> list[tuple[str, Any]]:
-    run = table.run or {}
-    snapshot = run.get("config_snapshot") or {}
-    geography = snapshot.get("geography") or {}
-    stats = (run.get("stats") or {}).get("engine") or {}
-    started = aware(run.get("started_at"))
-    ai = snapshot.get("ai") or {}
-    scope_text = {"run": "organisations this run found",
-                  "new": f"new since run {table.against}" if table.against else "new",
-                  "project": "the whole project"}[table.scope]
-    return [
-        ("Project", table.project["name"]),
-        ("Config", snapshot.get("name") or ""),
-        ("Run", run.get("id") or "(whole project)"),
-        ("Status", run.get("status") or ""),
-        ("Run started", started.strftime("%Y-%m-%d %H:%M UTC") if started else ""),
-        ("Duration (min)", round(float(run.get("active_seconds") or 0) / 60, 1) if run else ""),
-        ("Places", ", ".join(geography.get("places") or [])),
-        ("Country", geography.get("country") or ""),
-        ("Lead types", ", ".join(sorted((snapshot.get("lead_types") or {}).keys()))),
-        ("AI", "on" if ai.get("enabled") else "off"),
-        ("Scope", scope_text),
-        ("Records", len(table.rows)),
-        ("New in this run", stats.get("new", "") if run else ""),
-        ("Updated in this run", stats.get("merged", "") if run else ""),
-        ("Excluded by suppression lists", table.excluded),
-        ("Generated", table.generated_at.strftime("%Y-%m-%d %H:%M UTC")),
-    ]
-
-
-def to_xlsx(table: ExportTable) -> bytes:
-    from openpyxl import Workbook
-    from openpyxl.styles import Alignment, Font, PatternFill
-    from openpyxl.utils import get_column_letter
-
-    workbook = Workbook()
-    overview = workbook.active
-    overview.title = "Overview"
-    bold = Font(bold=True)
-    for label, value in _overview(table):
-        overview.append([label, value])
-        overview.cell(overview.max_row, 1).font = bold
-        if isinstance(value, str) and value:
-            overview.cell(overview.max_row, 2).data_type = "s"
-    overview.column_dimensions["A"].width = 32
-    overview.column_dimensions["B"].width = 60
-
-    records = workbook.create_sheet("Records")
-    records.append(table.headers)
-    header_fill = PatternFill("solid", fgColor="1F3864")
-    for cell in records[1]:
-        cell.font = Font(bold=True, color="FFFFFF")
-        cell.fill = header_fill
-        cell.alignment = Alignment(vertical="center", wrap_text=True)
-    link = Font(color="0563C1", underline="single")
-    for _, lead, flags in table.rows:
-        record = table.record(lead, flags)
-        records.append([record.get(h, "") for h in table.headers])
-        row = records.max_row
-        for col, header in enumerate(table.headers, start=1):
-            cell = records.cell(row, col)
-            if isinstance(cell.value, str) and cell.value:
-                # Always a literal string: a scraped "=HYPERLINK(...)" must
-                # never become a live formula in the deliverable.
-                cell.data_type = "s"
-            if header in _TEXT_COLUMNS and cell.value not in (None, ""):
-                cell.value = str(cell.value)
-                cell.data_type = "s"
-                cell.number_format = "@"
-            if header in _URL_COLUMNS and isinstance(cell.value, str) \
-                    and cell.value.startswith("http"):
-                cell.hyperlink = cell.value
-                cell.font = link
-    records.freeze_panes = "C2"
-    if table.rows:
-        records.auto_filter.ref = (f"A1:{get_column_letter(len(table.headers))}"
-                                   f"{len(table.rows) + 1}")
-    for col, header in enumerate(table.headers, start=1):
-        width = 40 if header in ("Business Name", "Address") else \
-            30 if header in _URL_COLUMNS else 16
-        records.column_dimensions[get_column_letter(col)].width = width
-    buffer = io.BytesIO()
-    workbook.save(buffer)
-    return buffer.getvalue()
-
-
 RENDERERS = {"csv": to_csv, "json": to_json, "xlsx": to_xlsx}
+
+
+def filename_for(table: ExportTable, fmt: str) -> str:
+    stem = table.project["slug"] + (f"-run{table.run['id']}" if table.run is not None else "")
+    if table.scope == "new":
+        stem += "-new"
+    return f"{stem}.{fmt}"
 
 
 def export(engine: Engine, ws: Workspace, fmt: str, *, run_id: int | None = None,
            project_id: int | None = None, scope: str | None = None,
-           against: int | None = None) -> tuple[str, bytes, ExportTable]:
+           against: int | None = None,
+           generated_at: datetime | None = None) -> tuple[str, bytes, ExportTable]:
     """(filename, content, table) for one export."""
     if fmt not in FORMATS:
         raise Invalid(f"format must be one of {', '.join(FORMATS)}")
     table = build_table(engine, ws, run_id=run_id, project_id=project_id, scope=scope,
-                        against=against)
-    stem = table.project["slug"] + (f"-run{run_id}" if run_id is not None else "")
-    if table.scope == "new":
-        stem += "-new"
-    return f"{stem}.{fmt}", RENDERERS[fmt](table), table
+                        against=against, generated_at=generated_at)
+    return filename_for(table, fmt), RENDERERS[fmt](table), table
 
 
 def to_google_sheets(engine: Engine, ws: Workspace, run_id: int, *,
                      scope: str | None = None) -> dict[str, Any]:
-    """Push a run's export to its Google Sheet (the existing service-account flow)."""
+    """Push a run's export to its Google Sheet (the existing service-account flow).
+
+    The Sheet keeps the legacy layout and order its tabs have always had.
+    """
+    from ..core.identity import DedupOptions
+    from ..db.store import sort_leads
     from ..export.sheets import SheetsWriter
     from .runs import run_row
 
@@ -338,8 +427,42 @@ def to_google_sheets(engine: Engine, ws: Workspace, run_id: int, *,
         raise Invalid(f"run {run_id} has no usable config snapshot")
     config.set("sheets.enabled", True, record=False)
     writer = SheetsWriter(config)
-    leads = [lead for _, lead, _ in table.rows]
+    leads = sort_leads([r.lead for r in table.records], DedupOptions.from_config(config).sort)
     if not writer.sync(leads):
         raise Conflict("Google Sheets was not written: "
                        f"{writer.unavailable_reason or 'see the server log'}")
     return {"url": writer.url, "rows": len(leads), "scope": table.scope}
+
+
+def write_run_outputs(engine: Engine, run_id: int, config: Any) -> list[str]:
+    """Write the files a run's ``output`` section asks for; returns their paths.
+
+    Called by the runner once a run has ended (completed, paused, cancelled or
+    failed: what it has is worth a workbook). Each file is recorded on the run
+    (``runs.files``). Written to a temporary name first, so a crash never
+    leaves half a workbook behind.
+    """
+    from ..db.runs import add_run_file
+    from ..export.outputs import output_dir, run_formats
+
+    formats = run_formats(config)
+    if not formats:
+        return []
+    with engine.connect() as conn:
+        workspace_id = conn.execute(select(RUNS.c.workspace_id)
+                                    .where(RUNS.c.id == run_id)).scalar()
+    if workspace_id is None:
+        raise NotFound(f"no run {run_id}")
+    ws = Workspace(int(workspace_id), "")
+    directory = output_dir(config)
+    directory.mkdir(parents=True, exist_ok=True)
+    written = []
+    for fmt in formats:
+        filename, content, table = export(engine, ws, fmt, run_id=run_id)
+        path = directory / filename
+        partial = path.with_name(path.name + ".partial")
+        partial.write_bytes(content)
+        partial.replace(path)
+        add_run_file(engine, run_id, kind=fmt, path=str(path), rows=len(table.records))
+        written.append(str(path))
+    return written

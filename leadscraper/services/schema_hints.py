@@ -36,6 +36,14 @@ LABELS: dict[str, tuple[str, str]] = {
     "fields.include": ("Fields", "Unchecked fields switch off the sources that only fill them."),
     "filters.suppression_lists": ("Suppression lists", "Names of lists whose organisations are "
                                                        "excluded or flagged."),
+    "filters.min_rating": ("Minimum rating", "Exports leave out organisations rated below this; "
+                                             "unrated ones stay."),
+    "filters.must_have": ("Must have", "Exports leave out organisations without these."),
+    "output.excel": ("Workbook", "The deliverable: Overview + Records, written after the run."),
+    "output.csv": ("Legacy CSV", "The old column layout, written as the run goes."),
+    "output.json": ("JSON", "The workbook's records as JSON, written after the run."),
+    "output.sort": ("Row order", "auto = best score first, grouped by place when there are "
+                                 "several places."),
     "scoring.weights": ("Score weights", "How fit, intent and reach combine into the score."),
     "depth": ("Depth", "quick = a fast skim, balanced = the default, deep = thorough."),
     "time_budget_minutes": ("Time budget (minutes)", "Best units first; the run ends in time. "

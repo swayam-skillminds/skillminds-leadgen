@@ -142,6 +142,8 @@ class RunOutcome:
     #: (unit key, reason) for every unit that did not run.
     skipped: list[tuple[str, str]] = field(default_factory=list)
     elapsed_seconds: float = 0.0
+    #: Files written from the database after the run (the workbook; Phase 4).
+    files: list[str] = field(default_factory=list)
 
     @property
     def ok(self) -> bool:
@@ -899,11 +901,23 @@ class _Run:
 def execute(request: RunRequest) -> RunOutcome:
     """Run (or resume) every requested lead type of `request.config` against its project.
 
-    Afterwards the workspace's notification targets hear how it ended (Phase 3);
-    a failing notification is logged, never raised.
+    Afterwards the run's files are written from the database -- the workbook
+    and JSON its ``output`` section asks for (Phase 4) -- and the workspace's
+    notification targets hear how it ended (Phase 3). A failure in either is
+    logged, never raised.
     """
     run = _Run(request)
     outcome = run.execute()
+    if (not request.dry_run and outcome.run_id is not None and request.kind == "run"
+            and outcome.status != "lost"):
+        try:
+            from ..services.exports import write_run_outputs
+
+            outcome.files = write_run_outputs(run.engine, outcome.run_id, request.config)
+            for path in outcome.files:
+                log.info("run %s: wrote %s", outcome.run_id, path)
+        except Exception as exc:  # the run's data is safe in the database either way
+            log.warning("run %s: the workbook was not written: %s", outcome.run_id, exc)
     if (request.notify and not request.dry_run and outcome.run_id is not None
             and request.kind == "run" and outcome.status != "lost"):
         try:

@@ -31,6 +31,7 @@ from ...ai import AIAssistant
 from ...net.browser import BrowserSession
 from ...config import Category, Config, Locality
 from ...export.csv_writer import write_csv, write_failures_csv
+from ...export.outputs import wants_csv
 from ...engine.failures import FailureLog
 from ...engine.parallel import HostQueue, run_across_hosts
 from ...net.http import HttpClient
@@ -917,11 +918,12 @@ class Pipeline:
         with self._stats_lock:
             self._since_flush = 0
         leads = self.store.sorted_leads()
-        try:
-            write_csv(leads, self.config.path_for("csv_export", "data/leads.csv"), self.profile,
-                      self.config.currency)
-        except Exception as exc:
-            log.warning("CSV write failed: %s", exc)
+        if wants_csv(self.config):
+            try:
+                write_csv(leads, self.config.path_for("csv_export", "data/leads.csv"),
+                          self.profile, self.config.currency)
+            except Exception as exc:
+                log.warning("CSV write failed: %s", exc)
         self.sheets.sync(leads)
 
     def _finalise(self) -> None:
@@ -937,14 +939,16 @@ class Pipeline:
         leads = self._without_suppressed(self.store.sorted_leads())
         self.leads = leads
         csv_path = self.config.path_for("csv_export", "data/leads.csv")
-        try:
-            write_csv(leads, csv_path, self.profile, self.config.currency)
-            self._record_file("csv", csv_path, len(leads))
-        except Exception as exc:
-            log.error("final CSV write failed: %s", exc)
+        csv_on = wants_csv(self.config)    # off: the workbook is the run's output (Phase 4)
+        if csv_on:
+            try:
+                write_csv(leads, csv_path, self.profile, self.config.currency)
+                self._record_file("csv", csv_path, len(leads))
+            except Exception as exc:
+                log.error("final CSV write failed: %s", exc)
 
         failure_rows = self.failures.rows()
-        if len(failure_rows) > 1:
+        if csv_on and len(failure_rows) > 1:
             skipped = write_failures_csv(failure_rows, csv_path.with_name("skipped.csv"))
             self._record_file("skipped_csv", skipped, len(failure_rows) - 1)
         self.sheets.sync(leads)
@@ -1034,7 +1038,8 @@ class Pipeline:
             for name, count in list(failure_summary.items())[:10]:
                 print(f"    {name:<16} {count}")
 
-        print(f"\n  CSV : {self.config.path_for('csv_export', 'data/leads.csv')}")
+        if wants_csv(self.config):
+            print(f"\n  CSV : {self.config.path_for('csv_export', 'data/leads.csv')}")
         if self.sheets.url:
             print(f"  Sheet: {self.sheets.url}")
         elif self.sheets.unavailable_reason:

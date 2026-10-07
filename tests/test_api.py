@@ -17,6 +17,7 @@ from typing import Iterator
 
 import pytest
 from fastapi.testclient import TestClient
+from openpyxl import load_workbook
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -219,7 +220,11 @@ def test_end_to_end_config_estimate_run_events_export(client, engine, fixture_so
     assert detail["per_source"][0]["found"] == 6
     assert detail["organizations"] == {"new": 6}
     assert detail["estimate"]["p50_seconds"] > 0 and detail["config"]["name"] == "API dentists"
-    assert any(f["kind"] == "csv" for f in detail["files"])
+    # The run's deliverable (output.excel, on by default) was written from the database;
+    # output.csv is off by default, so no legacy CSV.
+    kinds = {f["kind"]: f for f in detail["files"]}
+    assert "csv" not in kinds and kinds["xlsx"]["rows"] == 6
+    assert load_workbook(kinds["xlsx"]["path"]).sheetnames == ["Overview", "Records"]
     orgs = client.get(f"{PREFIX}/organizations", params={"run_id": run_id, "has": "phone",
                                                          "sort": "name"}).json()
     assert orgs["total"] == 6 and orgs["items"][0]["name"].startswith("Dentists House")
@@ -229,11 +234,10 @@ def test_end_to_end_config_estimate_run_events_export(client, engine, fixture_so
 
     # 6. Exports, regenerated from the database.
     csv_text = client.get(f"{PREFIX}/runs/{run_id}/export.csv").content.decode("utf-8-sig")
-    assert csv_text.splitlines()[0].startswith("Score,Business Name")
+    assert csv_text.splitlines()[0].startswith("Score,Name,Category,")
     assert len(csv_text.strip().splitlines()) == 7
     data = client.get(f"{PREFIX}/runs/{run_id}/export.json").json()
     assert data["count"] == 6 and data["scope"] == "run"
-    from openpyxl import load_workbook
 
     response = client.get(f"{PREFIX}/runs/{run_id}/export.xlsx")
     assert "attachment" in response.headers["content-disposition"]
@@ -241,7 +245,7 @@ def test_end_to_end_config_estimate_run_events_export(client, engine, fixture_so
     assert book.sheetnames == ["Overview", "Records"]
     records = book["Records"]
     assert records.max_row == 7
-    phones = [c.value for c in records[1]].index("Phones") + 1
+    phones = [c.value for c in records[1]].index("Primary Phone") + 1
     assert records.cell(2, phones).data_type == "s"           # phones as text
     assert records.cell(2, phones).value.startswith("+91")
 

@@ -119,9 +119,11 @@ def test_settings_this_build_does_not_apply_are_named():
         icp={"industries": ["dental"]}, depth="deep", time_budget_minutes=30,
         output={"excel": True, "csv": False, "json": True}))
     notes = loud.unapplied()
-    assert len(notes) == 5
-    assert any(n.startswith("filters.min_rating") for n in notes)
-    assert any(n.startswith("output.csv is off") for n in notes)
+    assert len(notes) == 1 and notes[0].startswith("icp")
+    # Phase 4 applies min_rating / must_have (exports) and every output setting.
+    assert not any(n.startswith(("filters", "output")) for n in notes)
+    chains = RunConfig.model_validate(minimal(filters={"exclude_chains": True}))
+    assert [n.split(" ")[0] for n in chains.unapplied()] == ["filters.exclude_chains"]
     # Phase 2 applies depth presets and the time budget: no longer named.
     assert not any("time_budget_minutes" in n or n.startswith("depth") for n in notes)
     # Phase 3 applies suppression lists (exports, and the run's CSV/Sheet).

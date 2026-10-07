@@ -15,7 +15,7 @@ Shape::
     depth: balanced
     time_budget_minutes: null
     ai: {enabled: false, provider: null, features: [], budget_usd: 2.0}
-    output: {excel: true, csv: false, json: false, google_sheets: false}
+    output: {excel: true, csv: false, json: false, google_sheets: false, sort: auto}
 
 ``lead_types.<key>`` is validated against that lead type's own config model
 (``leadtypes/registry.py``), so adding a lead type needs no change here.
@@ -88,8 +88,13 @@ class Fields(_Strict):
 
 
 class Filters(_Strict):
-    min_rating: float | None = Field(None, ge=0, le=5)
-    must_have: list[Literal["phone", "email", "website"]] = Field(default_factory=list)
+    """A view over the project: exports leave out what fails; nothing is deleted."""
+
+    min_rating: float | None = Field(
+        None, ge=0, le=5, description="Leave out organisations rated below this (best rating "
+                                      "across sources, 5-point scale); unrated ones are kept.")
+    must_have: list[Literal["phone", "email", "website"]] = Field(
+        default_factory=list, description="Leave out organisations without each of these.")
     exclude_chains: bool = False
     suppression_lists: list[str] = Field(default_factory=list)
 
@@ -134,12 +139,19 @@ class SheetsSettings(BaseModel):
 class Output(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True, serialize_by_alias=True)
 
-    excel: bool = True
-    csv: bool = False
+    excel: bool = Field(True, description="Write the workbook (Overview + Records) after "
+                                           "the run.")
+    csv: bool = Field(False, description="Write the legacy-layout CSV (and skipped.csv) as "
+                                         "the run goes.")
     # "json" would shadow BaseModel.json(); the document key is still "json".
-    json_: bool = Field(False, alias="json")
+    json_: bool = Field(False, alias="json", description="Write the records as JSON after "
+                                                         "the run.")
     google_sheets: bool = False
     sheets: SheetsSettings | None = None
+    sort: Literal["auto", "score", "place", "area", "category", "legacy"] = Field(
+        "auto", description="Order of the Records rows. auto: score, highest first, grouped "
+                            "by place when the run covers several places. legacy: the "
+                            "profile's own order (locality/category, or venue tier).")
 
 
 class Runtime(BaseModel):
@@ -178,7 +190,12 @@ class RunConfig(_Strict):
                 raise ValueError(f"unknown lead type {key!r} (known: {known})")
             validated[key] = (section if isinstance(section, model)
                               else model.model_validate(section or {}))
-        return validated
+        # The registry's order, not the document's: Postgres keeps a snapshot as
+        # JSONB, which does not preserve key order, so a run resumed (or exported)
+        # from it would otherwise see its lead types -- and their columns -- in
+        # another order than on SQLite.
+        rank = {lt.key: i for i, lt in enumerate(registry.all_lead_types())}
+        return dict(sorted(validated.items(), key=lambda item: rank[item[0]]))
 
     @model_validator(mode="after")
     def _something_enabled(self) -> "RunConfig":
@@ -201,19 +218,10 @@ class RunConfig(_Strict):
         prints them, rather than letting a filter or a budget pass silently.
         """
         notes: list[str] = []
-        f = self.filters
-        if f.min_rating is not None or f.must_have or f.exclude_chains:
-            notes.append("filters.min_rating / must_have / exclude_chains are not applied yet: "
-                         "every lead is kept and exported")
+        if self.filters.exclude_chains:
+            notes.append("filters.exclude_chains is not applied yet: chains are kept")
         if self.icp != ICP():
             notes.append("icp is recorded with the run but does not steer it yet")
-        if self.output.excel:
-            notes.append("output.excel: the Overview + Records workbook is Phase 4 "
-                         "(tools/build_*_workbook.py meanwhile)")
-        if self.output.json_:
-            notes.append("output.json: the JSON export is Phase 4")
-        if not self.output.csv:
-            notes.append("output.csv is off, but the CSV is still written until Phase 4")
         return notes
 
     def to_document(self) -> dict[str, Any]:

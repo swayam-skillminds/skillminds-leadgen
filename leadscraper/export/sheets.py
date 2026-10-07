@@ -194,10 +194,13 @@ class SheetsWriter:
             try:
                 if worksheet.row_count < needed_rows or worksheet.col_count < needed_cols:
                     worksheet.resize(rows=needed_rows, cols=max(needed_cols, worksheet.col_count))
+                # RAW, never USER_ENTERED: Sheets would parse "+91 93200 22422" as a
+                # formula (#ERROR! in every phone cell, Pheraas-ScrapedLeads-16thSept.xlsx)
+                # and run a scraped "=HYPERLINK(...)". Numbers stay numbers either way.
                 worksheet.update(
                     values=self._stringify(rows),
                     range_name="A1",
-                    value_input_option="USER_ENTERED",
+                    value_input_option="RAW",
                 )
                 # A shorter table than last time would leave stale rows behind.
                 if self._last_row_count > len(rows):

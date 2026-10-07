@@ -121,11 +121,11 @@ def cmd_export(args: argparse.Namespace) -> int:
         path.write_bytes(content)
         if args.run is not None:
             add_run_file(engine, args.run, kind=f"export_{args.format}", path=str(path),
-                         rows=len(table.rows))
+                         rows=len(table.records))
     finally:
         engine.dispose()
     excluded = f", {table.excluded} excluded by suppression lists" if table.excluded else ""
-    print(f"wrote {len(table.rows)} organisations ({table.scope}{excluded}) -> {path}")
+    print(f"wrote {len(table.records)} organisations ({table.scope}{excluded}) -> {path}")
     return 0
 
 

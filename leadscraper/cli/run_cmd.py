@@ -39,8 +39,9 @@ import sys
 
 from ..config import Config
 from ..db.legacy_import import is_legacy_store
-from ..db.store import LeadStore, store_target
+from ..db.store import LeadStore, slugify_project, store_target
 from ..export.csv_writer import write_csv
+from ..export.outputs import wants_csv
 from ..export.sheets import SheetsWriter
 from ..leadtypes.local_business.scoring import Scorer
 from ..sources.registry import DISCOVERY_SOURCES, ENRICHMENT_SOURCES
@@ -207,6 +208,26 @@ def open_project(config: Config) -> LeadStore:
     return LeadStore(target, Scorer(config), DedupOptions.from_config(config), **kwargs)
 
 
+def write_project_outputs(store: LeadStore, config: Config) -> list[str]:
+    """The project's workbook (and JSON) per ``output.*``, from the database. Never raises."""
+    from ..export.outputs import output_dir, run_formats
+    from ..services import exports
+    from ..services.workspace import Workspace
+
+    written = []
+    for fmt in run_formats(config):
+        try:
+            _, content, _ = exports.export(store.engine, Workspace(store.workspace_id, ""), fmt,
+                                           project_id=store.project_id)
+            path = output_dir(config) / f"{slugify_project(store.project_name)}.{fmt}"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(content)
+            written.append(str(path))
+        except Exception as exc:
+            print(f"{fmt} not written: {exc}", file=sys.stderr)
+    return written
+
+
 def export_only(config: Config) -> int:
     """Rescore and re-export whatever is already in the project."""
     config.apply_name_noise()
@@ -220,9 +241,13 @@ def export_only(config: Config) -> int:
             return 1
         store.rescore_all()
         leads = store.sorted_leads()
-        csv_path = config.path_for("csv_export", "data/leads.csv")
-        write_csv(leads, csv_path, config.profile, config.currency)
-        print(f"Re-scored and exported {len(leads)} leads of '{store.project_name}' -> {csv_path}")
+        if wants_csv(config):
+            csv_path = config.path_for("csv_export", "data/leads.csv")
+            write_csv(leads, csv_path, config.profile, config.currency)
+            print(f"Re-scored and exported {len(leads)} leads of '{store.project_name}' "
+                  f"-> {csv_path}")
+        for path in write_project_outputs(store, config):
+            print(f"Wrote {path}")
 
         sheets = SheetsWriter(config)
         if sheets.sync(leads):
@@ -289,6 +314,8 @@ def report_outcome(outcome) -> None:
         if len(outcome.skipped) > 15:
             print(f"    ... and {len(outcome.skipped) - 15} more "
                   f"(leadscraper runs show {outcome.run_id})")
+    for path in outcome.files:
+        print(f"  wrote {path}")
     if outcome.status == "paused":
         print(f"  resume with: python -m leadscraper runs resume {outcome.run_id}"
               f"  (or: python run.py --resume {outcome.run_id})")
