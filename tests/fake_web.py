@@ -186,3 +186,34 @@ def patch_kit(monkeypatch, web: FakeWeb) -> None:
                    robots=RobotsCache(web, enabled=config.get("runtime.robots_txt")
                                       is not False))
     monkeypatch.setattr(Kit, "build", classmethod(build))
+
+
+def project_rows(config, model) -> list[dict]:
+    """Rows of ``model`` that belong to the config's project (a shared Postgres holds others)."""
+    from sqlalchemy import select
+
+    from leadscraper.db.models import Organization
+    from leadscraper.db.store import LeadStore, store_target
+
+    target, kwargs = store_target(config)
+    store = LeadStore(target, **kwargs)
+    try:
+        table = model.__table__
+        query = select(table)
+        if "project_id" in table.c:
+            query = query.where(table.c.project_id == store.project_id)
+        elif "organization_id" in table.c:
+            orgs = Organization.__table__
+            query = query.where(table.c.organization_id.in_(
+                select(orgs.c.id).where(orgs.c.project_id == store.project_id)))
+        return [dict(r) for r in store._conn.execute(query).mappings()]
+    finally:
+        store.close()
+
+
+def run_database(tmp_path, name: str) -> str:
+    """The opt-in engine database (LEADSCRAPER_TEST_ENGINE_DB_URL), else a SQLite file."""
+    import os
+
+    return os.environ.get("LEADSCRAPER_TEST_ENGINE_DB_URL") or \
+        f"sqlite:///{tmp_path / name / 'app.sqlite3'}"

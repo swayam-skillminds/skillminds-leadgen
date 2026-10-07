@@ -14,9 +14,8 @@ from typing import Iterator
 import pytest
 import requests
 from openpyxl import Workbook, load_workbook
-from sqlalchemy import select
 
-from fake_web import FakeWeb, Page, dead, fixture, kit_for, patch_kit
+from fake_web import project_rows, run_database, FakeWeb, Page, dead, fixture, kit_for, patch_kit
 from leadscraper.config.compile import compile_run_config
 from leadscraper.config.schema import RunConfig
 from leadscraper.core.lead import Lead
@@ -371,21 +370,16 @@ def run(tmp_path, monkeypatch, name: str, lead_types: dict):
     (tmp_path / name).mkdir(exist_ok=True)
     monkeypatch.setenv("LEADSCRAPER_DATA_DIR", str(tmp_path / name))
     config = compile_run_config(RunConfig.model_validate({
-        "name": "Audit test", "project": "audit-test",
+        "name": "Audit test", "project": f"audit-test-{tmp_path.name}-{name}",
         "geography": {"country": "IN", "places": ["Pune"]},
         "lead_types": lead_types,
-        "runtime": {"db_url": f"sqlite:///{tmp_path / name / 'app.sqlite3'}"},
+        "runtime": {"db_url": run_database(tmp_path, name)},
     }))
     return config, execute(RunRequest(config=config, install_signals=False))
 
 
 def rows(config, model) -> list[dict]:
-    target, kwargs = store_target(config)
-    store = LeadStore(target, **kwargs)
-    try:
-        return [dict(r) for r in store._conn.execute(select(model.__table__)).mappings()]
-    finally:
-        store.close()
+    return project_rows(config, model)
 
 
 def workbook_records(config, run_id) -> tuple[list[str], dict[str, tuple]]:
