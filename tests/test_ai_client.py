@@ -339,3 +339,32 @@ def test_web_search_calls_go_only_to_providers_that_search(monkeypatch, keys):
                        web_search=True) is None
     assert adapter.requests == []
     assert json.dumps(client.spend())                              # spend is serialisable
+
+
+def test_a_key_is_never_sent_to_an_endpoint_it_does_not_belong_to():
+    """No login (A.2.2): a provider entry can't borrow another endpoint's key."""
+    from leadscraper.ai.providers import make_spec
+
+    attacks = [
+        {"name": "x", "kind": "openai_compatible", "base_url": "https://evil.example/v1",
+         "key_secret_name": "anthropic-api-key"},
+        {"name": "anthropic", "base_url": "https://evil.example", },     # default key, new URL
+        {"name": "x", "kind": "openai_compatible", "base_url": "https://evil.example/v1",
+         "key_secret_name": "notify-smtp-password"},
+    ]
+    for entry in attacks:
+        with pytest.raises(ValueError):
+            make_spec(entry)
+    # Env variables come from the kind's defaults only, never from config.
+    spec = make_spec({"name": "x", "kind": "openai_compatible", "base_url": "https://e.example",
+                      "key_env": ["ANTHROPIC_API_KEY"], "key_secret_name": "x-key"})
+    assert spec.key_env == []
+    # The legitimate cases still work.
+    assert make_spec("anthropic").key_secret_name == "anthropic-api-key"
+    assert make_spec({"name": "groq", "kind": "openai_compatible",
+                      "base_url": "https://api.groq.example/openai/v1",
+                      "key_secret_name": "groq-api-key"}).key_secret_name == "groq-api-key"
+    proxied = make_spec({"name": "anthropic", "base_url": "https://proxy.example",
+                         "key_secret_name": "anthropic-proxy-key"})
+    assert proxied.base_url and proxied.key_env == []            # not ANTHROPIC_API_KEY
+    assert make_spec("anthropic").key_env == ["ANTHROPIC_API_KEY"]
