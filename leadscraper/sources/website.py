@@ -63,6 +63,17 @@ class WebsiteEnricher(Enricher):
     def pending_text(self, value: str | None) -> None:
         self._pending.text = value
 
+    def _robots(self):
+        """One robots.txt cache per enricher (per run); ``runtime.robots_txt`` toggles it."""
+        robots = getattr(self, "_robots_cache", None)
+        if robots is None:
+            from ..net.robots import RobotsCache
+
+            enabled = self.ctx.config.get("runtime.robots_txt")
+            robots = RobotsCache(self.ctx.http, enabled=enabled is not False)
+            self._robots_cache = robots
+        return robots
+
     def enrich(self, lead: Lead) -> Lead | None:
         if not lead.website or not is_vendor_website(lead.website):
             return None
@@ -80,8 +91,13 @@ class WebsiteEnricher(Enricher):
         fetched = 0
         self.pending_text = None
 
+        robots = self._robots()
         while pages_to_try and fetched < max_pages:
             url = pages_to_try.pop(0)
+            if not robots.allowed(url, rate_key=host):
+                self.fail("robots_disallowed", url=url, business=lead.business_name,
+                          detail="robots.txt disallows this page")
+                continue
             try:
                 response = self.ctx.http.get(url, rate_key=host)
             except BlockedError as exc:
