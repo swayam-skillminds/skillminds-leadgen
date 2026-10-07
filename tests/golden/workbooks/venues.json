@@ -1,0 +1,3854 @@
+{
+ "Overview": {
+  "autofilter": null,
+  "cells": {
+   "A1": {
+    "align": "center",
+    "font": "Arial 16 b #1F3864",
+    "t": "s",
+    "v": "Sample venues — Lead Book"
+   },
+   "A10": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Run"
+   },
+   "A100": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Type Reason"
+   },
+   "A101": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Discovery Bucket"
+   },
+   "A102": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Sources"
+   },
+   "A103": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Change"
+   },
+   "A104": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Last Seen"
+   },
+   "A105": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Org ID"
+   },
+   "A107": {
+    "align": "top wrap",
+    "font": "Arial 8 i #7F7F7F",
+    "t": "s",
+    "v": "Every figure is computed from the project database when the workbook is generated; Records holds the rows behind each. Contact details appear only where they were published. Re-export at any time from the API or CLI, without re-scraping."
+   },
+   "A11": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Date"
+   },
+   "A12": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Duration"
+   },
+   "A13": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Places"
+   },
+   "A14": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Country"
+   },
+   "A15": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Lead types"
+   },
+   "A16": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Sources used"
+   },
+   "A17": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Work units"
+   },
+   "A18": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Depth"
+   },
+   "A19": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "AI"
+   },
+   "A2": {
+    "align": "center",
+    "font": "Arial 9 i #7F7F7F",
+    "t": "s",
+    "v": "7 records · sorted by score (highest first) · generated 01 Oct 2026, 15:00 (Asia/Kolkata)"
+   },
+   "A20": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Score weights"
+   },
+   "A21": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "This workbook"
+   },
+   "A22": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Sorted by"
+   },
+   "A23": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Generated"
+   },
+   "A25": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "RESULTS"
+   },
+   "A26": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Records"
+   },
+   "A27": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Change in this run"
+   },
+   "A29": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "TOP 7 LEADS"
+   },
+   "A30": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Name"
+   },
+   "A31": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Vineyard Courtyard Retreat"
+   },
+   "A32": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Cloudline Hill Villa"
+   },
+   "A33": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Gangapur Lakeside Lawns"
+   },
+   "A34": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Trimbak Valley Homestay"
+   },
+   "A35": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Ridge Estate Plot Sales"
+   },
+   "A36": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Hilltop Villas Collective"
+   },
+   "A37": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Misty Peak Farm Stay"
+   },
+   "A39": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "BY TIER"
+   },
+   "A4": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "RECORDS"
+   },
+   "A40": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Tier"
+   },
+   "A41": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Luxury"
+   },
+   "A42": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Premium"
+   },
+   "A43": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Standard"
+   },
+   "A44": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Unverified"
+   },
+   "A45": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Excluded"
+   },
+   "A47": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "BY VENUE TYPE"
+   },
+   "A48": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Venue type"
+   },
+   "A49": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Banquet / Event Lawn"
+   },
+   "A5": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 18 b #1F3864",
+    "t": "n",
+    "v": 7
+   },
+   "A50": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Boutique Stay / Homestay"
+   },
+   "A51": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Farmhouse / Farm Stay"
+   },
+   "A52": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Not a Venue"
+   },
+   "A53": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Premium Hotel"
+   },
+   "A54": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Private Pool Villa"
+   },
+   "A55": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Villa / Bungalow"
+   },
+   "A57": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "BY LOCALITY"
+   },
+   "A58": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Locality"
+   },
+   "A59": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Igatpuri"
+   },
+   "A60": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Gangapur Dam Belt"
+   },
+   "A61": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Region-wide"
+   },
+   "A62": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Trimbakeshwar"
+   },
+   "A63": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Wine Country (Dindori / Ozar / Niphad)"
+   },
+   "A65": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "BY SCORE BAND"
+   },
+   "A66": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Score band"
+   },
+   "A67": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "60–79"
+   },
+   "A68": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "40–59"
+   },
+   "A69": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "20–39"
+   },
+   "A7": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "RUN SUMMARY"
+   },
+   "A70": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "0–19"
+   },
+   "A72": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "DATA QUALITY"
+   },
+   "A73": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Field"
+   },
+   "A74": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Any contact"
+   },
+   "A75": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Phone"
+   },
+   "A76": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Email"
+   },
+   "A77": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Website"
+   },
+   "A78": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Address"
+   },
+   "A79": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Social profile"
+   },
+   "A8": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Project"
+   },
+   "A80": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Google Maps listing"
+   },
+   "A81": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Decision-maker"
+   },
+   "A82": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Rating"
+   },
+   "A83": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Price"
+   },
+   "A85": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "COLUMN LEGEND"
+   },
+   "A86": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Column"
+   },
+   "A87": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Score"
+   },
+   "A88": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Tier"
+   },
+   "A89": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Record Type"
+   },
+   "A9": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Config"
+   },
+   "A90": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Lead Types"
+   },
+   "A91": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Max Guests"
+   },
+   "A92": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Event Capacity"
+   },
+   "A93": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Best Rating"
+   },
+   "A94": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Listing"
+   },
+   "A95": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Fit"
+   },
+   "A96": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Intent"
+   },
+   "A97": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Reach"
+   },
+   "A98": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Score Reasons"
+   },
+   "A99": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Tier Reasons"
+   },
+   "B10": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "#1 · completed"
+   },
+   "B100": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Why the venue type was chosen: a rule, or 'ai'."
+   },
+   "B101": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The run category whose search found the venue."
+   },
+   "B102": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Which sources found or enriched it."
+   },
+   "B103": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "What this run did: New (first found), Updated (added something), Unchanged (found again, nothing to add)."
+   },
+   "B104": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The last run that found it (or changed it)."
+   },
+   "B105": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The organisation's id in the API (/organizations/{id})."
+   },
+   "B11": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "30 Sep 2026, 15:00 (Asia/Kolkata)"
+   },
+   "B12": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "1.6 h"
+   },
+   "B13": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Nashik · 10 areas"
+   },
+   "B14": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "India (IN)"
+   },
+   "B15": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses"
+   },
+   "B16": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "google_maps (6 found), airbnb (2 found)"
+   },
+   "B17": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "4 of 5 done, 1 skipped"
+   },
+   "B18": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "balanced"
+   },
+   "B19": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "on · claude_cli · $0.42 spent of $5.00 (18 calls)"
+   },
+   "B20": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Fit 100% · Intent 0% · Reach 0%"
+   },
+   "B21": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "organisations this run found"
+   },
+   "B22": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "score (highest first)"
+   },
+   "B23": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "01 Oct 2026, 15:00 (Asia/Kolkata), from the project database"
+   },
+   "B26": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "7"
+   },
+   "B27": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "7 new · 0 updated · 0 found again unchanged"
+   },
+   "B30": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Score"
+   },
+   "B31": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 70.83
+   },
+   "B32": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 63.45
+   },
+   "B33": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 48.6
+   },
+   "B34": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 25.91
+   },
+   "B35": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 22.68
+   },
+   "B36": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 21.66
+   },
+   "B37": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 13.39
+   },
+   "B4": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "NEW"
+   },
+   "B40": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Records"
+   },
+   "B41": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "B42": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "B43": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B44": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B45": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B48": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Records"
+   },
+   "B49": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B5": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 18 b #1F3864",
+    "t": "n",
+    "v": 7
+   },
+   "B50": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B51": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B52": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B53": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B54": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B55": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B58": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Records"
+   },
+   "B59": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "B60": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B61": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B62": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B63": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B66": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Records"
+   },
+   "B67": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "B68": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B69": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "B70": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B73": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Filled"
+   },
+   "B74": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 7
+   },
+   "B75": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 6
+   },
+   "B76": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "B77": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "B78": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 7
+   },
+   "B79": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B8": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Sample venues"
+   },
+   "B80": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
+   },
+   "B81": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "B82": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 5
+   },
+   "B83": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
+   },
+   "B86": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Meaning"
+   },
+   "B87": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Overall rank, 0–100: the run's weights over Fit, Intent and Reach. A component no lead type in the run scores is left out and the other weights are scaled up; one that some lead type scores counts 0 for an organisation without it."
+   },
+   "B88": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "How upscale the venue is (not how good a lead). Operator: a brand running several venues. Luxury: a high-end criterion plus a top price. Premium: one high-end criterion (premium platform or operator, strong rating over many reviews, private pool or 3+ bedrooms, premium hotel). Standard: none met, or a budget price. Unverified: too little known. Excluded: not a venue."
+   },
+   "B89": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Property: one venue. Brand: an operator such as a villa-rental company, with its venues under Managed By."
+   },
+   "B9": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Sample venues"
+   },
+   "B90": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The lead types that found or enriched the organisation."
+   },
+   "B91": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Overnight capacity."
+   },
+   "B92": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Guests for a function."
+   },
+   "B93": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The rating backed by the most reviews across Maps, the directories and every booking platform, on a 5-point scale."
+   },
+   "B94": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The first booking-platform page; Platforms lists every platform the venue is on."
+   },
+   "B95": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Is it the kind of organisation we sell to? 0–100."
+   },
+   "B96": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Is there a reason to buy now (hiring, funding, tenders…)? 0–100: 0 when nothing was found, blank when no lead type in the run looks for one."
+   },
+   "B97": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Can we get hold of someone? 0–100, from the published contact channels."
+   },
+   "B98": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Why it ranks where it does: each lead type's reasons, strongest first."
+   },
+   "B99": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The facts that set the tier."
+   },
+   "C30": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Where"
+   },
+   "C31": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Wine Country (Dindori / Ozar / Niphad), Nashik"
+   },
+   "C32": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Igatpuri, Nashik"
+   },
+   "C33": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Gangapur Dam Belt, Nashik"
+   },
+   "C34": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Trimbakeshwar, Nashik"
+   },
+   "C35": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Igatpuri, Nashik"
+   },
+   "C36": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Region-wide, Nashik"
+   },
+   "C37": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Igatpuri, Nashik"
+   },
+   "C4": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "UPDATED"
+   },
+   "C40": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Share"
+   },
+   "C41": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.2857
+   },
+   "C42": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.2857
+   },
+   "C43": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1429
+   },
+   "C44": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1429
+   },
+   "C45": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1429
+   },
+   "C48": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Share"
+   },
+   "C49": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1429
+   },
+   "C5": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 18 b #1F3864",
+    "t": "n",
+    "v": 0
+   },
+   "C50": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1429
+   },
+   "C51": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1429
+   },
+   "C52": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1429
+   },
+   "C53": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1429
+   },
+   "C54": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1429
+   },
+   "C55": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1429
+   },
+   "C58": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Share"
+   },
+   "C59": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.4286
+   },
+   "C60": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1429
+   },
+   "C61": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1429
+   },
+   "C62": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1429
+   },
+   "C63": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1429
+   },
+   "C66": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Share"
+   },
+   "C67": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.2857
+   },
+   "C68": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1429
+   },
+   "C69": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.4286
+   },
+   "C70": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1429
+   },
+   "C73": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Coverage"
+   },
+   "C74": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "C75": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.8571
+   },
+   "C76": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.2857
+   },
+   "C77": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.2857
+   },
+   "C78": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "C79": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1429
+   },
+   "C80": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.5714
+   },
+   "C81": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "C82": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.7143
+   },
+   "C83": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.5714
+   },
+   "D4": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "WITH PHONE"
+   },
+   "D40": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Avg score"
+   },
+   "D41": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 67.1
+   },
+   "D42": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 31
+   },
+   "D43": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 25.9
+   },
+   "D44": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 21.7
+   },
+   "D45": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 22.7
+   },
+   "D48": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Avg score"
+   },
+   "D49": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 48.6
+   },
+   "D5": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 18 b #1F3864",
+    "t": "n",
+    "v": 6
+   },
+   "D50": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 25.9
+   },
+   "D51": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 13.4
+   },
+   "D52": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 22.7
+   },
+   "D53": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 70.8
+   },
+   "D54": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 63.5
+   },
+   "D55": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 21.7
+   },
+   "D58": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Avg score"
+   },
+   "D59": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 33.2
+   },
+   "D60": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 48.6
+   },
+   "D61": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 21.7
+   },
+   "D62": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 25.9
+   },
+   "D63": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 70.8
+   },
+   "D66": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Avg score"
+   },
+   "D67": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 67.1
+   },
+   "D68": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 48.6
+   },
+   "D69": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 23.4
+   },
+   "D70": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 13.4
+   },
+   "D73": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Reading"
+   },
+   "D74": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "A phone, email, website, social profile or booking line."
+   },
+   "D75": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Published numbers only."
+   },
+   "D76": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Published addresses only; inferred ones are counted separately."
+   },
+   "D77": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The organisation's own site (directory and platform pages excluded)."
+   },
+   "D79": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Instagram, Facebook, LinkedIn or WhatsApp."
+   },
+   "D81": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "A named person (and title) from a public page."
+   },
+   "E30": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Tier"
+   },
+   "E31": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Luxury"
+   },
+   "E32": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Luxury"
+   },
+   "E33": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Premium"
+   },
+   "E34": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Standard"
+   },
+   "E35": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Excluded"
+   },
+   "E36": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Unverified"
+   },
+   "E37": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Premium"
+   },
+   "E4": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "WITH EMAIL"
+   },
+   "E40": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "With phone"
+   },
+   "E41": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "E42": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E43": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E44": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E45": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E48": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "With phone"
+   },
+   "E49": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E5": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 18 b #1F3864",
+    "t": "n",
+    "v": 2
+   },
+   "E50": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E51": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "E52": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E53": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E54": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E55": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E58": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "With phone"
+   },
+   "E59": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "E60": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E61": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E62": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E63": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E66": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "With phone"
+   },
+   "E67": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "E68": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E69": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "E70": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "F30": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Phone"
+   },
+   "F31": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 253 000 0102"
+   },
+   "F32": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 2553 000 101"
+   },
+   "F33": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 253 000 0103"
+   },
+   "F34": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 2594 000 104"
+   },
+   "F35": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 2553 000 111"
+   },
+   "F36": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 20 0000 0110"
+   },
+   "F4": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "AVG SCORE"
+   },
+   "F5": {
+    "align": "left center",
+    "fmt": "0.0",
+    "font": "Arial 18 b #1F3864",
+    "t": "n",
+    "v": 38.1
+   },
+   "G30": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Website"
+   },
+   "G31": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://vineyardcourtyard.example/",
+    "t": "s",
+    "v": "vineyardcourtyard.example"
+   },
+   "G36": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://hilltopvillas.example/",
+    "t": "s",
+    "v": "hilltopvillas.example"
+   }
+  },
+  "conditional": [
+   "B31:B37 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "C74:C83 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D41:D45 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D49:D55 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D59:D63 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D67:D70 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']"
+  ],
+  "dimensions": "A1:H107",
+  "freeze": null,
+  "gridlines": false,
+  "merged": [
+   "A107:H107",
+   "A1:H1",
+   "A2:H2",
+   "B100:H100",
+   "B101:H101",
+   "B102:H102",
+   "B103:H103",
+   "B104:H104",
+   "B105:H105",
+   "B10:H10",
+   "B11:H11",
+   "B12:H12",
+   "B13:H13",
+   "B14:H14",
+   "B15:H15",
+   "B16:H16",
+   "B17:H17",
+   "B18:H18",
+   "B19:H19",
+   "B20:H20",
+   "B21:H21",
+   "B22:H22",
+   "B23:H23",
+   "B26:H26",
+   "B27:H27",
+   "B86:H86",
+   "B87:H87",
+   "B88:H88",
+   "B89:H89",
+   "B8:H8",
+   "B90:H90",
+   "B91:H91",
+   "B92:H92",
+   "B93:H93",
+   "B94:H94",
+   "B95:H95",
+   "B96:H96",
+   "B97:H97",
+   "B98:H98",
+   "B99:H99",
+   "B9:H9",
+   "C30:D30",
+   "C31:D31",
+   "C32:D32",
+   "C33:D33",
+   "C34:D34",
+   "C35:D35",
+   "C36:D36",
+   "C37:D37",
+   "D73:H73",
+   "D74:H74",
+   "D75:H75",
+   "D76:H76",
+   "D77:H77",
+   "D78:H78",
+   "D79:H79",
+   "D80:H80",
+   "D81:H81",
+   "D82:H82",
+   "D83:H83",
+   "G30:H30",
+   "G31:H31",
+   "G32:H32",
+   "G33:H33",
+   "G34:H34",
+   "G35:H35",
+   "G36:H36",
+   "G37:H37"
+  ],
+  "tab": "C00000",
+  "widths": {
+   "A": 34.0,
+   "B": 12.0,
+   "C": 12.0,
+   "D": 12.0,
+   "E": 14.0,
+   "F": 18.0,
+   "G": 22.0,
+   "H": 30.0
+  }
+ },
+ "Records": {
+  "autofilter": "A1:AU8",
+  "cells": {
+   "A1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Score"
+   },
+   "A2": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 70.83
+   },
+   "A3": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 63.45
+   },
+   "A4": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 48.6
+   },
+   "A5": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 25.91
+   },
+   "A6": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 22.68
+   },
+   "A7": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 21.66
+   },
+   "A8": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 13.39
+   },
+   "AA1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Fit"
+   },
+   "AA2": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 70.8
+   },
+   "AA3": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 63.5
+   },
+   "AA4": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 48.6
+   },
+   "AA5": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 25.9
+   },
+   "AA6": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 22.7
+   },
+   "AA7": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 21.7
+   },
+   "AA8": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 13.4
+   },
+   "AB1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Intent"
+   },
+   "AC1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Reach"
+   },
+   "AC2": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 76
+   },
+   "AC3": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 36
+   },
+   "AC4": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 36
+   },
+   "AC5": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 36
+   },
+   "AC6": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 36
+   },
+   "AC7": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 76
+   },
+   "AC8": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 18
+   },
+   "AD1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Score Reasons"
+   },
+   "AD2": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Luxury venue (rated 4.6 over 410 reviews; 12 bedrooms; premium hotel); best rating 4.6 over 410 reviews; reachable by phone, email, website; found on google_maps only; Google rating 4.6 from 410 reviews"
+   },
+   "AD3": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Luxury venue (rated 4.9 over 64 reviews; private pool; 5 bedrooms); best rating 4.9 over 64 reviews; reachable by phone; found on airbnb only"
+   },
+   "AD4": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "best rating 4.4 over 95 reviews; Premium venue (rated 4.4 over 95 reviews; event capacity 800; ₹1,800/plate); reachable by phone; found on google_maps only; Google rating 4.4 from 95 reviews"
+   },
+   "AD5": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "best rating 4.1 over 14 reviews; reachable by phone; found on google_maps only; Google rating 4.1 from 14 reviews; Standard venue (₹3,200/night; price under ₹4,000/night)"
+   },
+   "AD6": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "best rating 3.6 over 7 reviews; reachable by phone; found on google_maps only; Google rating 3.6 from 7 reviews; Excluded venue (not a venue: rules: real estate agency)"
+   },
+   "AD7": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "reachable by phone, email, website; found on airbnb only; Unverified venue"
+   },
+   "AD8": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "found on airbnb only; reachable by Instagram; Premium venue (3 bedrooms)"
+   },
+   "AE1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Amenities"
+   },
+   "AE3": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Private pool, Lawn, Mountain view"
+   },
+   "AF1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Maps Rating"
+   },
+   "AF2": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4.6
+   },
+   "AF4": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4.4
+   },
+   "AF5": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4.1
+   },
+   "AF6": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3.6
+   },
+   "AG1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Maps Reviews"
+   },
+   "AG2": {
+    "align": "center top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 410
+   },
+   "AG4": {
+    "align": "center top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 95
+   },
+   "AG5": {
+    "align": "center top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 14
+   },
+   "AG6": {
+    "align": "center top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 7
+   },
+   "AH1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Platform Ratings"
+   },
+   "AH3": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "airbnb 4.9 (64)"
+   },
+   "AI1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Bathrooms"
+   },
+   "AI3": {
+    "align": "center top",
+    "fmt": "0.#",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 5
+   },
+   "AJ1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Lawn / Garden"
+   },
+   "AJ2": {
+    "align": "center top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Yes"
+   },
+   "AJ4": {
+    "align": "center top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Yes"
+   },
+   "AK1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Tier Reasons"
+   },
+   "AK2": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "rated 4.6 over 410 reviews; 12 bedrooms; premium hotel; ₹14,000/night"
+   },
+   "AK3": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "rated 4.9 over 64 reviews; private pool; 5 bedrooms; ₹32,000/night"
+   },
+   "AK4": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "rated 4.4 over 95 reviews; event capacity 800; ₹1,800/plate"
+   },
+   "AK5": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "₹3,200/night; price under ₹4,000/night"
+   },
+   "AK6": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "not a venue: rules: real estate agency"
+   },
+   "AK8": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "3 bedrooms"
+   },
+   "AL1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Type Reason"
+   },
+   "AL2": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "rules: premium hotel chain"
+   },
+   "AL3": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "rules: villa with a private pool"
+   },
+   "AL4": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "rules: banquet / lawn / event venue"
+   },
+   "AL5": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "rules: homestay / cottage / home"
+   },
+   "AL6": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "rules: real estate agency"
+   },
+   "AL7": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "rules: villa / bungalow / 3+ bedroom home"
+   },
+   "AL8": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "rules: farm / farmhouse"
+   },
+   "AM1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Price Source"
+   },
+   "AM3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "platform"
+   },
+   "AN1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Source Category"
+   },
+   "AN2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Resort"
+   },
+   "AN3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Villa"
+   },
+   "AN4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Banquet hall"
+   },
+   "AN5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Homestay"
+   },
+   "AN6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Real estate agency"
+   },
+   "AN8": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Farm stay"
+   },
+   "AO1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Discovery Bucket"
+   },
+   "AO2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Villas and farm stays"
+   },
+   "AO3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Villas and farm stays"
+   },
+   "AO4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Villas and farm stays"
+   },
+   "AO5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Villas and farm stays"
+   },
+   "AO6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Villas and farm stays"
+   },
+   "AO7": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Villas and farm stays"
+   },
+   "AO8": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Villas and farm stays"
+   },
+   "AP1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Sources"
+   },
+   "AP2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "google_maps"
+   },
+   "AP3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "airbnb"
+   },
+   "AP4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "google_maps"
+   },
+   "AP5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "google_maps"
+   },
+   "AP6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "google_maps"
+   },
+   "AP7": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "airbnb"
+   },
+   "AP8": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "airbnb"
+   },
+   "AQ1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Src #"
+   },
+   "AQ2": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "AQ3": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "AQ4": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "AQ5": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "AQ6": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "AQ7": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "AQ8": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "AR1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Change"
+   },
+   "AR2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "AR3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "AR4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "AR5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "AR6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "AR7": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "AR8": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "AS1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "First Seen"
+   },
+   "AS2": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-08-24T15:00:00"
+   },
+   "AS3": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-08-23T15:00:00"
+   },
+   "AS4": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-08-25T15:00:00"
+   },
+   "AS5": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-08-26T15:00:00"
+   },
+   "AS6": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-08-29T15:00:00"
+   },
+   "AS7": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-08-28T15:00:00"
+   },
+   "AS8": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-08-27T15:00:00"
+   },
+   "AT1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Last Seen"
+   },
+   "AT2": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T15:00:00"
+   },
+   "AT3": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T15:00:00"
+   },
+   "AT4": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T15:00:00"
+   },
+   "AT5": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T15:00:00"
+   },
+   "AT6": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T15:00:00"
+   },
+   "AT7": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T15:00:00"
+   },
+   "AT8": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T15:00:00"
+   },
+   "AU1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Org ID"
+   },
+   "AU2": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "AU3": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "AU4": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "AU5": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
+   },
+   "AU6": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 7
+   },
+   "AU7": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 6
+   },
+   "AU8": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 5
+   },
+   "B1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Name"
+   },
+   "B2": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Vineyard Courtyard Retreat"
+   },
+   "B3": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Cloudline Hill Villa"
+   },
+   "B4": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Gangapur Lakeside Lawns"
+   },
+   "B5": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Trimbak Valley Homestay"
+   },
+   "B6": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Ridge Estate Plot Sales"
+   },
+   "B7": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Hilltop Villas Collective"
+   },
+   "B8": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Misty Peak Farm Stay"
+   },
+   "C1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Tier"
+   },
+   "C2": {
+    "align": "top",
+    "font": "Arial 10 b #2E7D32",
+    "t": "s",
+    "v": "Luxury"
+   },
+   "C3": {
+    "align": "top",
+    "font": "Arial 10 b #2E7D32",
+    "t": "s",
+    "v": "Luxury"
+   },
+   "C4": {
+    "align": "top",
+    "font": "Arial 10 b #1565C0",
+    "t": "s",
+    "v": "Premium"
+   },
+   "C5": {
+    "align": "top",
+    "font": "Arial 10 b #B26A00",
+    "t": "s",
+    "v": "Standard"
+   },
+   "C6": {
+    "align": "top",
+    "font": "Arial 10 b #B3261E",
+    "t": "s",
+    "v": "Excluded"
+   },
+   "C7": {
+    "align": "top",
+    "font": "Arial 10 b #7F7F7F",
+    "t": "s",
+    "v": "Unverified"
+   },
+   "C8": {
+    "align": "top",
+    "font": "Arial 10 b #1565C0",
+    "t": "s",
+    "v": "Premium"
+   },
+   "D1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Venue Type"
+   },
+   "D2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Premium Hotel"
+   },
+   "D3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Private Pool Villa"
+   },
+   "D4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Banquet / Event Lawn"
+   },
+   "D5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Boutique Stay / Homestay"
+   },
+   "D6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Not a Venue"
+   },
+   "D7": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Villa / Bungalow"
+   },
+   "D8": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Farmhouse / Farm Stay"
+   },
+   "E1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Record Type"
+   },
+   "E2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Property"
+   },
+   "E3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Property"
+   },
+   "E4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Property"
+   },
+   "E5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Property"
+   },
+   "E6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Not a venue"
+   },
+   "E7": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Property"
+   },
+   "E8": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Property"
+   },
+   "F1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Lead Types"
+   },
+   "F2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses"
+   },
+   "F3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses"
+   },
+   "F4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses"
+   },
+   "F5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses"
+   },
+   "F6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses"
+   },
+   "F7": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses"
+   },
+   "F8": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses"
+   },
+   "G1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Locality"
+   },
+   "G2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Wine Country (Dindori / Ozar / Niphad)"
+   },
+   "G3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Igatpuri"
+   },
+   "G4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Gangapur Dam Belt"
+   },
+   "G5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Trimbakeshwar"
+   },
+   "G6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Igatpuri"
+   },
+   "G7": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Region-wide"
+   },
+   "G8": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Igatpuri"
+   },
+   "H1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Price From (INR)"
+   },
+   "H2": {
+    "align": "center top",
+    "fmt": "\"₹\"#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 14000
+   },
+   "H3": {
+    "align": "center top",
+    "fmt": "\"₹\"#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 32000
+   },
+   "H4": {
+    "align": "center top",
+    "fmt": "\"₹\"#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1800
+   },
+   "H5": {
+    "align": "center top",
+    "fmt": "\"₹\"#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3200
+   },
+   "I1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Price To (INR)"
+   },
+   "I3": {
+    "align": "center top",
+    "fmt": "\"₹\"#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 45000
+   },
+   "J1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Price Basis"
+   },
+   "J2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "per night"
+   },
+   "J3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "per night"
+   },
+   "J4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "per plate"
+   },
+   "J5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "per night"
+   },
+   "K1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Bedrooms"
+   },
+   "K2": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 12
+   },
+   "K3": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 5
+   },
+   "K5": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "K8": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "L1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Max Guests"
+   },
+   "L3": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 14
+   },
+   "L5": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 6
+   },
+   "L8": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 10
+   },
+   "M1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Event Capacity"
+   },
+   "M2": {
+    "align": "center top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 250
+   },
+   "M4": {
+    "align": "center top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 800
+   },
+   "N1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Private Pool"
+   },
+   "N3": {
+    "align": "center top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Yes"
+   },
+   "N8": {
+    "align": "center top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "No"
+   },
+   "O1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Event Friendly"
+   },
+   "O2": {
+    "align": "center top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Yes"
+   },
+   "O3": {
+    "align": "center top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Yes"
+   },
+   "O4": {
+    "align": "center top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Yes"
+   },
+   "P1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Pet Friendly"
+   },
+   "P5": {
+    "align": "center top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Yes"
+   },
+   "Q1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Best Rating"
+   },
+   "Q2": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4.6
+   },
+   "Q3": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4.9
+   },
+   "Q4": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4.4
+   },
+   "Q5": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4.1
+   },
+   "Q6": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3.6
+   },
+   "R1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Total Reviews"
+   },
+   "R2": {
+    "align": "center top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 410
+   },
+   "R3": {
+    "align": "center top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 64
+   },
+   "R4": {
+    "align": "center top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 95
+   },
+   "R5": {
+    "align": "center top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 14
+   },
+   "R6": {
+    "align": "center top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 7
+   },
+   "S1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Primary Phone"
+   },
+   "S2": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 253 000 0102"
+   },
+   "S3": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 2553 000 101"
+   },
+   "S4": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 253 000 0103"
+   },
+   "S5": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 2594 000 104"
+   },
+   "S6": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 2553 000 111"
+   },
+   "S7": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 20 0000 0110"
+   },
+   "T1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Primary Email"
+   },
+   "T2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "stay@vineyardcourtyard.example"
+   },
+   "T7": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "book@hilltopvillas.example"
+   },
+   "U1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Website"
+   },
+   "U2": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://vineyardcourtyard.example/",
+    "t": "s",
+    "v": "vineyardcourtyard.example"
+   },
+   "U7": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://hilltopvillas.example/",
+    "t": "s",
+    "v": "hilltopvillas.example"
+   },
+   "V1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Instagram"
+   },
+   "V8": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://instagram.com/mistypeak.sample",
+    "t": "s",
+    "v": "@mistypeak.sample"
+   },
+   "W1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Google Maps"
+   },
+   "W2": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://maps.google.com/?cid=1000000000000000202",
+    "t": "s",
+    "v": "View map"
+   },
+   "W4": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://maps.google.com/?cid=1000000000000000203",
+    "t": "s",
+    "v": "View map"
+   },
+   "W5": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://maps.google.com/?cid=1000000000000000204",
+    "t": "s",
+    "v": "View map"
+   },
+   "W6": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://maps.google.com/?cid=1000000000000000207",
+    "t": "s",
+    "v": "View map"
+   },
+   "X1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Listing"
+   },
+   "X3": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://stays.example/cloudline",
+    "t": "s",
+    "v": "View"
+   },
+   "Y1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Platforms"
+   },
+   "Y3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "airbnb"
+   },
+   "Z1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Address"
+   },
+   "Z2": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Survey 2, Wine Country (Dindori / Ozar / Niphad), Nashik district"
+   },
+   "Z3": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Survey 1, Igatpuri, Nashik district"
+   },
+   "Z4": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Survey 3, Gangapur Dam Belt, Nashik district"
+   },
+   "Z5": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Survey 4, Trimbakeshwar, Nashik district"
+   },
+   "Z6": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Survey 7, Igatpuri, Nashik district"
+   },
+   "Z7": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Survey 6, Region-wide, Nashik district"
+   },
+   "Z8": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Survey 5, Igatpuri, Nashik district"
+   }
+  },
+  "conditional": [
+   "A2:A8 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "A2:AU8 expression ['MOD(ROW(),2)=0']",
+   "AA2:AA8 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "AB2:AB8 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "AC2:AC8 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']"
+  ],
+  "dimensions": "A1:AU8",
+  "freeze": "C2",
+  "gridlines": null,
+  "merged": [],
+  "tab": "1F3864",
+  "widths": {
+   "A": 8.0,
+   "AA": 7.0,
+   "AB": 7.0,
+   "AC": 7.0,
+   "AD": 50.0,
+   "AE": 44.0,
+   "AF": 9.0,
+   "AG": 10.0,
+   "AH": 30.0,
+   "AI": 9.0,
+   "AJ": 8.0,
+   "AK": 46.0,
+   "AL": 30.0,
+   "AM": 16.0,
+   "AN": 18.0,
+   "AO": 18.0,
+   "AP": 22.0,
+   "AQ": 6.0,
+   "AR": 11.0,
+   "AS": 15.0,
+   "AT": 15.0,
+   "AU": 8.0,
+   "B": 38.0,
+   "C": 11.0,
+   "D": 22.0,
+   "E": 11.0,
+   "F": 18.0,
+   "G": 20.0,
+   "H": 12.0,
+   "I": 12.0,
+   "J": 10.0,
+   "K": 9.0,
+   "L": 9.0,
+   "M": 10.0,
+   "N": 8.0,
+   "O": 9.0,
+   "P": 8.0,
+   "Q": 8.0,
+   "R": 9.0,
+   "S": 18.0,
+   "T": 28.0,
+   "U": 26.0,
+   "V": 20.0,
+   "W": 12.0,
+   "X": 12.0,
+   "Y": 22.0,
+   "Z": 44.0
+  }
+ },
+ "active": "Overview",
+ "sheets": [
+  "Overview",
+  "Records"
+ ]
+}

@@ -1,0 +1,3192 @@
+{
+ "Overview": {
+  "autofilter": null,
+  "cells": {
+   "A1": {
+    "align": "center",
+    "font": "Arial 16 b #1F3864",
+    "t": "s",
+    "v": "Sample dentists and caterers — Lead Book"
+   },
+   "A10": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Run"
+   },
+   "A11": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Date"
+   },
+   "A12": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Duration"
+   },
+   "A13": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Places"
+   },
+   "A14": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Country"
+   },
+   "A15": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Lead types"
+   },
+   "A16": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Sources used"
+   },
+   "A17": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Work units"
+   },
+   "A18": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Depth"
+   },
+   "A19": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "AI"
+   },
+   "A2": {
+    "align": "center",
+    "font": "Arial 9 i #7F7F7F",
+    "t": "s",
+    "v": "10 records · sorted by place, then score · generated 01 Oct 2026, 15:00 (Asia/Kolkata)"
+   },
+   "A20": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Score weights"
+   },
+   "A21": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "This workbook"
+   },
+   "A22": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Sorted by"
+   },
+   "A23": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Generated"
+   },
+   "A25": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "RESULTS"
+   },
+   "A26": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Records"
+   },
+   "A27": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Change in this run"
+   },
+   "A29": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "TOP 10 LEADS"
+   },
+   "A30": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Name"
+   },
+   "A31": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Pearl Orthodontics"
+   },
+   "A32": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Bright Smile Dental Studio"
+   },
+   "A33": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Saffron Table Caterers"
+   },
+   "A34": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Coastal Feast Catering"
+   },
+   "A35": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Lotus Family Dentistry"
+   },
+   "A36": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Riverside Dental Care"
+   },
+   "A37": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Monsoon Spice Caterers"
+   },
+   "A38": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Silver Spoon Banquet Kitchen"
+   },
+   "A39": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Harbour Dental Clinic"
+   },
+   "A4": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "RECORDS"
+   },
+   "A40": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Green Leaf Kitchens"
+   },
+   "A42": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "BY CATEGORY"
+   },
+   "A43": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Category"
+   },
+   "A44": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Caterers"
+   },
+   "A45": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Dentists"
+   },
+   "A47": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "BY PLACE"
+   },
+   "A48": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Place"
+   },
+   "A49": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Mumbai"
+   },
+   "A5": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 18 b #1F3864",
+    "t": "n",
+    "v": 10
+   },
+   "A50": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Pune"
+   },
+   "A52": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "BY SCORE BAND"
+   },
+   "A53": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Score band"
+   },
+   "A54": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "60–79"
+   },
+   "A55": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "20–39"
+   },
+   "A57": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "DATA QUALITY"
+   },
+   "A58": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Field"
+   },
+   "A59": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Any contact"
+   },
+   "A60": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Phone"
+   },
+   "A61": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Email"
+   },
+   "A62": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Website"
+   },
+   "A63": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Address"
+   },
+   "A64": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Social profile"
+   },
+   "A65": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Google Maps listing"
+   },
+   "A66": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Decision-maker"
+   },
+   "A67": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Rating"
+   },
+   "A69": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "COLUMN LEGEND"
+   },
+   "A7": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "RUN SUMMARY"
+   },
+   "A70": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Column"
+   },
+   "A71": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Score"
+   },
+   "A72": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Lead Types"
+   },
+   "A73": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Place"
+   },
+   "A74": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Fit"
+   },
+   "A75": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Intent"
+   },
+   "A76": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Reach"
+   },
+   "A77": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Score Reasons"
+   },
+   "A78": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Sources"
+   },
+   "A79": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Change"
+   },
+   "A8": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Project"
+   },
+   "A80": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Last Seen"
+   },
+   "A81": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Org ID"
+   },
+   "A83": {
+    "align": "top wrap",
+    "font": "Arial 8 i #7F7F7F",
+    "t": "s",
+    "v": "Every figure is computed from the project database when the workbook is generated; Records holds the rows behind each. Contact details appear only where they were published. Re-export at any time from the API or CLI, without re-scraping."
+   },
+   "A9": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Config"
+   },
+   "B10": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "#1 · completed"
+   },
+   "B11": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "30 Sep 2026, 15:00 (Asia/Kolkata)"
+   },
+   "B12": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "38 min"
+   },
+   "B13": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune, Mumbai"
+   },
+   "B14": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "India (IN)"
+   },
+   "B15": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses"
+   },
+   "B16": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "google_maps (12 found), justdial (3 found)"
+   },
+   "B17": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "7 of 8 done, 1 failed"
+   },
+   "B18": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "balanced"
+   },
+   "B19": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "off"
+   },
+   "B20": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Fit 40% · Intent 40% · Reach 20%"
+   },
+   "B21": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "organisations this run found"
+   },
+   "B22": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "place, then score"
+   },
+   "B23": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "01 Oct 2026, 15:00 (Asia/Kolkata), from the project database"
+   },
+   "B26": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "10"
+   },
+   "B27": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "10 new · 0 updated · 0 found again unchanged"
+   },
+   "B30": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Score"
+   },
+   "B31": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 78.49
+   },
+   "B32": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 77.09
+   },
+   "B33": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 73.26
+   },
+   "B34": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 69.6
+   },
+   "B35": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 66.87
+   },
+   "B36": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 39.97
+   },
+   "B37": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 36.9
+   },
+   "B38": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 32.31
+   },
+   "B39": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 30.46
+   },
+   "B4": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "NEW"
+   },
+   "B40": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 24.51
+   },
+   "B43": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Records"
+   },
+   "B44": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 5
+   },
+   "B45": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 5
+   },
+   "B48": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Records"
+   },
+   "B49": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 5
+   },
+   "B5": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 18 b #1F3864",
+    "t": "n",
+    "v": 10
+   },
+   "B50": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 5
+   },
+   "B53": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Records"
+   },
+   "B54": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 5
+   },
+   "B55": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 5
+   },
+   "B58": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Filled"
+   },
+   "B59": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 10
+   },
+   "B60": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 8
+   },
+   "B61": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 6
+   },
+   "B62": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 7
+   },
+   "B63": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 10
+   },
+   "B64": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
+   },
+   "B65": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 8
+   },
+   "B66": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "B67": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 8
+   },
+   "B70": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Meaning"
+   },
+   "B71": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Overall rank, 0–100: the run's weights over Fit, Intent and Reach. A component no lead type in the run scores is left out and the other weights are scaled up; one that some lead type scores counts 0 for an organisation without it."
+   },
+   "B72": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The lead types that found or enriched the organisation."
+   },
+   "B73": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Which of the run's places it is in."
+   },
+   "B74": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Is it the kind of organisation we sell to? 0–100."
+   },
+   "B75": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Is there a reason to buy now (hiring, funding, tenders…)? 0–100: 0 when nothing was found, blank when no lead type in the run looks for one."
+   },
+   "B76": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Can we get hold of someone? 0–100, from the published contact channels."
+   },
+   "B77": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Why it ranks where it does: each lead type's reasons, strongest first."
+   },
+   "B78": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Which sources found or enriched it."
+   },
+   "B79": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "What this run did: New (first found), Updated (added something), Unchanged (found again, nothing to add)."
+   },
+   "B8": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Sample dentists and caterers"
+   },
+   "B80": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The last run that found it (or changed it)."
+   },
+   "B81": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The organisation's id in the API (/organizations/{id})."
+   },
+   "B9": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Sample dentists and caterers"
+   },
+   "C30": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Where"
+   },
+   "C31": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Mumbai"
+   },
+   "C32": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune"
+   },
+   "C33": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune"
+   },
+   "C34": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Mumbai"
+   },
+   "C35": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune"
+   },
+   "C36": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune"
+   },
+   "C37": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Mumbai"
+   },
+   "C38": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Mumbai"
+   },
+   "C39": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Mumbai"
+   },
+   "C4": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "UPDATED"
+   },
+   "C40": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune"
+   },
+   "C43": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Share"
+   },
+   "C44": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.5
+   },
+   "C45": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.5
+   },
+   "C48": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Share"
+   },
+   "C49": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.5
+   },
+   "C5": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 18 b #1F3864",
+    "t": "n",
+    "v": 0
+   },
+   "C50": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.5
+   },
+   "C53": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Share"
+   },
+   "C54": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.5
+   },
+   "C55": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.5
+   },
+   "C58": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Coverage"
+   },
+   "C59": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "C60": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.8
+   },
+   "C61": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.6
+   },
+   "C62": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.7
+   },
+   "C63": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "C64": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.4
+   },
+   "C65": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.8
+   },
+   "C66": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "C67": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.8
+   },
+   "D4": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "WITH PHONE"
+   },
+   "D43": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Avg score"
+   },
+   "D44": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 47.3
+   },
+   "D45": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 58.6
+   },
+   "D48": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Avg score"
+   },
+   "D49": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 49.6
+   },
+   "D5": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 18 b #1F3864",
+    "t": "n",
+    "v": 8
+   },
+   "D50": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 56.3
+   },
+   "D53": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Avg score"
+   },
+   "D54": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 73.1
+   },
+   "D55": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 32.8
+   },
+   "D58": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Reading"
+   },
+   "D59": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "A phone, email, website, social profile or booking line."
+   },
+   "D60": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Published numbers only."
+   },
+   "D61": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Published addresses only; inferred ones are counted separately."
+   },
+   "D62": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The organisation's own site (directory and platform pages excluded)."
+   },
+   "D64": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Instagram, Facebook, LinkedIn or WhatsApp."
+   },
+   "D66": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "A named person (and title) from a public page."
+   },
+   "E30": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Category"
+   },
+   "E31": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Dentists"
+   },
+   "E32": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Dentists"
+   },
+   "E33": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Caterers"
+   },
+   "E34": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Caterers"
+   },
+   "E35": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Dentists"
+   },
+   "E36": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Dentists"
+   },
+   "E37": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Caterers"
+   },
+   "E38": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Caterers"
+   },
+   "E39": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Dentists"
+   },
+   "E4": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "WITH EMAIL"
+   },
+   "E40": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Caterers"
+   },
+   "E43": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "With phone"
+   },
+   "E44": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
+   },
+   "E45": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
+   },
+   "E48": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "With phone"
+   },
+   "E49": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "E5": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 18 b #1F3864",
+    "t": "n",
+    "v": 6
+   },
+   "E50": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 5
+   },
+   "E53": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "With phone"
+   },
+   "E54": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 5
+   },
+   "E55": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "F30": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Phone"
+   },
+   "F31": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 22 0000 0104"
+   },
+   "F32": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 20 0000 0101"
+   },
+   "F33": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 20 0000 0106"
+   },
+   "F34": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 22 0000 0108"
+   },
+   "F35": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 20 0000 0102"
+   },
+   "F36": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 20 0000 0103"
+   },
+   "F37": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 22 0000 0109"
+   },
+   "F4": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "AVG SCORE"
+   },
+   "F40": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 20 0000 0107"
+   },
+   "F5": {
+    "align": "left center",
+    "fmt": "0.0",
+    "font": "Arial 18 b #1F3864",
+    "t": "n",
+    "v": 52.9
+   },
+   "G30": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Website"
+   },
+   "G31": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://pearlortho.example/",
+    "t": "s",
+    "v": "pearlortho.example"
+   },
+   "G32": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://brightsmile.example/",
+    "t": "s",
+    "v": "brightsmile.example"
+   },
+   "G33": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://saffrontable.example/",
+    "t": "s",
+    "v": "saffrontable.example"
+   },
+   "G34": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://coastalfeast.example/",
+    "t": "s",
+    "v": "coastalfeast.example"
+   },
+   "G35": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://lotusdental.example/",
+    "t": "s",
+    "v": "lotusdental.example"
+   },
+   "G38": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://silverspoon.example/",
+    "t": "s",
+    "v": "silverspoon.example"
+   },
+   "G39": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://harbourdental.example/",
+    "t": "s",
+    "v": "harbourdental.example"
+   }
+  },
+  "conditional": [
+   "B31:B40 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "C59:C67 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D44:D45 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D49:D50 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D54:D55 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']"
+  ],
+  "dimensions": "A1:H83",
+  "freeze": null,
+  "gridlines": false,
+  "merged": [
+   "A1:H1",
+   "A2:H2",
+   "A83:H83",
+   "B10:H10",
+   "B11:H11",
+   "B12:H12",
+   "B13:H13",
+   "B14:H14",
+   "B15:H15",
+   "B16:H16",
+   "B17:H17",
+   "B18:H18",
+   "B19:H19",
+   "B20:H20",
+   "B21:H21",
+   "B22:H22",
+   "B23:H23",
+   "B26:H26",
+   "B27:H27",
+   "B70:H70",
+   "B71:H71",
+   "B72:H72",
+   "B73:H73",
+   "B74:H74",
+   "B75:H75",
+   "B76:H76",
+   "B77:H77",
+   "B78:H78",
+   "B79:H79",
+   "B80:H80",
+   "B81:H81",
+   "B8:H8",
+   "B9:H9",
+   "C30:D30",
+   "C31:D31",
+   "C32:D32",
+   "C33:D33",
+   "C34:D34",
+   "C35:D35",
+   "C36:D36",
+   "C37:D37",
+   "C38:D38",
+   "C39:D39",
+   "C40:D40",
+   "D58:H58",
+   "D59:H59",
+   "D60:H60",
+   "D61:H61",
+   "D62:H62",
+   "D63:H63",
+   "D64:H64",
+   "D65:H65",
+   "D66:H66",
+   "D67:H67",
+   "G30:H30",
+   "G31:H31",
+   "G32:H32",
+   "G33:H33",
+   "G34:H34",
+   "G35:H35",
+   "G36:H36",
+   "G37:H37",
+   "G38:H38",
+   "G39:H39",
+   "G40:H40"
+  ],
+  "tab": "C00000",
+  "widths": {
+   "A": 34.0,
+   "B": 12.0,
+   "C": 12.0,
+   "D": 12.0,
+   "E": 14.0,
+   "F": 18.0,
+   "G": 22.0,
+   "H": 30.0
+  }
+ },
+ "Records": {
+  "autofilter": "A1:AB11",
+  "cells": {
+   "A1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Score"
+   },
+   "A10": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 32.31
+   },
+   "A11": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 30.46
+   },
+   "A2": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 77.09
+   },
+   "A3": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 73.26
+   },
+   "A4": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 66.87
+   },
+   "A5": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 39.97
+   },
+   "A6": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 24.51
+   },
+   "A7": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 78.49
+   },
+   "A8": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 69.6
+   },
+   "A9": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 36.9
+   },
+   "AA1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Last Seen"
+   },
+   "AA10": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T15:00:00"
+   },
+   "AA11": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T15:00:00"
+   },
+   "AA2": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T15:00:00"
+   },
+   "AA3": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T15:00:00"
+   },
+   "AA4": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T15:00:00"
+   },
+   "AA5": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T15:00:00"
+   },
+   "AA6": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T15:00:00"
+   },
+   "AA7": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T15:00:00"
+   },
+   "AA8": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T15:00:00"
+   },
+   "AA9": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T15:00:00"
+   },
+   "AB1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Org ID"
+   },
+   "AB10": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 10
+   },
+   "AB11": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 5
+   },
+   "AB2": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "AB3": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 6
+   },
+   "AB4": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "AB5": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "AB6": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 7
+   },
+   "AB7": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
+   },
+   "AB8": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 8
+   },
+   "AB9": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 9
+   },
+   "B1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Name"
+   },
+   "B10": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Silver Spoon Banquet Kitchen"
+   },
+   "B11": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Harbour Dental Clinic"
+   },
+   "B2": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Bright Smile Dental Studio"
+   },
+   "B3": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Saffron Table Caterers"
+   },
+   "B4": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Lotus Family Dentistry"
+   },
+   "B5": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Riverside Dental Care"
+   },
+   "B6": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Green Leaf Kitchens"
+   },
+   "B7": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Pearl Orthodontics"
+   },
+   "B8": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Coastal Feast Catering"
+   },
+   "B9": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Monsoon Spice Caterers"
+   },
+   "C1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Category"
+   },
+   "C10": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Caterers"
+   },
+   "C11": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Dentists"
+   },
+   "C2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Dentists"
+   },
+   "C3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Caterers"
+   },
+   "C4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Dentists"
+   },
+   "C5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Dentists"
+   },
+   "C6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Caterers"
+   },
+   "C7": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Dentists"
+   },
+   "C8": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Caterers"
+   },
+   "C9": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Caterers"
+   },
+   "D1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Lead Types"
+   },
+   "D10": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses"
+   },
+   "D11": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses"
+   },
+   "D2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses"
+   },
+   "D3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses"
+   },
+   "D4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses"
+   },
+   "D5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses"
+   },
+   "D6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses"
+   },
+   "D7": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses"
+   },
+   "D8": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses"
+   },
+   "D9": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses"
+   },
+   "E1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Place"
+   },
+   "E10": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Mumbai"
+   },
+   "E11": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Mumbai"
+   },
+   "E2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune"
+   },
+   "E3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune"
+   },
+   "E4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune"
+   },
+   "E5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune"
+   },
+   "E6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune"
+   },
+   "E7": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Mumbai"
+   },
+   "E8": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Mumbai"
+   },
+   "E9": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Mumbai"
+   },
+   "F1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Locality"
+   },
+   "F10": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Mumbai"
+   },
+   "F11": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Mumbai"
+   },
+   "F2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune"
+   },
+   "F3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune"
+   },
+   "F4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune"
+   },
+   "F5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune"
+   },
+   "F6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune"
+   },
+   "F7": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Mumbai"
+   },
+   "F8": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Mumbai"
+   },
+   "F9": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Mumbai"
+   },
+   "G1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Maps Rating"
+   },
+   "G11": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3.9
+   },
+   "G2": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4.8
+   },
+   "G3": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4.5
+   },
+   "G4": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4.6
+   },
+   "G5": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4.2
+   },
+   "G7": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4.9
+   },
+   "G8": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4.7
+   },
+   "G9": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4.1
+   },
+   "H1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Maps Reviews"
+   },
+   "H11": {
+    "align": "center top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 18
+   },
+   "H2": {
+    "align": "center top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 312
+   },
+   "H3": {
+    "align": "center top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 210
+   },
+   "H4": {
+    "align": "center top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 128
+   },
+   "H5": {
+    "align": "center top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 37
+   },
+   "H7": {
+    "align": "center top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 540
+   },
+   "H8": {
+    "align": "center top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 96
+   },
+   "H9": {
+    "align": "center top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 12
+   },
+   "I1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Primary Phone"
+   },
+   "I2": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 20 0000 0101"
+   },
+   "I3": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 20 0000 0106"
+   },
+   "I4": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 20 0000 0102"
+   },
+   "I5": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 20 0000 0103"
+   },
+   "I6": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 20 0000 0107"
+   },
+   "I7": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 22 0000 0104"
+   },
+   "I8": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 22 0000 0108"
+   },
+   "I9": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 22 0000 0109"
+   },
+   "J1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Other Phones"
+   },
+   "J4": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 20 0000 0112"
+   },
+   "K1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Primary Email"
+   },
+   "K10": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "hello@silverspoon.example"
+   },
+   "K2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "hello@brightsmile.example"
+   },
+   "K3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "events@saffrontable.example"
+   },
+   "K4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "care@lotusdental.example"
+   },
+   "K7": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "smile@pearlortho.example"
+   },
+   "K8": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "book@coastalfeast.example"
+   },
+   "L1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Other Emails"
+   },
+   "L4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "frontdesk@lotusdental.example"
+   },
+   "M1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Website"
+   },
+   "M10": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://silverspoon.example/",
+    "t": "s",
+    "v": "silverspoon.example"
+   },
+   "M11": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://harbourdental.example/",
+    "t": "s",
+    "v": "harbourdental.example"
+   },
+   "M2": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://brightsmile.example/",
+    "t": "s",
+    "v": "brightsmile.example"
+   },
+   "M3": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://saffrontable.example/",
+    "t": "s",
+    "v": "saffrontable.example"
+   },
+   "M4": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://lotusdental.example/",
+    "t": "s",
+    "v": "lotusdental.example"
+   },
+   "M7": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://pearlortho.example/",
+    "t": "s",
+    "v": "pearlortho.example"
+   },
+   "M8": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://coastalfeast.example/",
+    "t": "s",
+    "v": "coastalfeast.example"
+   },
+   "N1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Instagram"
+   },
+   "N10": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://instagram.com/silverspoon.sample",
+    "t": "s",
+    "v": "@silverspoon.sample"
+   },
+   "N2": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://instagram.com/brightsmile.sample",
+    "t": "s",
+    "v": "@brightsmile.sample"
+   },
+   "N3": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://instagram.com/saffrontable.sample",
+    "t": "s",
+    "v": "@saffrontable.sample"
+   },
+   "N7": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://instagram.com/pearlortho.sample",
+    "t": "s",
+    "v": "@pearlortho.sample"
+   },
+   "O1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "WhatsApp"
+   },
+   "O3": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://wa.me/912000000106",
+    "t": "s",
+    "v": "+912000000106"
+   },
+   "P1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Google Maps"
+   },
+   "P11": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://maps.google.com/?cid=1000000000000000005",
+    "t": "s",
+    "v": "View map"
+   },
+   "P2": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://maps.google.com/?cid=1000000000000000001",
+    "t": "s",
+    "v": "View map"
+   },
+   "P3": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://maps.google.com/?cid=1000000000000000006",
+    "t": "s",
+    "v": "View map"
+   },
+   "P4": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://maps.google.com/?cid=1000000000000000002",
+    "t": "s",
+    "v": "View map"
+   },
+   "P5": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://maps.google.com/?cid=1000000000000000003",
+    "t": "s",
+    "v": "View map"
+   },
+   "P7": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://maps.google.com/?cid=1000000000000000004",
+    "t": "s",
+    "v": "View map"
+   },
+   "P8": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://maps.google.com/?cid=1000000000000000008",
+    "t": "s",
+    "v": "View map"
+   },
+   "P9": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://maps.google.com/?cid=1000000000000000009",
+    "t": "s",
+    "v": "View map"
+   },
+   "Q1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Address"
+   },
+   "Q10": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "20 Sample Road, Mumbai"
+   },
+   "Q11": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "15 Sample Road, Mumbai"
+   },
+   "Q2": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "11 Sample Road, Pune"
+   },
+   "Q3": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "16 Sample Road, Pune"
+   },
+   "Q4": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "12 Sample Road, Pune"
+   },
+   "Q5": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "13 Sample Road, Pune"
+   },
+   "Q6": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "17 Sample Road, Pune"
+   },
+   "Q7": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "14 Sample Road, Mumbai"
+   },
+   "Q8": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "18 Sample Road, Mumbai"
+   },
+   "Q9": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "19 Sample Road, Mumbai"
+   },
+   "R1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Fit"
+   },
+   "R10": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 19.5
+   },
+   "R11": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 33.2
+   },
+   "R2": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 71.6
+   },
+   "R3": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 63.4
+   },
+   "R4": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 60.3
+   },
+   "R5": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 40
+   },
+   "R6": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 16.8
+   },
+   "R7": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 73.7
+   },
+   "R8": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 64.4
+   },
+   "R9": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 35.4
+   },
+   "S1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Intent"
+   },
+   "T1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Reach"
+   },
+   "T10": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 58
+   },
+   "T11": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 25
+   },
+   "T2": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 88
+   },
+   "T3": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 93
+   },
+   "T4": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 80
+   },
+   "T5": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 40
+   },
+   "T6": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 40
+   },
+   "T7": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 88
+   },
+   "T8": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 80
+   },
+   "T9": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 40
+   },
+   "U1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Score Reasons"
+   },
+   "U10": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "found on website only; reachable by email, website, Instagram"
+   },
+   "U11": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Google rating 3.9 from 18 reviews; found on google_maps only; reachable by website"
+   },
+   "U2": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Google rating 4.8 from 312 reviews; listed by 3 sources (google_maps, justdial, website); reachable by phone, email, website, Instagram"
+   },
+   "U3": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Google rating 4.5 from 210 reviews; listed by 2 sources (google_maps, website); reachable by phone, email, website, Instagram, WhatsApp"
+   },
+   "U4": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Google rating 4.6 from 128 reviews; listed by 2 sources (google_maps, website); reachable by phone, email, website"
+   },
+   "U5": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Google rating 4.2 from 37 reviews; found on google_maps only; reachable by phone"
+   },
+   "U6": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "found on justdial only; reachable by phone"
+   },
+   "U7": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Google rating 4.9 from 540 reviews; listed by 3 sources (google_maps, justdial, website); reachable by phone, email, website, Instagram"
+   },
+   "U8": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Google rating 4.7 from 96 reviews; listed by 3 sources (google_maps, justdial, website); reachable by phone, email, website"
+   },
+   "U9": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Google rating 4.1 from 12 reviews; found on google_maps only; reachable by phone"
+   },
+   "V1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Sources"
+   },
+   "V10": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "website"
+   },
+   "V11": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "google_maps"
+   },
+   "V2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "google_maps, justdial, website"
+   },
+   "V3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "google_maps, website"
+   },
+   "V4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "google_maps, website"
+   },
+   "V5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "google_maps"
+   },
+   "V6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "justdial"
+   },
+   "V7": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "google_maps, justdial, website"
+   },
+   "V8": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "google_maps, justdial, website"
+   },
+   "V9": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "google_maps"
+   },
+   "W1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Src #"
+   },
+   "W10": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "W11": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "W2": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "W3": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "W4": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "W5": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "W6": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "W7": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "W8": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "W9": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "X1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Notes"
+   },
+   "X4": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "also listed under category: Pediatric dentists"
+   },
+   "Y1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Change"
+   },
+   "Y10": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "Y11": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "Y2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "Y3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "Y4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "Y5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "Y6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "Y7": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "Y8": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "Y9": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "Z1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "First Seen"
+   },
+   "Z10": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-08-12T15:00:00"
+   },
+   "Z11": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-08-07T15:00:00"
+   },
+   "Z2": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-08-03T15:00:00"
+   },
+   "Z3": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-08-08T15:00:00"
+   },
+   "Z4": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-08-04T15:00:00"
+   },
+   "Z5": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-08-05T15:00:00"
+   },
+   "Z6": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-08-09T15:00:00"
+   },
+   "Z7": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-08-06T15:00:00"
+   },
+   "Z8": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-08-10T15:00:00"
+   },
+   "Z9": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-08-11T15:00:00"
+   }
+  },
+  "conditional": [
+   "A2:A11 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "A2:AB11 expression ['MOD(ROW(),2)=0']",
+   "R2:R11 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "S2:S11 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "T2:T11 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']"
+  ],
+  "dimensions": "A1:AB11",
+  "freeze": "C2",
+  "gridlines": null,
+  "merged": [],
+  "tab": "1F3864",
+  "widths": {
+   "A": 8.0,
+   "AA": 15.0,
+   "AB": 8.0,
+   "B": 38.0,
+   "C": 20.0,
+   "D": 18.0,
+   "E": 16.0,
+   "F": 20.0,
+   "G": 9.0,
+   "H": 9.0,
+   "I": 18.0,
+   "J": 26.0,
+   "K": 28.0,
+   "L": 30.0,
+   "M": 26.0,
+   "N": 20.0,
+   "O": 16.0,
+   "P": 12.0,
+   "Q": 44.0,
+   "R": 7.0,
+   "S": 7.0,
+   "T": 7.0,
+   "U": 50.0,
+   "V": 22.0,
+   "W": 6.0,
+   "X": 46.0,
+   "Y": 11.0,
+   "Z": 15.0
+  }
+ },
+ "active": "Overview",
+ "sheets": [
+  "Overview",
+  "Records"
+ ]
+}

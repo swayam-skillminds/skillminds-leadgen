@@ -14,9 +14,10 @@ logs/
 *.sqlite3-shm
 *.sqlite3-journal
 
-# Generated workbooks contain real leads. Phase 4 commits fixture-only
-# samples under docs/samples/ and will add an explicit exception for them.
+# Generated workbooks contain real leads. The only exception: the fixture-only
+# samples in docs/samples/ (tools/build_sample_workbooks.py).
 *.xlsx
+!docs/samples/*.xlsx
 *.xls
 *.csv
 !tests/**/*.csv
