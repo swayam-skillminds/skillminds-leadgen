@@ -139,6 +139,8 @@ class GoogleMapsSource(Source):
         phrasings = int(self.cfg.get("locality_phrasings", 2))
         for query_term in category.queries:
             for locality_term in locality.search_terms[:phrasings]:
+                if len(seen_places) >= max_results:
+                    return  # the combo has its places; another search would be thrown away
                 query = f"{query_term} in {locality_term}"
                 try:
                     place_urls = self._search(query, scroll_rounds, max_results)
