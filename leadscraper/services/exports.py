@@ -25,7 +25,9 @@ legacy column layout (``Lead.row_for``) that the Mumbai and Nashik tabs use.
 from __future__ import annotations
 
 from collections import Counter, defaultdict
+import logging
 from datetime import datetime, timezone
+from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
@@ -44,6 +46,8 @@ from ..export.table import ExportTable, safe_cell, to_csv, to_json
 from .errors import Conflict, Invalid, NotFound
 from .query import aware
 from .workspace import Workspace
+
+log = logging.getLogger(__name__)
 
 __all__ = ["ExportTable", "build_table", "export", "to_google_sheets", "safe_cell",
            "FORMATS", "SCOPES", "MEDIA_TYPES", "RENDERERS"]
@@ -132,13 +136,19 @@ def _money_prefix(config: Any, currency: str) -> str:
 def _timezone(config: Any) -> str:
     if config is None:
         return "UTC"
+    from zoneinfo import ZoneInfo
+
     zone = config.get("geo.timezone")
-    if zone:
-        return str(zone)
+    if not zone:
+        try:
+            zone = config.country_info.timezone
+        except Exception:
+            zone = None
     try:
-        return config.country_info.timezone or "UTC"
-    except Exception:
+        ZoneInfo(str(zone or "UTC"))
+    except Exception:      # an unknown name: say UTC, since that is what is shown
         return "UTC"
+    return str(zone or "UTC")
 
 
 _MUST_HAVE = {"phone": lambda lead: bool(lead.phones), "email": lambda lead: bool(lead.emails),
@@ -175,41 +185,51 @@ def _filter_text(config: Any) -> str:
     return ", ".join(parts)
 
 
-def _facts(conn, ws: Workspace, project_id: int, ids: list[int]) -> dict[str, Any]:
-    """Signals, people, inferred contacts and last-seen times, by organisation id."""
-    in_project = select(ORGS.c.id).where(ORGS.c.project_id == project_id)
-    wanted = set(ids)
+#: Ids per IN (...) list: far below every backend's bind-parameter limit.
+CHUNK = 500
+
+
+def _chunks(ids: list[int]):
+    for start in range(0, len(ids), CHUNK):
+        yield ids[start:start + CHUNK]
+
+
+def _rows(conn, query_for, ids: list[int]):
+    """Rows of `query_for(chunk)` for every chunk of ids, in (chunk, row) order."""
+    for chunk in _chunks(ids):
+        yield from conn.execute(query_for(chunk)).mappings()
+
+
+def _facts(conn, ws: Workspace, ids: list[int]) -> dict[str, Any]:
+    """Signals, people, inferred contacts and last-seen times, for these organisations only."""
+    def by_id(table, *where):
+        rows = _rows(conn, lambda chunk: select(table).where(
+            table.c.organization_id.in_(chunk), *where), ids)
+        return sorted(rows, key=lambda r: r["id"])
+
     signals: dict[int, list[dict[str, Any]]] = defaultdict(list)
-    for row in conn.execute(select(SIGNALS).where(SIGNALS.c.organization_id.in_(in_project))
-                            .order_by(SIGNALS.c.id)).mappings():
-        if row["organization_id"] in wanted:
-            signals[row["organization_id"]].append({
-                "type": row["type"], "lead_type": row["lead_type"], "title": row["title"],
-                "payload": dict(row["payload"] or {}), "observed_at": aware(row["observed_at"]),
-                "published_at": aware(row["published_at"]),
-                "expires_at": aware(row["expires_at"]), "strength": row["strength"],
-                "source_url": row["source_url"]})
+    for row in by_id(SIGNALS):
+        signals[row["organization_id"]].append({
+            "type": row["type"], "lead_type": row["lead_type"], "title": row["title"],
+            "payload": dict(row["payload"] or {}), "observed_at": aware(row["observed_at"]),
+            "published_at": aware(row["published_at"]), "expires_at": aware(row["expires_at"]),
+            "strength": row["strength"], "source_url": row["source_url"]})
     people: dict[int, list[dict[str, Any]]] = defaultdict(list)
-    for row in conn.execute(select(PEOPLE).where(PEOPLE.c.organization_id.in_(in_project))
-                            .order_by(PEOPLE.c.id)).mappings():
-        if row["organization_id"] in wanted:
-            people[row["organization_id"]].append({
-                "name": row["name"], "title": row["title"] or "",
-                "profile_url": row["profile_url"], "source": row["source"]})
+    for row in by_id(PEOPLE):
+        people[row["organization_id"]].append({
+            "name": row["name"], "title": row["title"] or "",
+            "profile_url": row["profile_url"], "source": row["source"]})
     inferred: dict[int, list[dict[str, Any]]] = defaultdict(list)
-    for row in conn.execute(select(CONTACTS).where(
-            CONTACTS.c.organization_id.in_(in_project), CONTACTS.c.kind == "inferred")
-            .order_by(CONTACTS.c.id)).mappings():
-        if row["organization_id"] in wanted:
-            inferred[row["organization_id"]].append({
-                "channel": row["channel"], "value": row["value"], "source": row["source"],
-                "confidence": row["confidence"]})
-    seen = func.max(func.coalesce(RUNS.c.started_at, RUNS.c.created_at))
-    last_seen = {int(org_id): aware(when) for org_id, when in conn.execute(
-        select(MEMBERS.c.organization_id, seen)
+    for row in by_id(CONTACTS, CONTACTS.c.kind == "inferred"):
+        inferred[row["organization_id"]].append({
+            "channel": row["channel"], "value": row["value"], "source": row["source"],
+            "confidence": row["confidence"]})
+    seen = func.max(func.coalesce(RUNS.c.started_at, RUNS.c.created_at)).label("seen")
+    last_seen = {int(row["organization_id"]): aware(row["seen"]) for row in _rows(
+        conn, lambda chunk: select(MEMBERS.c.organization_id, seen)
         .join(RUNS, RUNS.c.id == MEMBERS.c.run_id)
-        .where(MEMBERS.c.organization_id.in_(in_project), RUNS.c.workspace_id == ws.id)
-        .group_by(MEMBERS.c.organization_id))}
+        .where(MEMBERS.c.organization_id.in_(chunk), RUNS.c.workspace_id == ws.id)
+        .group_by(MEMBERS.c.organization_id), ids)}
     return {"signals": signals, "people": people, "inferred": inferred, "last_seen": last_seen}
 
 
@@ -258,8 +278,13 @@ def _run_context(conn, run: dict[str, Any]) -> dict[str, Any]:
 
 def build_table(engine: Engine, ws: Workspace, *, run_id: int | None = None,
                 project_id: int | None = None, scope: str | None = None,
-                against: int | None = None,
-                generated_at: datetime | None = None) -> ExportTable:
+                against: int | None = None, generated_at: datetime | None = None,
+                config: Any = None) -> ExportTable:
+    """The table every format renders.
+
+    ``config``: score, order and lay out with this compiled Config instead of
+    the run's snapshot (``--export-only`` after a weights or tiers change).
+    """
     from ..core.identity import DedupOptions
     from ..leadtypes import registry
     from ..leadtypes.local_business.scoring import Scorer
@@ -291,7 +316,10 @@ def build_table(engine: Engine, ws: Workspace, *, run_id: int | None = None,
     now = generated_at or datetime.now(timezone.utc)
 
     snapshot = run["config_snapshot"] if run else _latest_snapshot(engine, project_id)
-    config = config_for(snapshot)
+    if config is None:
+        config = config_for(snapshot)
+    else:
+        snapshot = {"name": config.get("name") or (snapshot or {}).get("name")}
     profile = config.profile if config is not None else "vendors"
     currency = config.currency if config is not None else "INR"
     if config is not None:
@@ -307,11 +335,16 @@ def build_table(engine: Engine, ws: Workspace, *, run_id: int | None = None,
             MEMBERS.c.run_id == run_id)))
     elif scope == "new":
         used_against, items = diff_items(engine, ws, run_id, against)
-        new_ids = [i["organization_id"] for i in items if i["change"] == "new"]
-        query = query.where(ORGS.c.id.in_(new_ids))
+        # New ones are among the run's own members: select those, keep the new
+        # ones below (no IN list of possibly tens of thousands of ids).
+        new_ids = {i["organization_id"] for i in items if i["change"] == "new"}
+        query = query.where(ORGS.c.id.in_(select(MEMBERS.c.organization_id).where(
+            MEMBERS.c.run_id == run_id)))
     with engine.connect() as conn:
         rows = conn.execute(query.order_by(ORGS.c.id)).all()
-        facts = _facts(conn, ws, project_id, [int(r[0]) for r in rows])
+        if scope == "new":
+            rows = [r for r in rows if int(r[0]) in new_ids]
+        facts = _facts(conn, ws, [int(r[0]) for r in rows])
         actions = {int(o): a for o, a in conn.execute(
             select(MEMBERS.c.organization_id, MEMBERS.c.action)
             .where(MEMBERS.c.run_id == run_id))} if run is not None else {}
@@ -400,13 +433,13 @@ def filename_for(table: ExportTable, fmt: str) -> str:
 
 def export(engine: Engine, ws: Workspace, fmt: str, *, run_id: int | None = None,
            project_id: int | None = None, scope: str | None = None,
-           against: int | None = None,
-           generated_at: datetime | None = None) -> tuple[str, bytes, ExportTable]:
+           against: int | None = None, generated_at: datetime | None = None,
+           config: Any = None) -> tuple[str, bytes, ExportTable]:
     """(filename, content, table) for one export."""
     if fmt not in FORMATS:
         raise Invalid(f"format must be one of {', '.join(FORMATS)}")
     table = build_table(engine, ws, run_id=run_id, project_id=project_id, scope=scope,
-                        against=against, generated_at=generated_at)
+                        against=against, generated_at=generated_at, config=config)
     return filename_for(table, fmt), RENDERERS[fmt](table), table
 
 
@@ -434,13 +467,36 @@ def to_google_sheets(engine: Engine, ws: Workspace, run_id: int, *,
     return {"url": writer.url, "rows": len(leads), "scope": table.scope}
 
 
+def write_files(table: ExportTable, formats: list[str], directory: Path,
+                name: str | None = None) -> list[tuple[str, str]]:
+    """Render `table` once per format into `directory`: [(format, path)] of what was written.
+
+    Each format on its own: one that fails is logged and the others are still
+    written. Files go through a ``.partial`` name, so a crash never leaves half
+    a workbook behind.
+    """
+    directory.mkdir(parents=True, exist_ok=True)
+    written = []
+    for fmt in formats:
+        path = directory / (f"{name}.{fmt}" if name else filename_for(table, fmt))
+        partial = path.with_name(path.name + ".partial")
+        try:
+            partial.write_bytes(RENDERERS[fmt](table))
+            partial.replace(path)
+        except Exception as exc:
+            log.warning("%s not written: %s", path.name, exc)
+            partial.unlink(missing_ok=True)
+            continue
+        written.append((fmt, str(path)))
+    return written
+
+
 def write_run_outputs(engine: Engine, run_id: int, config: Any) -> list[str]:
     """Write the files a run's ``output`` section asks for; returns their paths.
 
     Called by the runner once a run has ended (completed, paused, cancelled or
-    failed: what it has is worth a workbook). Each file is recorded on the run
-    (``runs.files``). Written to a temporary name first, so a crash never
-    leaves half a workbook behind.
+    failed: what it has is worth a workbook). The table is built once and
+    rendered per format; each file is recorded on the run (``runs.files``).
     """
     from ..db.runs import add_run_file
     from ..export.outputs import output_dir, run_formats
@@ -453,16 +509,8 @@ def write_run_outputs(engine: Engine, run_id: int, config: Any) -> list[str]:
                                     .where(RUNS.c.id == run_id)).scalar()
     if workspace_id is None:
         raise NotFound(f"no run {run_id}")
-    ws = Workspace(int(workspace_id), "")
-    directory = output_dir(config)
-    directory.mkdir(parents=True, exist_ok=True)
-    written = []
-    for fmt in formats:
-        filename, content, table = export(engine, ws, fmt, run_id=run_id)
-        path = directory / filename
-        partial = path.with_name(path.name + ".partial")
-        partial.write_bytes(content)
-        partial.replace(path)
-        add_run_file(engine, run_id, kind=fmt, path=str(path), rows=len(table.records))
-        written.append(str(path))
-    return written
+    table = build_table(engine, Workspace(int(workspace_id), ""), run_id=run_id)
+    written = write_files(table, formats, output_dir(config))
+    for fmt, path in written:
+        add_run_file(engine, run_id, kind=fmt, path=path, rows=len(table.records))
+    return [path for _, path in written]

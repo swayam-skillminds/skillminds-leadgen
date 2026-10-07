@@ -415,3 +415,83 @@ def test_lead_types_keep_one_order_whatever_the_document_says(engine):
                           "local_business": {"categories": [{"name": "Dentists"}]}}}
     order = RunConfig.model_validate(doc).enabled_lead_types()
     assert order == ["local_business", "demo_hiring", "demo_funding"]
+
+
+# --- fixes from the Phase 4 review --------------------------------------------------------------
+
+def test_control_characters_in_scraped_text_never_break_the_workbook(engine):
+    """openpyxl refuses \\x0b, \\x0c, \\x00 …: they are dropped, and the export still works."""
+    from leadscraper.db.store import LeadStore
+
+    run_id = wf.build(engine, "empty")
+    store = LeadStore(engine, project="Sample telescope makers", country="IN")
+    store.run_id = run_id
+    store.upsert(Lead(business_name="Star\x0bGazer Optics", locality="Nagpur",
+                      address="Plot 4, Ring Road", notes=["seen\x0bon a map", "x" * 40000],
+                      website="https://stargazer.example/" + "a" * 2100, sources=["google_maps"]))
+    store.close()
+    content = exports.export(engine, default_workspace(engine), "xlsx", run_id=run_id)[1]
+    records = load_workbook(io.BytesIO(content))["Records"]
+    col = {c.value: c.column for c in records[1]}
+    assert records.cell(2, col["Name"]).value == "Star Gazer Optics"    # the store cleans names
+    notes = records.cell(2, col["Notes"]).value                          # … but not notes
+    assert notes.startswith("seenon a map; xxx") and len(notes) == 32767  # Excel's cell limit
+    assert records.cell(2, col["Website"]).hyperlink is None             # too long to link
+
+
+def test_the_same_table_gives_the_same_bytes(engine, monkeypatch):
+    """Zip entries carry generated_at, not the wall clock at save time."""
+    import time
+
+    run_id = wf.build(engine, "venues")
+    ws = default_workspace(engine)
+    first = exports.export(engine, ws, "xlsx", run_id=run_id, generated_at=wf.FIXED_NOW)[1]
+    later = time.localtime(time.time() + 3600)
+    monkeypatch.setattr(time, "localtime", lambda *args: later)       # an hour on
+    second = exports.export(engine, ws, "xlsx", run_id=run_id, generated_at=wf.FIXED_NOW)[1]
+    assert first == second
+
+
+def test_export_only_scores_with_the_current_config(engine):
+    """A weights change needs only --export-only: the workbook follows the live config."""
+    from leadscraper.engine.runner import config_from_snapshot
+    from leadscraper.services.runs import run_row
+
+    run_id = wf.build(engine, "local_business")
+    ws = default_workspace(engine)
+    snapshot = run_row(engine, ws, run_id)["config_snapshot"]
+    project_id = run_row(engine, ws, run_id)["project_id"]
+    stored = exports.build_table(engine, ws, project_id=project_id)
+    live = config_from_snapshot({**snapshot, "scoring": {"weights": {"fit": 0, "intent": 0,
+                                                                      "reach": 1}}})
+    changed = exports.build_table(engine, ws, project_id=project_id, config=live)
+    from leadscraper.export.summary import run_summary
+
+    assert ("Score weights", "Fit 0% · Intent 0% · Reach 100%") in run_summary(changed)
+    by_id = {r.id: r.score for r in stored.records}
+    assert any(abs(r.score - by_id[r.id]) > 1 for r in changed.records)
+    assert all(r.score == pytest.approx(100 * r.overall.reach, abs=0.01) for r in changed.records)
+
+
+def test_one_failing_format_does_not_stop_the_others(engine, tmp_path, monkeypatch):
+    run_id = wf.build(engine, "local_business")
+    table = exports.build_table(engine, default_workspace(engine), run_id=run_id)
+
+    def broken(_table):
+        raise RuntimeError("disk full")
+
+    monkeypatch.setitem(exports.RENDERERS, "xlsx", broken)
+    written = exports.write_files(table, ["xlsx", "json"], tmp_path)
+    assert [fmt for fmt, _ in written] == ["json"]
+    assert sorted(p.name for p in tmp_path.iterdir()) == [
+        "sample-dentists-and-caterers-run1.json"]                       # no .partial left
+
+
+def test_an_unknown_timezone_falls_back_to_utc_everywhere(engine):
+    run_id = wf.build(engine, "local_business")
+    patch_snapshot(engine, run_id, geography={"country": "IN", "places": ["Pune", "Mumbai"],
+                                              "center": [18.52, 73.85],
+                                              "admin_area": "Maharashtra",
+                                              "timezone": "Mars/Olympus_Mons"})
+    table = exports.build_table(engine, default_workspace(engine), run_id=run_id)
+    assert table.timezone == "UTC"

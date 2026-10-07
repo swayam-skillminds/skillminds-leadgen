@@ -32,7 +32,6 @@ from ..engine.costs import UnitCost, prior_cost
 
 ColumnKind = Literal["text", "number", "url", "phone", "email", "date", "score", "flag", "money"]
 ColumnPlacement = Literal["front", "body", "contacts", "tail"]
-ColumnPlacement = Literal["front", "body", "contacts", "tail"]
 
 
 @dataclass(frozen=True)

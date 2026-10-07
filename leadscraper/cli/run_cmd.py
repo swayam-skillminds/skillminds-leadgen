@@ -209,23 +209,26 @@ def open_project(config: Config) -> LeadStore:
 
 
 def write_project_outputs(store: LeadStore, config: Config) -> list[str]:
-    """The project's workbook (and JSON) per ``output.*``, from the database. Never raises."""
+    """The project's workbook (and JSON) per ``output.*``, from the database. Never raises.
+
+    Scored with *this* config, so a weights or tiers change needs only --export-only.
+    """
     from ..export.outputs import output_dir, run_formats
     from ..services import exports
     from ..services.workspace import Workspace
 
-    written = []
-    for fmt in run_formats(config):
-        try:
-            _, content, _ = exports.export(store.engine, Workspace(store.workspace_id, ""), fmt,
-                                           project_id=store.project_id)
-            path = output_dir(config) / f"{slugify_project(store.project_name)}.{fmt}"
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_bytes(content)
-            written.append(str(path))
-        except Exception as exc:
-            print(f"{fmt} not written: {exc}", file=sys.stderr)
-    return written
+    formats = run_formats(config)
+    if not formats:
+        return []
+    try:
+        table = exports.build_table(store.engine, Workspace(store.workspace_id, ""),
+                                    project_id=store.project_id, config=config)
+    except Exception as exc:
+        print(f"workbook not written: {exc}", file=sys.stderr)
+        return []
+    written = exports.write_files(table, formats, output_dir(config),
+                                  name=slugify_project(store.project_name))
+    return [path for _, path in written]
 
 
 def export_only(config: Config) -> int:

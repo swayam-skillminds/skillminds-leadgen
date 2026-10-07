@@ -16,7 +16,7 @@ Rules the workbook keeps:
   never becomes a live formula), phones and IDs as text (``@``), so "+91 …"
   can never turn into ``#ERROR!`` the way the Sheets USER_ENTERED sync did;
 * links are http(s) only;
-* output is deterministic: same database, same ``generated_at``, same cells.
+* output is deterministic: same database, same ``generated_at``, same bytes.
 """
 
 from __future__ import annotations
@@ -24,12 +24,14 @@ from __future__ import annotations
 import io
 import math
 import re
+import zipfile
 from datetime import datetime
 from typing import Any
 
 from openpyxl import Workbook
 from openpyxl.formatting.rule import ColorScaleRule, FormulaRule
 from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
 
@@ -83,13 +85,21 @@ def short_link(url: str) -> str:
     return re.sub(r"^https?://(www\.)?", "", url).rstrip("/")[:40]
 
 
+#: Excel refuses longer hyperlinks (the file needs "repair"); the text stays.
+MAX_LINK = 2000
+#: Excel's limit for one cell's text.
+MAX_TEXT = 32767
+
+
 def _is_link(value: Any) -> bool:
-    return isinstance(value, str) and value.lower().startswith(("http://", "https://"))
+    return (isinstance(value, str) and value.lower().startswith(("http://", "https://"))
+            and len(value) <= MAX_LINK)
 
 
 def _literal(cell, value: str) -> None:
-    """Text, never a formula."""
-    cell.value = value
+    """Text, never a formula. Control characters a scraped page may carry (vertical
+    tab, form feed …) are not allowed in a workbook: they are dropped, not fatal."""
+    cell.value = ILLEGAL_CHARACTERS_RE.sub("", value)[:MAX_TEXT]
     cell.data_type = "s"
 
 
@@ -451,4 +461,19 @@ def to_xlsx(table: ExportTable) -> bytes:
     workbook.properties.modified = stamp
     buffer = io.BytesIO()
     workbook.save(buffer)
-    return buffer.getvalue()
+    return _stamped(buffer.getvalue(), stamp)
+
+
+def _stamped(content: bytes, stamp: datetime) -> bytes:
+    """The same zip with every entry dated `stamp`: same table, same bytes."""
+    date_time = (max(stamp.year, 1980), stamp.month, stamp.day, stamp.hour, stamp.minute,
+                 stamp.second)
+    out = io.BytesIO()
+    with zipfile.ZipFile(io.BytesIO(content)) as source, \
+            zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED) as target:
+        for item in source.infolist():
+            info = zipfile.ZipInfo(item.filename, date_time=date_time)
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = item.external_attr
+            target.writestr(info, source.read(item.filename))
+    return out.getvalue()
