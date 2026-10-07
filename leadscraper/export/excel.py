@@ -527,6 +527,8 @@ def to_xlsx(table: ExportTable) -> bytes:
 
 #: The Overview is the first sheet openpyxl writes.
 OVERVIEW_PART = "xl/worksheets/sheet1.xml"
+CORE_PART = "docProps/core.xml"
+_MODIFIED = re.compile(r"(<dcterms:modified[^>]*>)[^<]*(</dcterms:modified>)")
 
 
 def _with_results(xml: bytes, results: dict[str, float]) -> bytes:
@@ -556,6 +558,10 @@ def _stamped(content: bytes, stamp: datetime,
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = item.external_attr
             data = source.read(item.filename)
+            if item.filename == CORE_PART:
+                # openpyxl dates "modified" with the clock at save time, whatever we set.
+                data = _MODIFIED.sub(lambda m: m.group(1) + stamp.strftime("%Y-%m-%dT%H:%M:%SZ")
+                                     + m.group(2), data.decode("utf-8")).encode("utf-8")
             if results and results.get(item.filename):
                 data = _with_results(data, results[item.filename])
             target.writestr(info, data)

@@ -448,6 +448,18 @@ def test_the_same_table_gives_the_same_bytes(engine, monkeypatch):
     first = exports.export(engine, ws, "xlsx", run_id=run_id, generated_at=wf.FIXED_NOW)[1]
     later = time.localtime(time.time() + 3600)
     monkeypatch.setattr(time, "localtime", lambda *args: later)       # an hour on
+    import datetime as real
+    from types import SimpleNamespace
+
+    import openpyxl.writer.excel as openpyxl_writer
+
+    class Later(real.datetime):                                       # openpyxl's save clock
+        @classmethod
+        def now(cls, tz=None):
+            return real.datetime.now(tz) + real.timedelta(hours=1)
+
+    monkeypatch.setattr(openpyxl_writer, "datetime",
+                        SimpleNamespace(datetime=Later, timezone=real.timezone))
     second = exports.export(engine, ws, "xlsx", run_id=run_id, generated_at=wf.FIXED_NOW)[1]
     assert first == second
 
