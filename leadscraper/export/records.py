@@ -12,6 +12,7 @@ exactly the legacy rescore, so legacy rankings are unchanged.
 
 from __future__ import annotations
 
+import inspect
 import logging
 import math
 from dataclasses import dataclass, field
@@ -65,6 +66,8 @@ class ExportRecord:
     overall: OverallScore = field(default_factory=OverallScore)
     #: Column key -> value, filled when the columns are assembled.
     values: dict[str, Any] = field(default_factory=dict)
+    #: The moment the export describes (its generated_at): signal ages count to here.
+    as_of: datetime | None = None
 
     @property
     def score(self) -> float:
@@ -101,9 +104,22 @@ def signal_date(signal: dict[str, Any]) -> datetime | None:
 
 # --- scoring ---------------------------------------------------------------------------------
 
+def _takes_now(score: Any) -> bool:
+    """Does a lead type's ``score`` take ``now`` (signals that fade with age)?"""
+    try:
+        return "now" in inspect.signature(score).parameters
+    except (TypeError, ValueError):
+        return False
+
+
 def score_records(records: Iterable[ExportRecord], config: Any, weights: dict[str, float],
-                  default_lead_type: str = "local_business") -> None:
+                  default_lead_type: str = "local_business",
+                  now: datetime | None = None) -> None:
     """Every lead type's parts for each record, combined with the run's weights.
+
+    ``now`` is the moment the export describes: a lead type whose ``score``
+    takes ``now`` ages its signals to it, so an export is the same whenever it
+    is regenerated for the same moment.
 
     Weights renormalise per *run*, not per organisation: a component some lead
     type in the export scores counts as 0 for an organisation without it (a
@@ -122,8 +138,9 @@ def score_records(records: Iterable[ExportRecord], config: Any, weights: dict[st
             if lead_type is None:
                 continue
             signals = [s for s in record.signals if s.get("lead_type") == key]
+            extra = {"now": now} if now is not None and _takes_now(lead_type.score) else {}
             try:
-                parts.append(lead_type.score(record.lead, signals, config))
+                parts.append(lead_type.score(record.lead, signals, config, **extra))
             except Exception as exc:  # one lead type's bug never sinks the export
                 log.warning("lead type %s could not score organisation %s: %s",
                             key, record.id, exc)

@@ -183,10 +183,14 @@ def test_an_old_site_gets_plain_findings_and_a_low_score(tmp_path):
                      "no_contact_form", "no_online_booking", "broken_links"]
     text = {f.type: f.text for f in result.findings}
     assert "certificate is invalid (certificate has expired)" in text["no_https"]
-    assert "WordPress 4.9.8" in text["outdated_tech"] and "jQuery 1.12.4" in text["outdated_tech"]
-    assert "PHP 7.2.34" in text["outdated_tech"] and "Apache 2.2.15" in text["outdated_tech"]
+    assert text["outdated_tech"] == "Outdated technology: WordPress 4.9.8, jQuery 1.12.4, " \
+                                    "PHP 7.2.34, Apache 2.2.15."
+    whys = {t["name"]: t["why"] for t in
+            next(f for f in result.findings if f.type == "outdated_tech").data["technologies"]}
+    assert "Dec 2025" in whys["PHP"] and "2017" in whys["Apache"]
     assert "2017" in text["stale_copyright"]
-    assert "restaurants expect to book or order online" in text["no_online_booking"]
+    assert text["no_online_booking"] == "No online booking or ordering: customers of " \
+        "restaurants expect to book or order online, and the site offers no way to."
     assert f"http://{BISTRO}/specials-2016/ (HTTP 404)" in text["broken_links"]
     assert result.score == 100 - 20 - 15 - 15 - 5 - 5 - 10 - 8
     # The contact page was read (no form on the homepage) and the PDF never probed.

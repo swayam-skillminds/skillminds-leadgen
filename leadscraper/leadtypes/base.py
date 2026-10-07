@@ -150,7 +150,11 @@ class LeadType(ABC):
 
     @abstractmethod
     def score(self, org: Any, signals: list, cfg: Any) -> ScoreParts:
-        """Its fit / intent / reach contribution for one organisation, with reasons."""
+        """Its fit / intent / reach contribution for one organisation, with reasons.
+
+        A lead type whose signals fade with age may also take ``now`` (keyword):
+        exports pass the moment they describe, so a regenerated export agrees.
+        """
 
     @abstractmethod
     def run(self, context: Any) -> LeadTypeResult:

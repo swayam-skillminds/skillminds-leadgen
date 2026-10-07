@@ -150,7 +150,8 @@ class DigitalAuditLeadType(LeadType):
                 "pagespeed": audit.get("pagespeed"),
                 "audited": audited.replace(tzinfo=None) if audited else None}
 
-    def score(self, org: Any, signals: list, cfg: Any) -> ScoreParts:
+    def score(self, org: Any, signals: list, cfg: Any,
+              now: datetime | None = None) -> ScoreParts:
         """Intent: the points the findings took off the audit score, fading with age."""
         if not signals:
             return ScoreParts(self.key, intent=0.0)
@@ -160,7 +161,8 @@ class DigitalAuditLeadType(LeadType):
         newest = max((d for d in dates if d is not None), default=None)
         fade = 1.0
         if newest is not None:
-            age = max(0.0, (datetime.now(timezone.utc) - newest).total_seconds() / 86400)
+            age = max(0.0, ((now or datetime.now(timezone.utc)) - newest).total_seconds()
+                      / 86400)
             fade = math.pow(0.5, age / HALF_LIFE_DAYS)
         intent = round((100 - health) / 100 * fade, 4)
         titles = [FINDINGS[t].title.lower() for t in dict.fromkeys(types)]

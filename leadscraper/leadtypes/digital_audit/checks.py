@@ -278,8 +278,8 @@ def check_tech(facts: PageFacts, html: str, headers: dict[str, str],
     old = [d for d in found if d.outdated]
     if not old:
         return found, None
-    text = "Outdated technology: " + "; ".join(
-        f"{d.label}{' (' + d.why + ')' if d.why else ''}" for d in old)
+    # The reasons (end-of-life dates) travel in the payload; the sentence stays short.
+    text = "Outdated technology: " + ", ".join(d.label for d in old) + "."
     return found, Finding("outdated_tech", text, {"technologies": [
         {"name": d.name, "version": d.version, "category": d.category, "why": d.why,
          "evidence": d.evidence} for d in old]}, url=facts.url)
@@ -310,7 +310,7 @@ def check_booking(pages: list[PageFacts], category: str,
     if any(has[k] for k in expected):
         return None
     wanted = " or ".join({"booking": "book", "ordering": "order"}[k] for k in expected)
-    return Finding("no_online_booking", f"No online booking or ordering: customers of a "
+    return Finding("no_online_booking", f"No online booking or ordering: customers of "
                    f"{category.strip().lower()} expect to {wanted} online, and the site "
                    "offers no way to.", {"expected": list(expected)}, url=pages[0].url)
 

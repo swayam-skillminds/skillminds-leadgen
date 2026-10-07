@@ -390,8 +390,8 @@ def build_table(engine: Engine, ws: Workspace, *, run_id: int | None = None,
             last_seen=max(seen) if seen else None,
             change="new" if scope == "new" else actions.get(int(org_id)),
             flags=matcher.flags(lead), place=place_of(lead, places),
-            attributes=facts["attributes"].get(org_id, {})))
-    score_records(records, cfg, scorer.score_weights)
+            attributes=facts["attributes"].get(org_id, {}), as_of=now))
+    score_records(records, cfg, scorer.score_weights, now=now)
 
     keys = _lead_type_keys(config, records)
     lead_types = [registry.get(k) for k in keys]

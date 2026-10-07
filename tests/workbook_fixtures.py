@@ -7,7 +7,10 @@ Four scenarios, each a finished run in a fresh application database:
   lead types defined here (``demo_hiring``, ``demo_funding``) with signals,
   decision-makers and one inferred email;
 * ``venues`` -- the hospitality vertical (the Nashik preset's settings);
-* ``empty`` -- a run that found nothing, with failures to explain why.
+* ``empty`` -- a run that found nothing, with failures to explain why;
+* ``audit_hiring`` -- Phase 6's real lead types in Pune: ``local_business``
+  shops and clinics, their ``digital_audit`` findings, and ``hiring`` signals
+  (ATS postings, a careers page, an HN ad).
 
 Names are invented, websites use the reserved ``.example`` domain, phone
 numbers sit in unallocated (India: 0000 exchanges) or fictional (US 555-01xx)
@@ -29,13 +32,14 @@ from sqlalchemy import update
 
 from leadscraper.core.lead import Lead
 from leadscraper.core.scoring import ScoreParts
-from leadscraper.db.models import AIUsage, Contact, Person, Run, Signal, WorkUnitRow
+from leadscraper.db.models import (AIUsage, Contact, OrgAttribute, Person, Run, Signal,
+                                   WorkUnitRow)
 from leadscraper.db.runs import finish_run, record_failure, start_run
 from leadscraper.leadtypes.base import ColumnSpec, LeadType, LeadTypeResult, SignalSpec
 
 UTC = timezone.utc
 FIXED_NOW = datetime(2026, 10, 1, 9, 30, tzinfo=UTC)
-SCENARIOS = ("local_business", "mix", "venues", "empty")
+SCENARIOS = ("local_business", "mix", "venues", "empty", "audit_hiring")
 ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -202,11 +206,22 @@ class _Run:
         with self.engine.begin() as conn:
             conn.execute(table.__table__.insert().values(workspace_id=self.ws.id, **values))
 
-    def signal(self, org: str, lead_type: str, type_: str, title: str, days: float,
-               url: str, strength: float, **payload) -> None:
+    def signal(self, org: str, lead_type: str, type_: str, title: str, days: float | None,
+               url: str, strength: float, key: str = "", **payload) -> None:
         self.insert(Signal, organization_id=self.ids[org], run_id=self.run_id, type=type_,
-                    lead_type=lead_type, title=title, payload=payload, observed_at=ago(1),
-                    published_at=ago(days), strength=strength, source_url=url)
+                    lead_type=lead_type, key=key, title=title, payload=payload,
+                    observed_at=ago(1), published_at=ago(days) if days is not None else None,
+                    strength=strength, source_url=url)
+
+    def tag(self, org: str, lead_type: str) -> None:
+        """Another lead type assessed this organisation (store.stamp)."""
+        self.store.lead_type = lead_type
+        self.store.stamp(self.ids[org])
+
+    def attribute(self, org: str, key: str, value: Any, *, origin: str, lead_type: str) -> None:
+        self.insert(OrgAttribute, organization_id=self.ids[org], key=key, value=value,
+                    origin=origin, estimated=False, producer=lead_type, lead_type=lead_type,
+                    run_id=self.run_id, created_at=ago(1), updated_at=ago(1))
 
     def unit(self, lead_type: str, source: str, area: str | None, category: str | None,
              status: str = "done", found: int = 0, new: int = 0, skip_reason: str = "") -> None:
@@ -428,7 +443,125 @@ def empty(engine) -> int:
     return run.finish(minutes=4)
 
 
-BUILDERS = {"local_business": local_business, "mix": mix, "venues": venues, "empty": empty}
+#: (finding type, plain words, check, penalty, strength) for the audit scenario.
+_FINDINGS = {
+    "no_https": ("No HTTPS: it only loads over http://.", "https", 20, 0.6),
+    "not_mobile_friendly": ("Not mobile-friendly: the homepage has no viewport tag, so phones "
+                            "show the desktop layout shrunk.", "mobile", 15, 0.55),
+    "outdated_tech": ("Outdated technology: WordPress 4.9.8, jQuery 1.12.4, PHP 7.2.34.",
+                      "cms_age", 15, 0.6),
+    "stale_copyright": ("Stale copyright: the footer still says 2017, 9 years ago.",
+                        "copyright", 5, 0.3),
+    "no_online_booking": ("No online booking or ordering: customers of restaurants expect to "
+                          "book or order online, and the site offers no way to.", "booking",
+                          10, 0.5),
+    "slow_site": ("Slow site: PageSpeed 28/100 on mobile, largest paint 7.9 s (below 50).",
+                  "pagespeed", 10, 0.45),
+    "no_website": ("No website of its own (none in any source that listed it).", "no_website",
+                   60, 0.8),
+    "incomplete_maps_profile": ("Incomplete Maps profile: no website, no reviews (only 4).",
+                                "maps_profile", 7, 0.35),
+    "site_unreachable": ("Website unreachable: the domain doesn't resolve.", "unreachable",
+                         50, 0.75),
+}
+
+
+def audit_hiring(engine) -> int:
+    document = _doc("Sample Pune web and hiring leads", "IN", ["Pune"],
+                    {"local_business": {"categories": [{"name": "Restaurants"},
+                                                       {"name": "Clinics"}]},
+                     "hiring": {"boards": ["greenhouse:kestrelrobotics"]},
+                     "digital_audit": {"checks": ["no_website", "unreachable", "https", "mobile",
+                                                  "pagespeed", "cms_age", "copyright",
+                                                  "booking", "maps_profile"]}},
+                    center=[18.52, 73.85], admin_area="Maharashtra",
+                    scoring={"weights": {"fit": 0.4, "intent": 0.4, "reach": 0.2}})
+    run = _Run(engine, document, "IN")
+    shops = [
+        ("Old Mill Bistro", "Restaurants", ["+912000000201"], "http://oldmill-bistro.example/",
+         4.2, 86, 1),
+        ("Brightwater Dental Studio", "Clinics", ["+912000000202"],
+         "https://brightwater-dental.example/", 4.8, 120, 2),
+        ("Corner Tailor", "Restaurants", ["+912000000203"], None, 4.0, 4, 3),
+        ("Gone Bakery", "Restaurants", ["+912000000204"], "https://gone-bakery.example/",
+         None, None, 4),
+        ("Lotus Logistics", "Clinics", ["+912000000205"], "https://lotus-logistics.example/",
+         4.4, 31, 5),
+    ]
+    for name, category, phones, site, rating, reviews, n in shops:
+        run.add(Lead(business_name=name, category=category, locality="Pune", phones=phones,
+                     website=site, gmaps_url=_maps(200 + n), gmaps_rating=rating,
+                     gmaps_reviews=reviews, address=f"{n} Sample Lane, Pune",
+                     sources=["google_maps"]), days=40 - n)
+    # Found only by hiring.
+    run.add(Lead(business_name="Kestrel Robotics", locality="Pune", sources=["greenhouse"],
+                 source_urls=["https://boards.greenhouse.io/kestrelrobotics"]),
+            lead_type="hiring", days=6)
+    run.add(Lead(business_name="Pinecrest Health", website="https://pinecrest-health.example/",
+                 sources=["hn_whos_hiring"],
+                 source_urls=["https://news.ycombinator.com/item?id=41000101"]),
+            lead_type="hiring", days=6)
+
+    audits = {
+        "Old Mill Bistro": ("audited", "OK", ["no_https", "not_mobile_friendly", "outdated_tech",
+                                              "stale_copyright", "no_online_booking",
+                                              "slow_site"],
+                            ["WordPress 4.9.8", "jQuery 1.12.4", "PHP 7.2.34"], 28),
+        "Brightwater Dental Studio": ("audited", "OK", [], ["Next.js"], 91),
+        "Corner Tailor": ("no_website", "No website", ["no_website", "incomplete_maps_profile"],
+                          [], None),
+        "Gone Bakery": ("unreachable", "Unreachable", ["site_unreachable"], [], None),
+        "Lotus Logistics": ("audited", "OK", [], ["WordPress 6.6.2"], 74),
+    }
+    for org, (status, text, types, stack, speed) in audits.items():
+        run.tag(org, "digital_audit")
+        score = max(0, 100 - sum(_FINDINGS[t][2] for t in types))
+        for t in types:
+            words, check, penalty, strength = _FINDINGS[t]
+            run.signal(org, "digital_audit", t, words, None,
+                       f"https://{org.split()[0].lower()}.example/", strength, key=t,
+                       check=check, penalty=penalty, audit_score=score)
+        run.attribute(org, "audit", {
+            "score": score, "status": status, "status_text": text,
+            "findings": [_FINDINGS[t][0] for t in types], "types": types, "stack": stack,
+            "pagespeed": speed, "audited_at": (FIXED_NOW - timedelta(days=1)).isoformat()},
+            origin="rule", lead_type="digital_audit")
+
+    run.tag("Lotus Logistics", "hiring")
+    postings = {
+        "Kestrel Robotics": [("Senior Backend Engineer (Python)", "developer", "Developer", 3),
+                             ("QA Automation Engineer", "qa", "QA / testing", 6),
+                             ("Site Reliability Engineer", "devops", "DevOps / cloud", 9)],
+        "Lotus Logistics": [("Senior PHP Developer", "developer", "Developer", None),
+                            ("IT Support Executive", "it_support", "IT support / admin", None)],
+    }
+    pages = {"Kestrel Robotics": "https://boards.greenhouse.io/kestrelrobotics",
+             "Lotus Logistics": "https://lotus-logistics.example/join-us"}
+    for org, roles in postings.items():
+        for i, (title, family, family_title, days) in enumerate(roles):
+            url = f"{pages[org]}/jobs/{9000001 + i}"
+            run.signal(org, "hiring", "job_posting", title, days, url,
+                       round(min(0.95, 0.45 + 0.1 * (len(roles) - 1)), 3), key=url,
+                       role=title, roles=[title], family=family, family_title=family_title,
+                       board_page=pages[org], open_roles=len(roles),
+                       source="greenhouse" if org == "Kestrel Robotics" else "careers_pages")
+    run.signal("Pinecrest Health", "hiring", "job_posting", "Backend Engineer, DevOps", 6,
+               "https://news.ycombinator.com/item?id=41000101", 0.55,
+               key="https://news.ycombinator.com/item?id=41000101",
+               roles=["Backend Engineer", "DevOps"], family="developer",
+               family_title="Developer", board_page="https://news.ycombinator.com/item?id=41000101",
+               open_roles=2, source="hn_whos_hiring")
+    for category in ("Restaurants", "Clinics"):
+        run.unit("local_business", "google_maps", "Pune", category, found=3, new=3)
+    run.unit("hiring", "ats", None, "greenhouse:kestrelrobotics", found=6, new=1)
+    run.unit("hiring", "hn_whos_hiring", None, None, found=236, new=1)
+    run.failure("pagespeed", "pagespeed_quota")
+    run.failure("careers_pages", "robots_disallowed")
+    return run.finish(minutes=31)
+
+
+BUILDERS = {"local_business": local_business, "mix": mix, "venues": venues, "empty": empty,
+            "audit_hiring": audit_hiring}
 
 
 def build(engine, scenario: str) -> int:

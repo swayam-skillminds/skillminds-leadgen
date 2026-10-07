@@ -156,7 +156,7 @@ class HiringLeadType(LeadType):
 
     def column_values(self, org: Any, cfg: Any) -> dict[str, Any]:
         rows = open_postings([s for s in getattr(org, "signals", []) or []
-                              if s.get("lead_type") == self.key])
+                              if s.get("lead_type") == self.key], getattr(org, "as_of", None))
         if not rows:
             return {}
         latest = max((_when(s) for s in rows if _when(s)), default=None)
@@ -171,16 +171,18 @@ class HiringLeadType(LeadType):
                 "roles": "; ".join(titles[:12]) + more if titles else None,
                 "hiring_sources": ", ".join(sources) or None}
 
-    def score(self, org: Any, signals: list, cfg: Any) -> ScoreParts:
+    def score(self, org: Any, signals: list, cfg: Any,
+              now: datetime | None = None) -> ScoreParts:
         """Intent: more open roles, more intent; fading as the newest posting ages."""
-        rows = open_postings(signals)
+        now = now or datetime.now(timezone.utc)
+        rows = open_postings(signals, now)
         if not rows:
             return ScoreParts(self.key, intent=0.0)
         count = _role_count(rows)
         newest = max((_when(s) for s in rows if _when(s)), default=None)
         fade = 1.0
         if newest is not None:
-            age = max(0.0, (datetime.now(timezone.utc) - newest).total_seconds() / 86400)
+            age = max(0.0, (now - newest).total_seconds() / 86400)
             fade = math.pow(0.5, age / float(SPEC.half_life_days or 30))
         intent = round(min(1.0, 0.4 + 0.15 * (count - 1)) * fade, 4)
         when = f", latest posted {newest:%Y-%m-%d}" if newest else ""

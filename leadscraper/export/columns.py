@@ -126,6 +126,8 @@ def _top_signals(record: ExportRecord) -> list[dict[str, Any]]:
 def _signal_text(signal: dict[str, Any]) -> str:
     label = signal.get("type_title") or signal.get("type") or ""
     title = signal.get("title") or ""
+    if title and label and title.casefold().startswith(label.casefold()):
+        return title                       # "No HTTPS: …" already says what it is
     return f"{label}: {title}" if title and label else (title or label)
 
 
