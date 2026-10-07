@@ -95,7 +95,13 @@ take its own `config_model` instance.
    output naturally changes with the finders. What never changes is the
    finders' output: `tests/test_digital_audit.py` and `tests/test_hiring.py`
    prove local_business's rows, score columns and its own evidence are
-   identical with either lead type on, off or crashing.
+   identical with either lead type on, off or crashing -- its rows, score
+   columns and evidence, its final leads (CSV, Sheet, report) and the targets
+   its enrichment is handed. local_business works on
+   `LeadStore.owned_by("local_business")`: every listing it goes through is
+   narrowed to the organisations it found or enriched (untagged legacy rows
+   count as its own), while writes and identity matching see the whole
+   project.
 
 ## How a run uses it
 
@@ -244,8 +250,10 @@ lead_types:
 | `maps_profile` | `incomplete_maps_profile` | 7 | Incomplete Maps profile: no website, no reviews (only 3). |
 
 - **Honesty.** A check that could not run says nothing. A site that refuses
-  us (401/403/429, a bot wall) or whose robots.txt disallows the homepage is
-  "Not checked", never "unreachable". A Maps check needs a Maps listing; a
+  us (401/403/429, a bot wall), whose robots.txt disallows the homepage, that
+  resolves to an internal address, or whose audit failed or was cut by a stop
+  is "not checked": nothing is written and the previous audit stands. One
+  dropped connection is retried before "unreachable" is claimed. A Maps check needs a Maps listing; a
   version check needs a version (a CMS seen without one is in the stack, not a
   finding). Booking is only expected where the category says so.
 - **Fingerprints** are our own rules in the open pattern style (meta
@@ -304,8 +312,12 @@ lead_types:
   verbatim quote from the ad.
 - **Careers pages** of the run's organisations (`audit: run`) or the
   project's: an ATS board the site links or embeds is read through the ATS's
-  API; otherwise tech job titles on the careers page itself count, each with
-  its own link.
+  API (once per run, however many organisations link it); otherwise tech job
+  titles on the careers page itself count, each with its own link. Only the
+  page's content counts (navigation, header, footer and forms name services,
+  not openings), a title must name a role ("Senior PHP Developer", not "SEO
+  Services"), and a page saying it has no openings has none. A site whose
+  board didn't answer is scanned again next run.
 - **Organisations.** A company the project already holds gets the signals and
   keeps its record (rule 6); a new one is created from the board's company
   name (and the HN ad's site).
@@ -321,7 +333,8 @@ lead_types:
 - **Not used:** Upwork, Indeed, Glassdoor, LinkedIn Jobs (A.2.4). No country
   job board qualified yet: Naukri forbids automated access and Arbeitnow's
   licence forbids commercial use (`docs/sources.md`).
-- **Depth:** quick scans at most 50 careers pages; deep reads three HN threads.
+- **Depth:** quick scans at most 50 careers pages, deep up to 500. (More HN
+  threads only help with `posted_within_days` above 30.)
 
 ## The export (Phase 4)
 
@@ -380,6 +393,7 @@ ledger under the feature it used.
    `find_match` first and only attach to a match (rule 6), and set
    `discovery_stage = 1`. If it assesses others' organisations, do that in
    `post_discovery`, set `post_order` and `post_scope = "run"`.
-8. Network access: `leadtypes/toolkit.Kit` gives a session its paced HTTP
-   client (bound to the dead-domain cache), failure log and robots.txt cache;
-   `tests/fake_web.py` serves fixtures to it in tests.
+8. Network access: `leadtypes/toolkit.Kit` gives a session the run's shared
+   rate limiter, a public-only HTTP client (internal addresses refused, every
+   redirect hop included; bound to the dead-domain cache), a failure log and a
+   robots.txt cache; `tests/fake_web.py` serves fixtures to it in tests.
