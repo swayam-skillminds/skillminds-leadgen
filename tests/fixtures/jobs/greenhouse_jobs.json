@@ -1,0 +1,8 @@
+{"jobs": [
+  {"absolute_url": "https://boards.greenhouse.io/kestrelrobotics/jobs/9000001", "data_compliance": [], "internal_job_id": 1, "location": {"name": "Pune, India"}, "metadata": null, "id": 9000001, "updated_at": "@iso:2", "requisition_id": "R-1", "title": "Senior Backend Engineer (Python)", "company_name": "Kestrel Robotics", "first_published": "@iso:3", "language": "en"},
+  {"absolute_url": "https://boards.greenhouse.io/kestrelrobotics/jobs/9000002", "location": {"name": "Remote - India"}, "id": 9000002, "updated_at": "@iso:5", "title": "QA Automation Engineer", "company_name": "Kestrel Robotics", "first_published": "@iso:6"},
+  {"absolute_url": "https://boards.greenhouse.io/kestrelrobotics/jobs/9000003", "location": {"name": "Pune, India"}, "id": 9000003, "updated_at": "@iso:1", "title": "Account Executive", "company_name": "Kestrel Robotics", "first_published": "@iso:1"},
+  {"absolute_url": "https://boards.greenhouse.io/kestrelrobotics/jobs/9000004", "location": {"name": "Remote (US)"}, "id": 9000004, "updated_at": "@iso:2", "title": "Data Engineer", "company_name": "Kestrel Robotics", "first_published": "@iso:2"},
+  {"absolute_url": "https://boards.greenhouse.io/kestrelrobotics/jobs/9000005", "location": {"name": "Pune, India"}, "id": 9000005, "updated_at": "@iso:80", "title": "Frontend Developer", "company_name": "Kestrel Robotics", "first_published": "@iso:90"},
+  {"absolute_url": "https://boards.greenhouse.io/kestrelrobotics/jobs/9000006", "location": {"name": "Berlin, Germany"}, "id": 9000006, "updated_at": "@iso:2", "title": "DevOps Engineer", "company_name": "Kestrel Robotics", "first_published": "@iso:2"}
+], "meta": {"total": 6}}

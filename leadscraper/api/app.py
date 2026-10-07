@@ -61,6 +61,7 @@ TAGS = [
     {"name": "organizations", "description": "The leads: filter, inspect, erase."},
     {"name": "exports", "description": "XLSX / CSV / JSON / Google Sheets, from the database."},
     {"name": "suppression", "description": "Organisations to exclude or flag."},
+    {"name": "lead types", "description": "Lead-type helpers: uploaded audit targets."},
     {"name": "schedules", "description": "Recurring runs of saved configs."},
     {"name": "notifications", "description": "Telling our own users that a run finished."},
     {"name": "settings", "description": "Retention, keep-awake, robots.txt."},

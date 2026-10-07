@@ -12,7 +12,11 @@ that can't finish:
   its reason -- the next one that fits is taken instead. The budget only
   shrinks, so a unit that doesn't fit now never will;
 * whole-region units (scope "run": sitemaps) go first in every mode: the
-  richest records land first and later hits merge into them.
+  richest records land first and later hits merge into them;
+* **stages** (Phase 6): a session's ``discovery_stage`` orders lead types. A
+  unit starts only once every unit of an earlier stage has finished, so a
+  lead type that attaches signals to organisations (``hiring``) sees what the
+  finders (``local_business``) found, rather than racing them for a record.
 
 Without a time budget the units run in **plan order** -- exactly the order
 the original scraper used -- so unbudgeted runs (both legacy presets) are
@@ -42,6 +46,8 @@ class Planned:
     hosts: frozenset[str] = field(default_factory=frozenset)
     #: The cost the scheduler started it with (recorded on the work unit).
     cost: UnitCost | None = None
+    #: Its session's discovery stage: it waits for every unit of a lower one.
+    stage: int = 0
 
     @property
     def key(self) -> str:
@@ -60,6 +66,8 @@ class Scheduler:
         self._pending: list[Planned] = list(planned)
         self._lock = threading.Lock()
         self.skipped: list[tuple[Planned, str]] = []
+        #: Units handed out and not yet finished, by stage.
+        self._running: dict[int, int] = {}
 
     @property
     def pending(self) -> list[Planned]:
@@ -77,8 +85,11 @@ class Scheduler:
         with self._lock:
             if not self._pending:
                 return EXHAUSTED
+            stages = [p.stage for p in self._pending]
+            stages += [stage for stage, count in self._running.items() if count > 0]
+            current = min(stages)
             for planned in self._ordered():
-                if planned.hosts & busy:
+                if planned.stage > current or planned.hosts & busy:
                     continue
                 cost = self.costs.cost(planned.unit)
                 if self.control.budgeted and not self.control.fits(cost.seconds,
@@ -87,8 +98,16 @@ class Scheduler:
                     continue
                 self._pending.remove(planned)
                 planned.cost = cost
+                self._running[planned.stage] = self._running.get(planned.stage, 0) + 1
                 return planned
             return EXHAUSTED if not self._pending else None
+
+    def finished(self, planned: Planned) -> None:
+        """A unit handed out by ``next_ready`` is over (done, failed or abandoned)."""
+        with self._lock:
+            count = self._running.get(planned.stage, 0)
+            if count > 0:
+                self._running[planned.stage] = count - 1
 
     def _skip(self, planned: Planned, reason: str) -> None:
         self._pending.remove(planned)

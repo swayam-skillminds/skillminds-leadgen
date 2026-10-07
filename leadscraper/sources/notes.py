@@ -95,6 +95,82 @@ NOTES: dict[str, dict[str, Any]] = {
         "review": False, "last_verified": None},
 }
 
+#: Sources a lead type runs itself (Phase 6), served beside the registry's by the catalog.
+NOTES.update({
+    "greenhouse": {
+        "endpoint": "https://boards-api.greenhouse.io/v1/boards/{token}/jobs (+ /{token})",
+        "method": "requests (JSON)",
+        "terms": "Greenhouse Job Board API: board data is public and GET needs no auth (its "
+                 "docs). One company's published postings. Lead type hiring.",
+        "review": False, "last_verified": "2026-10-07 (200, jobs[] with company_name)"},
+    "lever": {
+        "endpoint": "https://api.lever.co/v0/postings/{token}?mode=json",
+        "method": "requests (JSON)",
+        "terms": "Lever Postings API: published postings, public without a key (its docs). "
+                 "Lead type hiring.",
+        "review": False, "last_verified": "2026-10-07 (200, postings with createdAt)"},
+    "ashby": {
+        "endpoint": "https://api.ashbyhq.com/posting-api/job-board/{token}",
+        "method": "requests (JSON)",
+        "terms": "Ashby public job posting API, meant for career sites (its docs). Lead type "
+                 "hiring.",
+        "review": False, "last_verified": "2026-10-07 (200, jobs[] with publishedAt)"},
+    "workable": {
+        "endpoint": "https://apply.workable.com/api/v1/widget/accounts/{token}",
+        "method": "requests (JSON)",
+        "terms": "The JSON behind Workable's documented embeddable jobs widget; public, no key, "
+                 "but not a documented API (the documented one needs the employer's token). "
+                 "Lead type hiring.",
+        "review": True, "last_verified": "2026-10-07 (200 for a real account; 404 otherwise)"},
+    "smartrecruiters": {
+        "endpoint": "https://api.smartrecruiters.com/v1/companies/{token}/postings",
+        "method": "requests (JSON), 100 per page",
+        "terms": "SmartRecruiters Posting API: answers without a key for companies with a "
+                 "public feed (verified), though its docs now describe API-key/OAuth access. "
+                 "Lead type hiring.",
+        "review": True, "last_verified": "2026-10-07 (200 without auth, content[] postings)"},
+    "hn_whos_hiring": {
+        "endpoint": "https://hn.algolia.com/api/v1/search_by_date?tags=story,"
+                    "author_whoishiring, then /api/v1/items/{thread id}",
+        "method": "requests (JSON), two requests per monthly thread",
+        "terms": "The public HN Search API by Algolia, no key; a commonly cited limit is "
+                 "10,000 requests per hour per IP. Ads are posted by the hiring companies. "
+                 "Lead type hiring.",
+        "review": False,
+        "last_verified": "2026-10-07 (200; 'Who is hiring? (October 2026)', 236 ads)"},
+    "careers_pages": {
+        "endpoint": "the organisation's own site: home, then its careers page",
+        "method": "requests (robots.txt honoured)",
+        "terms": "The business's public pages, one request at a time per site. ATS boards they "
+                 "link are read through the ATS's own API. Lead type hiring.",
+        "review": False, "last_verified": None},
+    "board_search": {
+        "endpoint": "Google search (then DuckDuckGo) for site:boards.greenhouse.io … pages",
+        "method": "via google_search's SERP client (no browser)",
+        "terms": "As google_search: Google's terms restrict automated queries. Off by default. "
+                 "Lead type hiring.",
+        "review": True, "last_verified": None},
+    "upload": {
+        "endpoint": "your own list (targets, domains, targets_file, POST /audit/targets)",
+        "method": "none", "terms": "Your data. Lead type digital_audit.",
+        "review": False, "last_verified": None},
+    "site_audit": {
+        "endpoint": "the organisation's own site: TLS handshake, home (HTTPS then HTTP), one "
+                    "contact page, a HEAD per checked link",
+        "method": "requests + ssl (robots.txt honoured for every page and link)",
+        "terms": "The business's public pages, paced per site. Lead type digital_audit.",
+        "review": False, "last_verified": None},
+    "pagespeed": {
+        "endpoint": "https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=…"
+                    "&strategy=mobile&category=performance",
+        "method": "requests (JSON); key from the secret pagespeed-api-key",
+        "terms": "Google's official free API; a key is recommended by its docs and needed in "
+                 "practice. Lead type digital_audit.",
+        "review": False,
+        "last_verified": "2026-10-07 (keyless: 429 'Quota exceeded … Queries per day')"},
+})
+
+
 
 def note(name: str) -> dict[str, Any]:
     return dict(NOTES.get(name) or {"endpoint": "", "method": "", "terms": "",

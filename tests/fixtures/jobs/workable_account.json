@@ -1,0 +1,3 @@
+{"name": "Saffron Analytics", "description": "Fictional analytics firm.", "jobs": [
+  {"title": "Data Analyst", "shortcode": "ABC123", "code": "", "employment_type": "Full-time", "telecommuting": false, "department": "Data", "url": "https://apply.workable.com/j/ABC123", "shortlink": "https://apply.workable.com/j/ABC123", "application_url": "https://apply.workable.com/j/ABC123/apply", "published_on": "@date:5", "created_at": "@date:5", "country": "India", "city": "Pune", "state": "Maharashtra", "education": "", "experience": "", "function": "", "industry": "", "locations": [{"country": "India", "countryCode": "IN", "city": "Pune", "region": "Maharashtra", "hidden": false}]}
+]}

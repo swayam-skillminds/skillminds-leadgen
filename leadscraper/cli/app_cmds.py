@@ -474,6 +474,31 @@ def _db(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
     return parser
 
 
+def cmd_audit(args: argparse.Namespace) -> int:
+    """``audit targets FILE``: the uploaded list as a config snippet (nothing is run)."""
+    import yaml
+
+    from ..services.errors import Invalid
+    from ..services.leadtypes import audit_targets
+
+    path = Path(args.file)
+    try:
+        result = audit_targets(path.read_bytes(), path.name)
+    except (OSError, Invalid) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    text = yaml.safe_dump({"lead_types": {"digital_audit": {"enabled": True,
+                                                            "targets": result["targets"]}}},
+                          sort_keys=False, allow_unicode=True)
+    if args.output:
+        Path(args.output).write_text(text, encoding="utf-8")
+        print(f"wrote {len(result['targets'])} target(s) to {args.output}"
+              + (f" ({result['skipped']} row(s) skipped)" if result["skipped"] else ""))
+    else:
+        print(text, end="")
+    return 0
+
+
 def add_parsers(sub) -> dict:
     """Register the Phase 3 commands; returns {command: handler}."""
     api = _db(sub.add_parser("api", help="serve the HTTP API (docs at /api/v1/docs)"))
@@ -575,10 +600,17 @@ def add_parsers(sub) -> dict:
     _db(ai_sub.add_parser("usage", help="AI spend by provider and feature")).add_argument(
         "--run", type=int)
 
+    audit = sub.add_parser("audit", help="digital_audit helpers: targets FILE")
+    audit_sub = audit.add_subparsers(dest="audit_cmd", required=True)
+    targets = audit_sub.add_parser("targets", help="a CSV/XLSX of businesses or domains -> "
+                                                   "the YAML for lead_types.digital_audit")
+    targets.add_argument("file")
+    targets.add_argument("-o", "--output")
+
     return {"api": cmd_api, "status": cmd_status, "export": cmd_export, "bundle": cmd_bundle,
             "projects": cmd_projects, "suppression": cmd_suppression,
             "schedules": cmd_schedules, "purge": cmd_purge, "secrets": cmd_secrets,
-            "ai": cmd_ai}
+            "ai": cmd_ai, "audit": cmd_audit}
 
 
 def add_config_parsers(config_sub) -> None:

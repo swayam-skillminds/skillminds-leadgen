@@ -1,0 +1,129 @@
+# Fingerprint rules for the digital_audit `cms_age` check: which CMS, framework
+# or server a site runs, which version, and whether that version is outdated.
+#
+# Written for this project in the open pattern style of Wappalyzer-like tools
+# (meta generator, HTML, script/link URLs, response headers), so nothing here is
+# copied from a GPL rule set. Every rule only reads what the site itself sends.
+#
+# `outdated_below`: the oldest version still current; anything lower is a
+# finding. `outdated: true`: every version is (end of life). `eol` says why,
+# with a date, so a reviewer can re-check it. A config can override a
+# threshold per technology (`lead_types.digital_audit.outdated`).
+#
+# Patterns are Python regular expressions, case-insensitive. A group captures
+# the version where the evidence carries one.
+
+verified: "2026-10-07"
+
+technologies:
+  WordPress:
+    category: CMS
+    meta_generator: ['^WordPress ?([\d.]+)?']
+    html: ['/wp-content/', '/wp-includes/']
+    outdated_below: "6.4"
+    eol: "No formal end of life; 6.4 shipped Nov 2023, so anything older is about three years behind and usually missing security releases."
+  Joomla:
+    category: CMS
+    meta_generator: ['^Joomla!?(?: - Open Source Content Management)? ?([\d.]+)?']
+    html: ['/media/jui/', '/media/system/js/core\.js', 'option=com_']
+    outdated_below: "5.0"
+    eol: "Joomla 3 ended Aug 2023, Joomla 4 security support ended Oct 2025."
+  Drupal:
+    category: CMS
+    meta_generator: ['^Drupal ?(\d+)?']
+    headers: {x-generator: '^Drupal ?(\d+)?', x-drupal-cache: '.'}
+    html: ['/sites/default/files/', 'drupal-settings-json', 'Drupal\.settings']
+    outdated_below: "10"
+    eol: "Drupal 7 ended Jan 2025, Drupal 9 Nov 2023."
+  Magento 1:
+    category: Ecommerce
+    html: ['Mage\.Cookies', '/skin/frontend/', 'js/varien/']
+    outdated: true
+    eol: "Magento 1 ended June 2020."
+  Magento 2:
+    category: Ecommerce
+    html: ['/static/version\d+/frontend/', 'data-mage-init', 'mage/requirejs']
+  PrestaShop:
+    category: Ecommerce
+    meta_generator: ['^PrestaShop']
+    html: ['var prestashop ?=', '/modules/ps_']
+  OpenCart:
+    category: Ecommerce
+    html: ['catalog/view/theme/', 'index\.php\?route=common/home']
+  WooCommerce:
+    category: Ecommerce
+    meta_generator: ['^WooCommerce ?([\d.]+)?']
+    html: ['/wp-content/plugins/woocommerce/', 'woocommerce-cart']
+  Shopify:
+    category: Ecommerce
+    html: ['cdn\.shopify\.com', 'Shopify\.theme']
+  Wix:
+    category: Site builder
+    meta_generator: ['^Wix\.com Website Builder']
+    html: ['static\.wixstatic\.com', 'static\.parastorage\.com']
+  Squarespace:
+    category: Site builder
+    html: ['static1\.squarespace\.com', 'Static\.SQUARESPACE_CONTEXT']
+  Webflow:
+    category: Site builder
+    meta_generator: ['^Webflow']
+    html: ['data-wf-page=', 'data-wf-site=']
+  Weebly:
+    category: Site builder
+    html: ['editmysite\.com', 'weebly\.com/weebly/']
+  GoDaddy Website Builder:
+    category: Site builder
+    meta_generator: ['^Starfield Technologies; Go Daddy Website Builder ?([\d.]+)?']
+    html: ['img1\.wsimg\.com']
+  Blogger:
+    category: Site builder
+    meta_generator: ['^Blogger']
+  Next.js:
+    category: Framework
+    html: ['id="__NEXT_DATA__"', '/_next/static/']
+  Nuxt:
+    category: Framework
+    html: ['window\.__NUXT__', '/_nuxt/']
+  AngularJS:
+    category: JavaScript framework
+    html: ['\sng-app[=\s>]', '\sng-controller=']
+    scripts: ['angularjs/([\d.]+)/angular(?:\.min)?\.js', '/angular(?:\.min)?\.js']
+    outdated: true
+    eol: "AngularJS (1.x) ended Dec 2021."
+  jQuery:
+    category: JavaScript library
+    scripts: ['jquery[.-]([\d.]+)(?:\.min|\.slim|\.slim\.min)?\.js', 'jquery/([\d.]+)/jquery',
+              'jquery(?:\.min)?\.js\?ver=([\d.]+)']
+    outdated_below: "3.5.0"
+    eol: "Versions before 3.5.0 have the published XSS flaws CVE-2020-11022/11023."
+  Bootstrap:
+    category: UI framework
+    scripts: ['bootstrap@([\d.]+)', 'bootstrap/([\d.]+)/(?:css|js)/', 'bootstrap(?:\.min)?\.(?:js|css)\?ver=([\d.]+)']
+    outdated_below: "5.0"
+    eol: "Bootstrap 3 ended July 2019, Bootstrap 4 Jan 2023."
+  Adobe Flash:
+    category: Plugin
+    html: ['\.swf["?]', 'swfobject', 'application/x-shockwave-flash']
+    outdated: true
+    eol: "Flash Player ended Dec 2020; browsers no longer run it."
+  PHP:
+    category: Language
+    headers: {x-powered-by: 'PHP/([\d.]+)'}
+    outdated_below: "8.2"
+    eol: "PHP 8.1 security support ended Dec 2025 (8.0 Nov 2023, 7.4 Nov 2022)."
+  ASP.NET:
+    category: Framework
+    headers: {x-aspnet-version: '([\d.]+)', x-powered-by: '^ASP\.NET'}
+  Apache:
+    category: Web server
+    headers: {server: '^Apache/?([\d.]+)?'}
+    outdated_below: "2.4"
+    eol: "Apache 2.2 ended in 2017."
+  nginx:
+    category: Web server
+    headers: {server: '^nginx/?([\d.]+)?'}
+  Microsoft IIS:
+    category: Web server
+    headers: {server: '^Microsoft-IIS/([\d.]+)'}
+    outdated_below: "8.5"
+    eol: "IIS 7.x and older shipped with Windows Server 2008 R2, supported until Jan 2020."

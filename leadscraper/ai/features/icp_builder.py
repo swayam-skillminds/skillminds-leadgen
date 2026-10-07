@@ -3,7 +3,8 @@
 "We sell ERP to mid-size manufacturers in Pune and Nashik" becomes a schema-valid
 run config: geography, ``local_business`` categories with search phrases,
 fields, filters and the ``icp`` section, plus notes on what the brief asked for
-that this build can't do yet (lead types of later phases, roles and signals
+that this build can't do yet (lead types of later phases -- built ones it names are
+switched on with their defaults --, roles and signals
 the decision-maker and signal lead types will use).
 
 The draft is **returned, never run**. It starts from one of Skillminds'
@@ -75,6 +76,11 @@ def _slug(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", (text or "").lower()).strip("-")[:60] or "icp-draft"
 
 
+#: The A.7 lead types; those not registered in this build are noted, never configured.
+LATER_PHASES = ("digital_audit", "hiring", "funding_news", "decision_makers", "tenders",
+                "registrations", "tech_stack", "app_store")
+
+
 def available_lead_types() -> list[str]:
     from ...leadtypes import registry
 
@@ -135,7 +141,9 @@ def to_document(draft: ICPDraft, *, offering: str | None = None) -> tuple[dict[s
         "description": description,
         "geography": {"country": draft.country.strip().upper(),
                       "places": [p.strip() for p in draft.places if p and p.strip()]},
-        "lead_types": {"local_business": {"enabled": True, "categories": categories}},
+        "lead_types": {"local_business": {"enabled": True, "categories": categories},
+                       **{key: {"enabled": True} for key in wanted
+                          if key in known and key != "local_business"}},
         "filters": {"must_have": must_have},
         "icp": {"industries": draft.industries[:10], "company_size": draft.company_size,
                 "technologies": draft.technologies[:10]},
@@ -160,8 +168,10 @@ def build(client, brief: str, *, offering: str | None = None, country: str | Non
     if offering is not None and offering not in offerings():
         raise ValueError(f"unknown offering {offering!r} (known: {', '.join(offerings())})")
     base = draft_from_offering(offering, country=country, places=places) if offering else None
-    lead_types = ", ".join(available_lead_types()) + " (built); later phases: digital_audit, " \
-        "hiring, funding_news, decision_makers, tenders, registrations, tech_stack, app_store"
+    built = available_lead_types()
+    later = [k for k in LATER_PHASES if k not in built]
+    lead_types = ", ".join(built) + " (built)" + (f"; later phases: {', '.join(later)}"
+                                                  if later else "")
     user = f"Brief: {brief.strip()}\n\nLead types: {lead_types}\n"
     if base is not None:
         user += ("\nStart from this offering and adapt it to the brief:\n"

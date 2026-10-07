@@ -1,0 +1,5 @@
+[
+  {"id": "aaaa-1", "text": "Full Stack Developer", "categories": {"commitment": "Full-time", "department": "Engineering", "location": "Pune", "team": "Platform", "allLocations": ["Pune"]}, "createdAt": "@ms:4", "hostedUrl": "https://jobs.lever.co/marigold-labs/aaaa-1", "applyUrl": "https://jobs.lever.co/marigold-labs/aaaa-1/apply", "workplaceType": "hybrid", "country": "IN"},
+  {"id": "aaaa-2", "text": "SEO Specialist", "categories": {"commitment": "Full-time", "department": "Marketing", "location": "Remote", "allLocations": ["Remote"]}, "createdAt": "@ms:10", "hostedUrl": "https://jobs.lever.co/marigold-labs/aaaa-2", "workplaceType": "remote", "country": "IN"},
+  {"id": "aaaa-3", "text": "Office Manager", "categories": {"location": "Pune", "allLocations": ["Pune"]}, "createdAt": "@ms:2", "hostedUrl": "https://jobs.lever.co/marigold-labs/aaaa-3", "workplaceType": "onsite"}
+]

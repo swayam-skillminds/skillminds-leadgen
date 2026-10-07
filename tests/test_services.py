@@ -362,8 +362,14 @@ def test_every_source_has_catalog_notes_and_applicability():
     assert us["google_maps"]["applicable"] and not us["justdial"]["applicable"]
     assert "covers IN" in us["justdial"]["reason"]
     assert us["linkedin_serp"]["fills"] == ["decision_makers"]
-    [local] = catalog.lead_types("US")
+    by_key = {lt["key"]: lt for lt in catalog.lead_types("US")}
+    assert list(by_key) == ["local_business", "hiring", "digital_audit"]
+    local = by_key["local_business"]
     assert local["key"] == "local_business" and local["applicable"]
+    # Phase 6: a lead type's own sources are in the catalog too, with terms notes.
+    assert us["greenhouse"]["lead_type"] == "hiring" and us["greenhouse"]["terms"]
+    assert us["workable"]["review"] is True and us["greenhouse"]["last_verified"]
+    assert us["site_audit"]["lead_type"] == "digital_audit" and us["pagespeed"]["applicable"]
     headers = [c["header"] for c in local["columns"]]
     # Its own columns only: phones, emails and the rest are the export's core columns.
     assert "Category" in headers and "Phones" not in headers

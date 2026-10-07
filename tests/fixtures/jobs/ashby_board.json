@@ -1,0 +1,4 @@
+{"apiVersion": "1", "jobs": [
+  {"id": "b-1", "title": "Site Reliability Engineer", "department": "Engineering", "team": "Infra", "employmentType": "FullTime", "location": "Pune", "secondaryLocations": [], "publishedAt": "@iso:7", "isListed": true, "isRemote": false, "workplaceType": "Hybrid", "jobUrl": "https://jobs.ashbyhq.com/tamarind/b-1", "applyUrl": "https://jobs.ashbyhq.com/tamarind/b-1/application", "descriptionPlain": ""},
+  {"id": "b-2", "title": "Senior Android Developer", "department": "Engineering", "location": "Remote - India", "publishedAt": "@iso:3", "isListed": false, "isRemote": true, "workplaceType": "Remote", "jobUrl": "https://jobs.ashbyhq.com/tamarind/b-2"}
+]}

@@ -1,0 +1,9 @@
+{"author": "whoishiring", "id": 41000001, "title": "Ask HN: Who is hiring? (October 2026)", "type": "story", "created_at": "@iso:7", "text": "Please state the location and include REMOTE for remote work...", "children": [
+  {"author": "founder_a", "created_at": "@iso:6", "id": 41000101, "parent_id": 41000001, "story_id": 41000001, "type": "comment", "options": [], "children": [],
+   "text": "Pinecrest Health (Pune, India) | Senior Backend Engineer, DevOps Engineer | ONSITE | <a href=\"https:&#x2F;&#x2F;pinecrest-health.example\" rel=\"nofollow\">https:&#x2F;&#x2F;pinecrest-health.example</a><p>We build clinic software. Python, Postgres, AWS.<p>Email jobs@pinecrest-health.example"},
+  {"author": "founder_b", "created_at": "@iso:5", "id": 41000102, "parent_id": 41000001, "type": "comment", "children": [],
+   "text": "Glacier Payments | Full-Stack Developer | REMOTE (US) | <a href=\"https:&#x2F;&#x2F;glacier-pay.example\">https:&#x2F;&#x2F;glacier-pay.example</a><p>US timezones only."},
+  {"author": "founder_c", "created_at": "@iso:4", "id": 41000103, "parent_id": 41000001, "type": "comment", "children": [],
+   "text": "Monsoon Studio | REMOTE | <a href=\"https:&#x2F;&#x2F;monsoon-studio.example\">https:&#x2F;&#x2F;monsoon-studio.example</a><p>We are looking for someone to own our web storefront and the systems behind it."},
+  {"author": null, "created_at": "@iso:4", "id": 41000104, "parent_id": 41000001, "type": "comment", "children": [], "text": null}
+]}

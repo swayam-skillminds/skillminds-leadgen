@@ -73,7 +73,9 @@ def test_icp_builder_turns_a_brief_into_a_schema_valid_config(client, monkeypatc
     assert categories[0].queries == ["manufacturing company", "auto component maker"]
     assert config.filters.must_have == ["phone"]                    # "fax" is not a field
     assert config.icp.company_size == "51-200" and config.ai.enabled is False
-    assert any("hiring" in note for note in body["notes"])          # a later phase, noted
+    # A built lead type the draft names is configured (Phase 6); a later one is only noted.
+    assert config.lead_type("hiring").enabled is True
+    assert not any("later phases" in note for note in body["notes"])
     assert any("Plant Head" in note for note in body["notes"])
     assert "never run" in body["confirm"].lower() or "review it" in body["confirm"].lower()
     assert "ERP implementation" in seen[0][1]                       # started from the offering

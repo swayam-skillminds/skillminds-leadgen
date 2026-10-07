@@ -20,6 +20,7 @@ Commands:
   schedules        list | create | delete | run recurring runs
   purge            apply the retention settings now
   secrets          set | delete | check secrets in the OS keychain
+  audit            targets FILE: a CSV/XLSX of businesses or domains -> digital_audit YAML
 
 ``config`` also manages saved configs in the database (save | list | show |
 versions | export) and ``runs`` also does rerun | diff | failures.

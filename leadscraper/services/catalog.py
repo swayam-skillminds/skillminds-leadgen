@@ -193,4 +193,36 @@ def sources(engine: Engine | None = None, ws: Workspace | None = None, *,
                 **note(name),
                 "health": health.get(name, {"status": "unknown"}),
             })
+    out.extend(_lead_type_sources(health, code))
+    return out
+
+
+def _lead_type_sources(health: dict[str, Any], country: str | None) -> list[dict[str, Any]]:
+    """Sources a lead type runs itself (Phase 6: job boards, the site audit), from its
+    ``catalog_sources()``, in the same shape as the shared registry's."""
+    from ..leadtypes import registry
+    from ..sources.notes import note
+
+    out = []
+    for lt in registry.all_lead_types():
+        try:
+            entries = lt.catalog_sources()
+        except Exception:
+            continue
+        for entry in entries:
+            countries = entry.get("applicable_countries") or lt.applicable_countries
+            applicable = country is None or not countries or country in countries
+            out.append({
+                "name": entry["name"], "kind": entry.get("kind", "discovery"),
+                "pack": entry.get("pack") or "core", "lead_type": lt.key,
+                "applicable": applicable,
+                "reason": None if applicable else f"{entry['name']} covers "
+                                                  f"{', '.join(sorted(countries))}",
+                "applicable_countries": sorted(countries) if countries else None,
+                "applicable_verticals": None, "scope": entry.get("scope", "run"),
+                "priority": 100, "uses_browser": False, "fills": None,
+                "defaults": entry.get("defaults") or {},
+                **note(entry["name"]),
+                "health": health.get(entry["name"], {"status": "unknown"}),
+            })
     return out

@@ -542,7 +542,8 @@ class _Run:
                     hosts = frozenset(session.hosts(unit))
                 except Exception:
                     hosts = frozenset({f"{key}:{unit.source}"})
-                planned.append(Planned(unit=unit, session=session, index=index, hosts=hosts))
+                planned.append(Planned(unit=unit, session=session, index=index, hosts=hosts,
+                                       stage=int(getattr(session, "discovery_stage", 0) or 0)))
                 index += 1
         self.by_key = {p.key: p for p in planned}
         if run_id is None:
@@ -632,6 +633,8 @@ class _Run:
             except Exception as exc:
                 log.exception("bookkeeping for unit %s failed (the run continues): %s",
                               planned.key, exc)
+            finally:
+                scheduler.finished(planned)
 
         control = self.control
         grace = _number(self.config, "runtime.stop_grace_seconds", DEFAULT_STOP_GRACE_SECONDS)

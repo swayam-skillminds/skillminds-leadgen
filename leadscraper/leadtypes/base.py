@@ -196,6 +196,10 @@ class LeadTypeSession(ABC):
     #: What ``post_estimate`` is sized by: "own" (this lead type's expected new
     #: organisations) or "run" (every lead type's: it assesses them all).
     post_scope: str = "own"
+    #: Its units start only after every unit of a lower stage has finished
+    #: (Phase 6): lead types that attach signals to organisations others find
+    #: (stage 1) run after the finders (stage 0), instead of racing them.
+    discovery_stage: int = 0
 
     @abstractmethod
     def units(self) -> list[WorkUnit]:

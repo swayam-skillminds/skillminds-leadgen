@@ -1,4 +1,4 @@
-"""Suppression lists, schedules, notification targets."""
+"""Suppression lists, schedules, notification targets, audit-target uploads."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from typing import Literal
 from fastapi import APIRouter, Depends, File, Query, UploadFile
 from sqlalchemy.engine import Engine
 
-from ...services import notifications, schedules, suppression
+from ...services import leadtypes, notifications, schedules, suppression
 from ...services.workspace import Workspace
 from .. import schemas as s
 from ..deps import current_workspace, get_engine, read_upload
@@ -91,6 +91,15 @@ async def import_entries(list_id: int, file: UploadFile = File(...),
                          ws: Workspace = Depends(current_workspace)):
     return suppression.import_file(engine, ws, list_id, await read_upload(file),
                                    file.filename or "upload.csv")
+
+
+# --- lead-type uploads ------------------------------------------------------------------------------
+
+@router.post("/audit/targets", response_model=s.AuditTargetsOut, tags=["lead types"],
+             summary="Read a CSV/XLSX of businesses or domains into digital_audit targets "
+                     "(nothing is stored or run)")
+async def audit_targets(file: UploadFile = File(...)):
+    return leadtypes.audit_targets(await read_upload(file), file.filename or "upload.csv")
 
 
 # --- schedules -------------------------------------------------------------------------------------

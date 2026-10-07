@@ -35,9 +35,14 @@ def _load_builtins() -> None:
         if _builtins_loaded:
             return
         _builtins_loaded = True
+        from .digital_audit.plugin import DIGITAL_AUDIT
+        from .hiring.plugin import HIRING
         from .local_business.plugin import LOCAL_BUSINESS
 
-        _lead_types.setdefault(LOCAL_BUSINESS.key, LOCAL_BUSINESS)
+        # Registry order is the order of lead types in configs, columns and
+        # post-discovery (before ``post_order``): finders first.
+        for builtin in (LOCAL_BUSINESS, HIRING, DIGITAL_AUDIT):
+            _lead_types.setdefault(builtin.key, builtin)
         for module_name in filter(None, (m.strip() for m in
                                          os.environ.get(PLUGINS_ENV, "").split(","))):
             try:

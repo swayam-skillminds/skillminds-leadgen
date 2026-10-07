@@ -1,0 +1,4 @@
+{"offset": 0, "limit": 100, "totalFound": 2, "content": [
+  {"id": "744000000000001", "name": "IT Support Engineer", "uuid": "u-1", "refNumber": "REF1", "company": {"identifier": "NilgiriTextiles1", "name": "Nilgiri Textiles"}, "releasedDate": "@iso:2", "location": {"city": "Pune", "region": "MH", "country": "in", "remote": false, "hybrid": false, "fullLocation": "Pune, MH, India"}, "industry": {"id": "textiles", "label": "Textiles"}, "department": {"id": "1", "label": "IT"}, "function": {"id": "information_technology", "label": "Information Technology"}, "typeOfEmployment": {"id": "permanent", "label": "Full-time"}, "experienceLevel": {"id": "associate", "label": "Associate"}},
+  {"id": "744000000000002", "name": "Machine Operator", "uuid": "u-2", "company": {"identifier": "NilgiriTextiles1", "name": "Nilgiri Textiles"}, "releasedDate": "@iso:2", "location": {"city": "Pune", "country": "in", "remote": false, "fullLocation": "Pune, MH, India"}, "department": {}}
+]}

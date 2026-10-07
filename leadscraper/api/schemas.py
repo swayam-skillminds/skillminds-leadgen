@@ -691,6 +691,19 @@ class EntriesResult(BaseModel):
     read: int | None = None
 
 
+class AuditTargetsOut(BaseModel):
+    model_config = examples({
+        "targets": [{"name": "Brightwater Dental Studio", "website": "brightwater-dental.example",
+                     "category": "Dentists", "place": "Pune"},
+                    {"website": "oldmill-bistro.example"}],
+        "read": 3, "skipped": 1})
+
+    #: Ready for ``lead_types.digital_audit.targets`` in a run config.
+    targets: list[dict[str, Any]]
+    read: int
+    skipped: int
+
+
 # --- schedules -----------------------------------------------------------------------------------
 
 class ScheduleOut(BaseModel):
