@@ -73,6 +73,10 @@ COUNTRY_ALIASES = {
 _WORLDWIDE = re.compile(r"\b(?:global|worldwide|anywhere|any location|international)\b", re.I)
 _REMOTE = re.compile(r"\b(?:remote|work from home|wfh|distributed)\b", re.I)
 _REMOTE_QUALIFIER = re.compile(r"\bremote\b\s*(?:\(([^)]*)\)|[-–—:,/]\s*([a-z .&]+))", re.I)
+#: "Remote" that still decides where people must be.
+_RESTRICTED = re.compile(r"\b(?:based only|only (?:in|within|from)|must (?:be|live|reside)|"
+                         r"residents? (?:of|in)|select(?:ed)? countries|time ?zones? only|"
+                         r"remote within|remote but)\b", re.I)
 _REGION_WORDS = re.compile(r"\b(?:us|usa|uk|eu|emea|europe|americas|apac|latam|canada|"
                            r"north america|united states|united kingdom)\b", re.I)
 
@@ -106,6 +110,18 @@ def families_in(text: str, families: Iterable[str],
     return found
 
 
+_ROLE_LINE = re.compile(r"^\s*(?:[-*•–]\s+|(?:we(?:'re| are) )?(?:hiring|roles?|positions?|"
+                        r"open(?:ings| roles)?|looking for)\s*:)", re.I)
+
+
+def role_text(headline: str, body: str, max_lines: int = 15) -> str:
+    """Where an ad names its roles: the headline, plus lines that list roles (bullets,
+    "Hiring:", "Roles:"). Prose further down mentions technologies, not openings."""
+    lines = [line for line in (body or "").split("\n")[1:max_lines + 1]
+             if _ROLE_LINE.match(line)]
+    return "\n".join([headline, *lines])
+
+
 def seniority_of(title: str) -> str:
     for level, pattern in SENIORITY:
         if pattern.search(title or ""):
@@ -128,6 +144,8 @@ def remote_open_to(location: str, country_terms: list[str]) -> bool:
     text = location or ""
     if any(_word_in(word, text) for word in country_terms):
         return True
+    if _RESTRICTED.search(text):
+        return False                 # "Remote but Boston based only", "in select countries"
     for match in _REMOTE_QUALIFIER.finditer(text):
         qualifier = (match.group(1) or match.group(2) or "").strip()
         if not qualifier or _WORLDWIDE.search(qualifier):

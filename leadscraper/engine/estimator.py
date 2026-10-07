@@ -264,9 +264,15 @@ def describe_estimate(est: dict[str, Any]) -> str:
     lines = [f"Units queued : {est['units_queued']}"
              + (f" ({est['units_already_done']} already done)" if est.get("units_already_done")
                 else "") + f"; {est['workers']} parallel worker(s), one per host"]
+    # One column for every lead type's "type/source" (a local_business-only plan
+    # keeps its original layout: the source padded to 16).
+    width = max([len(f"{lt}/") + 16 for lt in est["breakdown"]]
+                + [len(f"{lt}/{src}") for lt, srcs in est["breakdown"].items() for src in srcs]
+                or [0])
     for lead_type, sources in est["breakdown"].items():
         for source, row in sorted(sources.items(), key=lambda kv: -kv[1]["seconds"]):
-            lines.append(f"  {lead_type}/{source:<16} {int(row['units']):>5} units"
+            label = f"{lead_type}/{source}"
+            lines.append(f"  {label:<{width}} {int(row['units']):>5} units"
                          f"  ~{minutes(row['seconds'])} min of work  ~{row['new']:.0f} new")
     basis = est.get("basis", {})
     lines.append("Basis        : " + ", ".join(f"{n} {kind}" for kind, n in basis.items())

@@ -576,3 +576,26 @@ def test_a_company_the_finders_hold_gets_the_signals_and_keeps_its_record(tmp_pa
     assert kestrel["lead_types"] == ["local_business", "hiring"]
     assert len(signals_by_org(config)["Kestrel Robotics Pvt Ltd"]) == 2
     assert outcome.results["hiring"].new == 0
+
+
+# Shapes seen in the live October 2026 thread, rewritten as fictional ads.
+@pytest.mark.parametrize("location, expected", [
+    ("Acme | Founding Engineer | Remote but Boston based only", None),
+    ("Acme | Senior Software Engineer | REMOTE in select countries", None),
+    ("Acme | Backend Engineers | REMOTE (US/Canada/Brazil/India)", "remote"),
+    ("Acme | Software Engineer | Full Time, Remote India", "remote"),
+    ("Acme | Android Engineer | Remote | Full-time", "remote"),
+])
+def test_remote_ads_must_be_open_to_the_country(location, expected):
+    assert roles.location_match(location, remote=None, places=["Pune"],
+                                country_terms=COUNTRY_IN) == expected
+
+
+def test_roles_come_from_the_headline_and_role_lists_not_prose():
+    headline = "Acme | Go-To-Market Specialist | REMOTE"
+    prose = f"{headline}\nWe help QA teams and developers ship faster with SEO-friendly docs."
+    assert roles.families_in(roles.role_text(headline, prose), roles.FAMILY_PATTERNS) == []
+    listed = "Acme | Several roles | REMOTE\n- Senior Backend Engineer\n- QA Engineer\nAbout us"
+    found = roles.families_in(roles.role_text("Acme | Several roles | REMOTE", listed),
+                              roles.FAMILY_PATTERNS)
+    assert {f for f, _ in found} == {"developer", "qa"}

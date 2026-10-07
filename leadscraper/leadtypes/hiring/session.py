@@ -35,7 +35,7 @@ from ..base import LeadTypeResult, LeadTypeSession, SignalSpec, UnitOutcome, Wor
 from ..toolkit import Kit
 from .config import HiringConfig
 from .roles import (FAMILY_TITLES, classify, country_words, families_in, location_match,
-                    seniority_of)
+                    role_text, seniority_of)
 
 log = logging.getLogger(__name__)
 
@@ -237,7 +237,7 @@ class HiringSession(LeadTypeSession):
                                        policy=self.section.remote)
                 if where is None:
                     continue
-                found = families_in(f"{ad.title}\n{ad.text[:1500]}", self.section.roles,
+                found = families_in(role_text(ad.title, ad.text), self.section.roles,
                                     self.section.keywords)
                 if not found:
                     unmatched.append(ad)
@@ -340,7 +340,7 @@ class HiringSession(LeadTypeSession):
                        "posted_at": posting.posted_at.isoformat() if posting.posted_at else None}
             if match.interpreted_by:
                 payload["interpreted_by"] = match.interpreted_by
-            title = ", ".join(match.roles[:6]) if len(match.roles) > 1 else posting.title
+            title = ", ".join(r for r in match.roles[:6] if r) or posting.title
             added += bool(self.store.add_signal(
                 org_id, SIGNAL, key=posting.url, title=title[:300], payload=payload,
                 strength=strength(count), published_at=posting.posted_at,
