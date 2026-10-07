@@ -503,6 +503,32 @@ first. Keep their visual language and generalise the code. The reference workboo
      dropped.
    - AI-estimated attributes are flagged as such in data and in the workbook.
    - AI output is schema-validated. Invalid output is retried once, then skipped.
+6. **Extraction techniques.** These ideas are borrowed from ScrapeGraphAI. **Do not add
+   `scrapegraphai` as a dependency.** Reviewed 2026-10-07 (v2.3.1), it is unsuitable because:
+   - its telemetry is on by default and sends prompt, source URL, schema and page content
+     (our leads' personal data) to a third-party server;
+   - it ships anti-bot evasion (undetected Playwright/chromedriver, free-proxy rotation),
+     against A.2.4;
+   - it pulls in the full LangChain provider tree, against our thin provider layer;
+   - it has no grounding, budget, cache or failure-record integration.
+
+   Implement these natively instead:
+   - **Token-lean page preparation.** Before any extraction call, strip scripts, styles,
+     navigation and boilerplate. Convert to compact Markdown and chunk it to fit the model's
+     context. Keep the original text for the verbatim grounding check in 5.
+   - **Schema-driven extraction.** Every extraction call passes a pydantic model as the
+     required output. Use the provider's native structured-output mode when it declares one;
+     otherwise use JSON + validation.
+   - **Self-healing selectors.** Used by the generic extractor source behind `source_discovery`,
+     and by `extraction_fallback` for listing/profile pages with a repeating layout:
+     - On first contact with a page type, the worker model proposes CSS/XPath selectors for the
+       target fields from a trimmed sample. They are accepted only if they reproduce the
+       AI-extracted values on that sample and on one more page of the same type.
+     - Accepted selectors are stored per (host, page type), with version and date, and then
+       run rule-based with **no AI cost**.
+     - When stored selectors stop matching (a failure such as `selectors_stale`), regenerate
+       once. If that fails, fall back to per-page AI extraction within budget, and record
+       the event in source health.
 
 **Acceptance:**
 - Provider conformance tests (mocked HTTP) for all providers.
@@ -510,6 +536,10 @@ first. Keep their visual language and generalise the code. The reference workboo
 - The budget cap stops AI mid-run and the run continues.
 - A test proves hallucinated phones/emails (absent from source text) are rejected.
 - `icp_builder` produces a schema-valid config from a sample brief.
+- Page preparation cuts input tokens by ≥50% versus raw HTML on the recorded fixtures, with
+  no loss of the target fields.
+- A self-healing test covers all three paths: selectors generated and validated on one fixture;
+  reused on a second with zero AI calls; regenerated after a simulated redesign fixture.
 
 ---
 
