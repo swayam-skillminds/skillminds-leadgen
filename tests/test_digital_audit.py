@@ -15,7 +15,7 @@ import pytest
 import requests
 from openpyxl import Workbook, load_workbook
 
-from fake_web import project_rows, run_database, FakeWeb, Page, dead, fixture, kit_for, patch_kit
+from fake_web import local_business_view, probe_enricher, project_rows, run_database, FakeWeb, Page, dead, fixture, kit_for, patch_kit
 from leadscraper.config.compile import compile_run_config
 from leadscraper.config.schema import RunConfig
 from leadscraper.core.lead import Lead
@@ -351,7 +351,9 @@ class SiteSource(Source):
 
 LOCAL = {"local_business": {"categories": [{"name": "Shops"}],
                             "sources": {"stub": {"enabled": True, "min_delay": 0,
-                                                 "max_delay": 0}}}}
+                                                 "max_delay": 0},
+                                        "probe": {"enabled": True, "min_delay": 0,
+                                                  "max_delay": 0}}}}
 AUDIT = {"min_delay": 0, "max_delay": 0, "checks": [c for c in DigitalAuditConfig().checks
                                                     if c != "pagespeed"]}
 
@@ -362,7 +364,7 @@ def offline(monkeypatch):
     patch_kit(monkeypatch, web)
     monkeypatch.setattr("leadscraper.net.tls.certificate", cert())
     monkeypatch.setattr(pipeline_mod, "DISCOVERY_SOURCES", {"stub": SiteSource})
-    monkeypatch.setattr(pipeline_mod, "ENRICHMENT_SOURCES", {})
+    monkeypatch.setattr(pipeline_mod, "ENRICHMENT_SOURCES", {"probe": probe_enricher()})
     return web
 
 
@@ -485,10 +487,16 @@ def local_business_output(config) -> tuple[list, list]:
 
 def test_enabling_or_disabling_digital_audit_leaves_local_business_unchanged(
         tmp_path, monkeypatch, offline):
-    alone, _ = run(tmp_path, monkeypatch, "alone", LOCAL)
-    together, outcome = run(tmp_path, monkeypatch, "together", {**LOCAL, "digital_audit": AUDIT})
-    off, _ = run(tmp_path, monkeypatch, "off", {**LOCAL, "digital_audit": {"enabled": False}})
+    uploads = {**AUDIT, "targets": [{"name": "Upload Only Cafe", "website": "walled.example"}]}
+    alone, first = run(tmp_path, monkeypatch, "alone", LOCAL)
+    view = local_business_view(first)
+    together, outcome = run(tmp_path, monkeypatch, "together", {**LOCAL, "digital_audit": uploads})
+    assert local_business_view(outcome) == view          # its CSV/report and enrichment targets
+    off, last = run(tmp_path, monkeypatch, "off", {**LOCAL, "digital_audit": {"enabled": False}})
+    assert local_business_view(last) == view
     assert outcome.results["digital_audit"].stats["findings"] > 0
+    assert outcome.results["digital_audit"].new == 1     # the upload is an organisation...
+    assert "Upload Only Cafe" not in view[0]             # ...but not local_business's output
     baseline = local_business_output(alone)
     assert baseline[0]
     assert local_business_output(together) == baseline

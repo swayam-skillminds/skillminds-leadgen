@@ -83,24 +83,28 @@ class Scheduler:
     def next_ready(self, busy: set[str]) -> Any:
         """The best unit that fits and whose hosts are free; None to wait; EXHAUSTED."""
         with self._lock:
-            if not self._pending:
-                return EXHAUSTED
-            stages = [p.stage for p in self._pending]
-            stages += [stage for stage, count in self._running.items() if count > 0]
-            current = min(stages)
-            for planned in self._ordered():
-                if planned.stage > current or planned.hosts & busy:
-                    continue
-                cost = self.costs.cost(planned.unit)
-                if self.control.budgeted and not self.control.fits(cost.seconds,
-                                                                   reserve=self._reserve()):
-                    self._skip(planned, SKIP_BUDGET)
-                    continue
-                self._pending.remove(planned)
-                planned.cost = cost
-                self._running[planned.stage] = self._running.get(planned.stage, 0) + 1
-                return planned
-            return EXHAUSTED if not self._pending else None
+            while self._pending:
+                stages = [p.stage for p in self._pending]
+                stages += [stage for stage, count in self._running.items() if count > 0]
+                current = min(stages)
+                skipped = False
+                for planned in self._ordered():
+                    if planned.stage > current or planned.hosts & busy:
+                        continue
+                    cost = self.costs.cost(planned.unit)
+                    if self.control.budgeted and not self.control.fits(
+                            cost.seconds, reserve=self._reserve()):
+                        self._skip(planned, SKIP_BUDGET)
+                        skipped = True
+                        continue
+                    self._pending.remove(planned)
+                    planned.cost = cost
+                    self._running[planned.stage] = self._running.get(planned.stage, 0) + 1
+                    return planned
+                if not skipped:
+                    return None            # wait: an earlier stage or a busy host
+                # Skips may have emptied the current stage: look again at the next one.
+            return EXHAUSTED
 
     def finished(self, planned: Planned) -> None:
         """A unit handed out by ``next_ready`` is over (done, failed or abandoned)."""

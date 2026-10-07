@@ -151,7 +151,11 @@ class Pipeline:
         if store is None:
             target, store_kwargs = store_target(config)
             store = LeadStore(target, self.scorer, **store_kwargs)
-        self.store = store
+        # Its listings (CSV, Sheet, report, rescore, enrichment and AI targets) cover
+        # only the organisations it found or enriched; other lead types' are not its
+        # output (Phase 6). Writes and matching still see the whole project.
+        owned_by = getattr(store, "owned_by", None)
+        self.store = owned_by("local_business") if callable(owned_by) else store
         if hasattr(self.store, "scorer"):
             self.store.scorer = self.scorer
         # Set after construction so a store without dedup options (a stub, an

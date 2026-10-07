@@ -217,3 +217,36 @@ def run_database(tmp_path, name: str) -> str:
 
     return os.environ.get("LEADSCRAPER_TEST_ENGINE_DB_URL") or \
         f"sqlite:///{tmp_path / name / 'app.sqlite3'}"
+
+
+class _Probe:
+    """Records the organisations local_business's enrichment is handed (and changes nothing)."""
+
+    seen: list[str] = []
+
+
+def probe_enricher():
+    """An Enricher class that records its targets: what local_business would enrich."""
+    from leadscraper.sources.base import Enricher
+
+    class ProbeEnricher(Enricher):
+        name = "probe"
+
+        def targets(self, store):
+            pairs = store.all_with_ids()
+            _Probe.seen.extend(lead.business_name for _, lead in pairs)
+            return pairs
+
+        def enrich(self, lead):
+            return None
+
+    _Probe.seen = []
+    return ProbeEnricher
+
+
+def local_business_view(outcome) -> tuple[list[str], list[str]]:
+    """What local_business itself put out: its final leads (CSV / Sheet / report) and the
+    organisations its enrichment was handed."""
+    pipeline = outcome.contexts["local_business"].pipeline
+    seen, _Probe.seen = sorted(_Probe.seen), []          # one run's worth
+    return sorted(lead.business_name for lead in pipeline.leads), seen

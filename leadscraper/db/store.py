@@ -931,47 +931,59 @@ class LeadStore:
 
     # --- read ------------------------------------------------------------------------------
 
-    def all_leads(self) -> list[Lead]:
-        return [lead for _, lead in self.all_with_ids()]
+    def all_leads(self, lead_type: str | None = None) -> list[Lead]:
+        return [lead for _, lead in self.all_with_ids(lead_type)]
 
-    def all_with_ids(self) -> list[tuple[int, Lead]]:
-        """(id, Lead) pairs in id order -- enrichment needs the id to merge in place."""
+    def all_with_ids(self, lead_type: str | None = None) -> list[tuple[int, Lead]]:
+        """(id, Lead) pairs in id order -- enrichment needs the id to merge in place.
+
+        ``lead_type``: only the organisations that lead type found or enriched
+        (an untagged legacy row counts as ``local_business``'s).
+        """
         with self._lock:
-            rows = self._conn.execute(select(ORGS.c.id, ORGS.c.record)
+            rows = self._conn.execute(select(ORGS.c.id, ORGS.c.record, ORGS.c.lead_types)
                                       .where(self._org_filter()).order_by(ORGS.c.id)).all()
-        return [(int(r.id), self._lead(r.record)) for r in rows]
+        return [(int(r.id), self._lead(r.record)) for r in rows
+                if lead_type is None or _belongs(r.lead_types, lead_type)]
 
-    def count(self) -> int:
+    def count(self, lead_type: str | None = None) -> int:
+        if lead_type is not None:
+            return len(self.all_with_ids(lead_type))
         with self._lock:
             return int(self._conn.execute(select(func.count()).select_from(ORGS)
                                           .where(self._org_filter())).scalar_one())
 
-    def rescore_all(self) -> None:
+    def rescore_all(self, lead_type: str | None = None) -> None:
         """Recompute every score (weights may have changed between runs)."""
         with self._lock:
-            for lead_id, lead in self.all_with_ids():
+            for lead_id, lead in self.all_with_ids(lead_type):
                 scores = self._score(lead)
                 self._conn.execute(update(ORGS).where(ORGS.c.id == lead_id).values(
                     record=asdict(lead), latitude=lead.latitude, longitude=lead.longitude,
                     **scores))
             self._conn.commit()
 
-    def sorted_leads(self) -> list[Lead]:
+    def sorted_leads(self, lead_type: str | None = None) -> list[Lead]:
         """One running table, in the profile's order (see :func:`sort_leads`)."""
-        leads = self.all_leads()
+        leads = self.all_leads(lead_type)
         for lead in leads:
             self.scorer.apply(lead)
         return sort_leads(leads, self.options.sort)
 
-    def website_enrichment_targets(self) -> list[tuple[int, Lead]]:
+    def website_enrichment_targets(self, lead_type: str | None = None) -> list[tuple[int, Lead]]:
         """Leads with a website whose email we still don't have."""
-        return [(lead_id, lead) for lead_id, lead in self.all_with_ids()
+        return [(lead_id, lead) for lead_id, lead in self.all_with_ids(lead_type)
                 if lead.website and not lead.emails]
 
-    def instagram_enrichment_targets(self) -> list[tuple[int, Lead]]:
+    def instagram_enrichment_targets(self, lead_type: str | None = None
+                                     ) -> list[tuple[int, Lead]]:
         """Leads with a known handle but missing an email or phone."""
-        return [(lead_id, lead) for lead_id, lead in self.all_with_ids()
+        return [(lead_id, lead) for lead_id, lead in self.all_with_ids(lead_type)
                 if lead.instagram and not (lead.emails and lead.phones)]
+
+    def owned_by(self, lead_type: str) -> "OwnedStore":
+        """This store, with its listings narrowed to one lead type's organisations."""
+        return OwnedStore(self, lead_type)
 
     def clear(self) -> int:
         """Delete every organisation of this project (and what hangs off them).
@@ -1014,6 +1026,61 @@ class LeadStore:
             finally:
                 if self._owns_engine:
                     self.engine.dispose()
+
+
+def _belongs(tags: Any, lead_type: str) -> bool:
+    """Did `lead_type` find or enrich an organisation with these tags? Untagged rows
+    (imported before lead types existed) are local_business's."""
+    tags = list(tags or [])
+    return lead_type in tags if tags else lead_type == "local_business"
+
+
+class OwnedStore:
+    """One lead type's view of a shared store (Phase 6).
+
+    Writes, identity lookups and everything else go to the store unchanged --
+    matching must see every organisation. Only the *listings* a lead type
+    works through (its CSV, Sheet and report, its rescore, its enrichment and
+    AI targets) are narrowed to the organisations it found or enriched, so
+    another lead type's organisations never flow into its output.
+    """
+
+    _OWN = ("_store", "_lead_type")
+
+    def __init__(self, store: LeadStore, lead_type: str):
+        object.__setattr__(self, "_store", store)
+        object.__setattr__(self, "_lead_type", lead_type)
+
+    def __getattr__(self, name: str) -> Any:
+        return getattr(self._store, name)
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        setattr(self._store, name, value)
+
+    @property
+    def store(self) -> LeadStore:
+        return self._store
+
+    def all_with_ids(self, lead_type: str | None = None):
+        return self._store.all_with_ids(lead_type or self._lead_type)
+
+    def all_leads(self, lead_type: str | None = None):
+        return self._store.all_leads(lead_type or self._lead_type)
+
+    def count(self, lead_type: str | None = None) -> int:
+        return self._store.count(lead_type or self._lead_type)
+
+    def rescore_all(self, lead_type: str | None = None) -> None:
+        self._store.rescore_all(lead_type or self._lead_type)
+
+    def sorted_leads(self, lead_type: str | None = None):
+        return self._store.sorted_leads(lead_type or self._lead_type)
+
+    def website_enrichment_targets(self, lead_type: str | None = None):
+        return self._store.website_enrichment_targets(lead_type or self._lead_type)
+
+    def instagram_enrichment_targets(self, lead_type: str | None = None):
+        return self._store.instagram_enrichment_targets(lead_type or self._lead_type)
 
 
 def sort_leads(leads: list[Lead], mode: str = "vendors") -> list[Lead]:

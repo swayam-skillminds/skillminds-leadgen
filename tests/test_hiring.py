@@ -17,7 +17,7 @@ import pytest
 from openpyxl import load_workbook
 from pydantic import ValidationError
 
-from fake_web import project_rows, run_database, FakeWeb, Page, fixture, json_fixture, kit_for, patch_kit
+from fake_web import local_business_view, probe_enricher, project_rows, run_database, FakeWeb, Page, fixture, json_fixture, kit_for, patch_kit
 from leadscraper.config.compile import compile_run_config
 from leadscraper.config.schema import RunConfig
 from leadscraper.core.lead import Lead
@@ -355,7 +355,9 @@ def careers_web() -> FakeWeb:
 
 LOCAL = {"local_business": {"categories": [{"name": "Companies"}],
                             "sources": {"stub": {"enabled": True, "min_delay": 0,
-                                                 "max_delay": 0}}}}
+                                                 "max_delay": 0},
+                                        "probe": {"enabled": True, "min_delay": 0,
+                                                  "max_delay": 0}}}}
 CAREERS_ONLY = {"sources": {**FAST, "hn_whos_hiring": {"enabled": False},
                             "careers_pages": {"min_delay": 0, "max_delay": 0}}}
 
@@ -365,7 +367,7 @@ def careers(monkeypatch):
     web = careers_web()
     patch_kit(monkeypatch, web)
     monkeypatch.setattr(pipeline_mod, "DISCOVERY_SOURCES", {"stub": CareersSource})
-    monkeypatch.setattr(pipeline_mod, "ENRICHMENT_SOURCES", {})
+    monkeypatch.setattr(pipeline_mod, "ENRICHMENT_SOURCES", {"probe": probe_enricher()})
     return web
 
 
@@ -410,10 +412,16 @@ def local_business_output(config) -> tuple[list, list]:
 
 def test_enabling_or_disabling_hiring_leaves_local_business_unchanged(tmp_path, monkeypatch,
                                                                      careers):
-    alone, _ = run(tmp_path, monkeypatch, "alone", LOCAL)
+    alone, first = run(tmp_path, monkeypatch, "alone", LOCAL)
+    view = local_business_view(first)
     together, outcome = run(tmp_path, monkeypatch, "together",
                             {**LOCAL, "hiring": {**CAREERS_ONLY, "boards": BOARDS}})
-    off, _ = run(tmp_path, monkeypatch, "off", {**LOCAL, "hiring": {"enabled": False}})
+    # Hiring's own companies (Marigold Labs, Tamarind, ...) are organisations of the
+    # project, but never local_business's CSV/report rows or enrichment targets.
+    assert local_business_view(outcome) == view
+    off, last = run(tmp_path, monkeypatch, "off", {**LOCAL, "hiring": {"enabled": False}})
+    assert local_business_view(last) == view
+    assert outcome.results["hiring"].new >= 4
     assert outcome.results["hiring"].stats["signals"] > 0
     baseline = local_business_output(alone)
     assert baseline[0]
@@ -593,3 +601,25 @@ def test_roles_come_from_the_headline_and_role_lists_not_prose():
     found = roles.families_in(roles.role_text("Acme | Several roles | REMOTE", listed),
                               roles.FAMILY_PATTERNS)
     assert {f for f, _ in found} == {"developer", "qa"}
+
+
+def test_a_later_stage_runs_when_the_budget_skips_the_earlier_one():
+    """Every stage-0 unit skipped for the budget: stage 1 still runs (never left pending)."""
+    from leadscraper.engine.control import RunControl
+    from leadscraper.engine.costs import CostModel, prior_cost
+    from leadscraper.engine.parallel import EXHAUSTED
+    from leadscraper.engine.scheduler import Planned, Scheduler
+    from leadscraper.leadtypes.base import WorkUnit
+
+    big = Planned(WorkUnit("local_business", "maps", "A", "C"), None, 0, frozenset({"maps"}))
+    board = Planned(WorkUnit("hiring", "ats", None, "lever:a", "run"), None, 1,
+                    frozenset({"api.lever.co"}), stage=1)
+    seconds = {"maps": 100.0, "ats": 4.0}
+    costs = CostModel(None, lambda unit: prior_cost(seconds[unit.source], 1),
+                      lambda unit: ("s", "*", "*"))
+    control = RunControl(budget_seconds=30, tail_seconds=0)
+    skipped: list = []
+    scheduler = Scheduler([big, board], costs, control, order="priority",
+                          on_skip=lambda p, reason: skipped.append(p))
+    assert scheduler.next_ready(set()) is board
+    assert skipped == [big] and scheduler.next_ready(set()) is EXHAUSTED
