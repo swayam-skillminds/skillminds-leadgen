@@ -155,7 +155,8 @@ def test_a_runs_ai_usage_is_in_the_ledger_and_the_event_stream(sources, monkeypa
     engine = open_database(default_db_url())
     with engine.connect() as conn:
         summaries = conn.execute(select(OrgAttribute.__table__).where(
-            OrgAttribute.__table__.c.key == "summary")).mappings().all()
+            OrgAttribute.__table__.c.key == "summary",
+            OrgAttribute.__table__.c.run_id == outcome.run_id)).mappings().all()
         ledger = conn.execute(select(AIUsage.__table__).where(
             AIUsage.__table__.c.run_id == outcome.run_id)).mappings().all()
     engine.dispose()
@@ -198,7 +199,8 @@ def test_the_budget_cap_with_a_billed_provider(sources, monkeypatch, tmp_path):
     engine = open_database(default_db_url())
     with engine.connect() as conn:
         summaries = conn.execute(select(func.count()).select_from(OrgAttribute.__table__).where(
-            OrgAttribute.__table__.c.key == "summary")).scalar()
+            OrgAttribute.__table__.c.key == "summary",
+            OrgAttribute.__table__.c.run_id == outcome.run_id)).scalar()
         cost = conn.execute(select(func.sum(AIUsage.__table__.c.cost_usd)).where(
             AIUsage.__table__.c.run_id == outcome.run_id)).scalar()
     assert 1 <= summaries < 6, "AI did not stop mid-run"
