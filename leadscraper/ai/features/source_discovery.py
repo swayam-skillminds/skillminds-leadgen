@@ -58,13 +58,19 @@ def _host(url: str) -> str:
     return (urlparse(url).hostname or "").lower().removeprefix("www.")
 
 
+def excluded(url: str) -> bool:
+    """A host A.2.4 rules out entirely, whatever finds it (search, a redirect, a next link)."""
+    host = _host(url)
+    return any(bad in host for bad in EXCLUDED_HOSTS)
+
+
 def acceptable(url: str) -> str | None:
     """Why a proposed URL is refused, or None."""
     parsed = urlparse(url or "")
     if parsed.scheme not in ("http", "https") or not parsed.hostname:
         return "not an http(s) URL"
     host = _host(url)
-    if any(bad in host for bad in EXCLUDED_HOSTS):
+    if excluded(url):
         return "excluded by policy (A.2.4)"
     if any(known in host for known in KNOWN_HOSTS):
         return "already has a dedicated source"

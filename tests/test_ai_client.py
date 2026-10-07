@@ -24,9 +24,9 @@ class Verdict(BaseModel):
 
 def remote(name: str, **extra) -> dict:
     """A remote (billed) OpenAI-compatible provider whose key is an env secret."""
-    return {"name": name, "kind": "openai_compatible", "base_url": f"https://{name}.example/v1",
+    return {"name": name, "kind": "openai_compatible", "base_url": f"https://api.{name}.com/v1",
             "worker_model": f"{name}-worker", "judge_model": f"{name}-judge",
-            "key_secret_name": f"{name}-key", "retries": 0, **extra}
+            "key_secret_name": f"ai-{name}-key", "retries": 0, **extra}
 
 
 def config(*providers, **ai) -> Config:
@@ -64,7 +64,7 @@ def ok(text: str = '{"ok": true}', tokens=(1000, 100)):
 @pytest.fixture
 def keys(monkeypatch):
     for name in ("first", "second", "pricey"):
-        monkeypatch.setenv(f"LEADSCRAPER_SECRET_{name.upper()}_KEY", f"sk-{name}")
+        monkeypatch.setenv(f"LEADSCRAPER_SECRET_AI_{name.upper()}_KEY", f"sk-{name}")
 
 
 def calls_to(adapter, host: str) -> int:
@@ -75,7 +75,7 @@ def calls_to(adapter, host: str) -> int:
 
 def test_a_failing_provider_falls_back_to_the_next(monkeypatch, keys):
     install_http(monkeypatch, FakeHTTP(by_host({
-        "first.example": (500, {"error": "down"}), "second.example": ok()})))
+        "api.first.com": (500, {"error": "down"}), "api.second.com": ok()})))
     failures = Recorder()
     client = AIClient(resolve(config(remote("first"), remote("second"))), failures=failures)
     result = client.call("summary", system="s", user="u", output=Verdict)
@@ -90,13 +90,13 @@ def test_a_failing_provider_falls_back_to_the_next(monkeypatch, keys):
 
 def test_quota_drops_a_provider_for_the_rest_of_the_run(monkeypatch, keys):
     adapter = install_http(monkeypatch, FakeHTTP(by_host({
-        "first.example": (402, {"error": {"message": "insufficient credits"}}),
-        "second.example": ok()})))
+        "api.first.com": (402, {"error": {"message": "insufficient credits"}}),
+        "api.second.com": ok()})))
     failures = Recorder()
     client = AIClient(resolve(config(remote("first"), remote("second"))), failures=failures)
     for _ in range(3):
         assert client.call("summary", system="s", user="u2", output=Verdict) is not None
-    assert calls_to(adapter, "first.example") == 1, "kept calling a provider out of credit"
+    assert calls_to(adapter, "api.first.com") == 1, "kept calling a provider out of credit"
     assert "ai_provider_dropped" in failures.reasons()
     assert "quota" in client.unavailable["first"]
 
@@ -355,16 +355,60 @@ def test_a_key_is_never_sent_to_an_endpoint_it_does_not_belong_to():
     for entry in attacks:
         with pytest.raises(ValueError):
             make_spec(entry)
+    # A custom secret is bound to its endpoint by name: ai-<site>-...
+    with pytest.raises(ValueError):
+        make_spec({"name": "x", "kind": "openai_compatible", "base_url": "https://evil.com/v1",
+                   "key_secret_name": "ai-groq-key"})        # groq's key, evil's URL
+    with pytest.raises(ValueError):
+        make_spec({"name": "x", "kind": "openai_compatible", "base_url": "https://groq.evil.com",
+                   "key_secret_name": "ai-groq-key"})        # the site is "evil"
     # Env variables come from the kind's defaults only, never from config.
-    spec = make_spec({"name": "x", "kind": "openai_compatible", "base_url": "https://e.example",
-                      "key_env": ["ANTHROPIC_API_KEY"], "key_secret_name": "x-key"})
+    spec = make_spec({"name": "x", "kind": "openai_compatible", "base_url": "https://e.com",
+                      "key_env": ["ANTHROPIC_API_KEY"], "key_secret_name": "ai-e-key"})
     assert spec.key_env == []
     # The legitimate cases still work.
     assert make_spec("anthropic").key_secret_name == "anthropic-api-key"
     assert make_spec({"name": "groq", "kind": "openai_compatible",
-                      "base_url": "https://api.groq.example/openai/v1",
-                      "key_secret_name": "groq-api-key"}).key_secret_name == "groq-api-key"
-    proxied = make_spec({"name": "anthropic", "base_url": "https://proxy.example",
-                         "key_secret_name": "anthropic-proxy-key"})
+                      "base_url": "https://api.groq.com/openai/v1",
+                      "key_secret_name": "ai-groq-key"}).key_secret_name == "ai-groq-key"
+    proxied = make_spec({"name": "anthropic", "base_url": "https://claude-proxy.com",
+                         "key_secret_name": "ai-claude-proxy-key"})
     assert proxied.base_url and proxied.key_env == []            # not ANTHROPIC_API_KEY
     assert make_spec("anthropic").key_env == ["ANTHROPIC_API_KEY"]
+
+
+def test_concurrent_calls_cannot_overshoot_the_cap(monkeypatch, keys):
+    """Review finding: the cap check and the spend were not atomic across threads."""
+    import time
+    from concurrent.futures import ThreadPoolExecutor
+
+    def slow(req):
+        """Usage as an API reports it: the prompt's real size, a full answer."""
+        time.sleep(0.05)
+        prompt = len(json.dumps(req.body["messages"])) // 4 + 20
+        return ok(tokens=(prompt, req.body["max_tokens"]))
+
+    install_http(monkeypatch, FakeHTTP(slow))
+    prices = {"pricey": {"pricey-worker": {"input": 10.0, "output": 50.0}}}
+    client = AIClient(resolve(config(remote("pricey"), max_cost_usd=0.06, prices=prices)))
+    with ThreadPoolExecutor(8) as pool:
+        list(pool.map(lambda i: client.call("summary", system="s", user=f"u{i}",
+                                            output=Verdict, max_tokens=200), range(16)))
+    assert client.stats.cost_usd <= 0.06 + 1e-9, client.stats.cost_usd
+
+
+def test_a_nearly_spent_budget_shortens_the_answer(monkeypatch, keys):
+    adapter = install_http(monkeypatch, FakeHTTP(lambda r: ok(tokens=(10, 10))))
+    prices = {"pricey": {"pricey-worker": {"input": 0.0, "output": 1000.0}}}
+    client = AIClient(resolve(config(remote("pricey"), max_cost_usd=1.0, prices=prices)))
+    client.call("summary", system="s", user="u", output=Verdict, max_tokens=4000)
+    # $1 at $1000 per million output tokens buys 1000 tokens, not 4000.
+    assert adapter.requests[0].body["max_tokens"] == 1000
+
+
+def test_invalid_output_counts_towards_the_circuit_breaker(monkeypatch, keys):
+    install_http(monkeypatch, FakeHTTP(lambda r: (200, chat_response("nonsense"))))
+    client = AIClient(resolve(config(remote("first"), failure_limit=2)))
+    client.call("summary", system="s", user="a", output=Verdict)
+    client.call("summary", system="s", user="b", output=Verdict)
+    assert client.shut_down and "consecutive" in client.stats.shutdown_reason

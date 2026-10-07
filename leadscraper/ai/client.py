@@ -9,12 +9,14 @@ What a call goes through:
 
 1. **Gate.** AI on, the task's feature switched on, the client not shut down.
 2. **Cache.** Provider kind + model + schema + prompt hash; hits cost nothing.
-3. **Budget.** The call's projected cost (prompt tokens, an expected answer,
-   searches) must fit under the run's hard cap, or AI stops for the rest of
-   the run. Spend is the providers' reported usage at the price table's rates.
-4. **Chain.** Providers in order. One out of credit, refused or unconfigured is
-   dropped for the run; one that errors is skipped for this call. When none is
-   left, AI stops and the run continues without it.
+3. **Budget.** The call's worst case (prompt, the answer at its ``max_tokens``
+   -- clamped to what is left -- and its searches) is held against the run's
+   hard cap before the call, under a lock; when it can't fit, AI stops for the
+   rest of the run. Spend is the providers' reported usage at the table's rates.
+4. **Chain.** Providers in order. One out of credit, with refused credentials or
+   unconfigured is dropped for the run; one that errors is skipped for this call;
+   a safety refusal skips the item. When none is left, AI stops and the run
+   continues without it.
 5. **Validation.** The answer is parsed into the pydantic model. Invalid output
    is retried once (same provider, told what was wrong), then skipped.
 
@@ -23,6 +25,7 @@ Nothing here raises to the caller.
 
 from __future__ import annotations
 
+import json
 import logging
 import threading
 import time
@@ -47,6 +50,11 @@ from .settings import ResolvedAI, bills_separately
 log = logging.getLogger(__name__)
 
 M = TypeVar("M", bound=BaseModel)
+
+#: The smallest answer worth asking for: below it, the budget is spent.
+_MIN_ANSWER = 256
+#: Tokens a provider adds to every call (roles, formatting).
+_CALL_OVERHEAD = 50
 
 _RETRY_NOTE = ("\n\nYour previous answer was not valid ({why}). Answer again with ONLY the "
                "JSON object the instructions describe -- no prose, no markdown fence.")
@@ -91,6 +99,8 @@ class AIClient:
         self.on_spend = on_spend
         self._lock = threading.Lock()
         self._consecutive_failures = 0
+        #: Spend held by calls in flight (see _reserve).
+        self._reserved = 0.0
         self._budget_warned = False
         self.shut_down = False
         #: Providers left out of the chain, and why (shown by `ai_status`).
@@ -181,9 +191,9 @@ class AIClient:
             request = AIRequest(system=system, user=user, model=model, schema=schema,
                                 schema_name=schema_name, max_tokens=max_tokens,
                                 web_search=web_search, max_searches=max_searches)
-            if not self._affordable(provider, request):
-                return None
             outcome = self._attempt(task, provider, request, output)
+            if outcome is _BUDGET:
+                return None
             if outcome is _DROPPED or outcome is _SKIP:
                 continue
             answered_by_none = False
@@ -204,9 +214,14 @@ class AIClient:
         return None
 
     def _attempt(self, task: str, provider: Provider, request: AIRequest, output):
-        """(data, response, cost), or one of the sentinels: _DROPPED, _SKIP, _REFUSED, _INVALID."""
+        """(data, response, cost), or a sentinel: _DROPPED, _SKIP, _REFUSED, _INVALID, _BUDGET."""
         feature = feature_of(task)
+        why = ""
         for attempt in (1, 2):
+            reserved = self._reserve(provider, request)
+            if reserved is None:
+                return _BUDGET if attempt == 1 else _INVALID
+            request, held = reserved
             started = time.time()
             try:
                 response = provider.complete(request)
@@ -228,20 +243,21 @@ class AIClient:
             finally:
                 with self._lock:
                     self.stats.seconds += time.time() - started
+                    self._reserved -= held
             cost = self._account(task, provider, request, response)
             data, why = validate(output, response.text)
             if data is not None:
-                self._consecutive_failures = 0
+                with self._lock:
+                    self._consecutive_failures = 0
                 return data, response, cost
             if attempt == 1 and self.uses(task):
                 request = AIRequest(**{**request.__dict__,
                                        "user": request.user + _RETRY_NOTE.format(why=why)})
-                if not self._affordable(provider, request):
-                    break
                 continue
             break
         self._fail(task, "ai_invalid_output", f"{provider.name}: {why}")
         self.ledger.add(provider.name, request.model, feature, failures=1)
+        self._note_failure(task)                  # a model that never answers validly
         return _INVALID
 
     def _account(self, task: str, provider: Provider, request: AIRequest,
@@ -264,19 +280,42 @@ class AIClient:
                 log.debug("AI spend sink failed: %s", exc)
         return cost
 
-    def projected_cost(self, provider: Provider, request: AIRequest) -> float:
-        tokens_in = estimate_tokens(request.system) + estimate_tokens(request.user)
-        tokens_out = min(request.max_tokens, max(256, tokens_in // 2))
-        searches = request.max_searches if request.web_search else 0
-        return self.prices.cost(provider.spec, request.model, tokens_in, tokens_out, searches)
+    def _reserve(self, provider: Provider, request: AIRequest) -> tuple[AIRequest, float] | None:
+        """Hold the call's worst case against the cap, or stop AI when it can't fit.
 
-    def _affordable(self, provider: Provider, request: AIRequest) -> bool:
-        projected = self.projected_cost(provider, request)
-        if self.stats.cost_usd + projected <= self.cap:
-            return True
-        self._shutdown(f"budget of ${self.cap:.2f} reached (spent ${self.stats.cost_usd:.3f}; "
-                       f"the next call would cost ~${projected:.3f})")
-        return False
+        Worst case = the prompt (estimated, with a margin) + the answer at its
+        ``max_tokens`` + its web searches. The hold is taken under the lock, so
+        calls on several worker threads can't all pass against the same spend;
+        an answer the budget can't cover in full gets a smaller ``max_tokens``
+        (but never below a useful minimum). Actual cost replaces the hold.
+        """
+        if self.cap == float("inf"):
+            return request, 0.0
+        rate_in, rate_out, _ = self.prices.rates(provider.spec, request.model)
+        # The prompt, the schema (providers bill it as input) and a per-call
+        # overhead, with a 30 % margin over the ~4-characters-a-token estimate.
+        schema = json.dumps(request.schema) if request.schema else ""
+        tokens_in = int((estimate_tokens(request.system) + estimate_tokens(request.user)
+                         + estimate_tokens(schema) + _CALL_OVERHEAD) * 1.3)
+        searches = request.max_searches if request.web_search else 0
+        fixed = tokens_in * rate_in / 1_000_000 + searches * self.prices.search_rate(provider.spec)
+        floor = min(_MIN_ANSWER, request.max_tokens)
+        with self._lock:
+            room = self.cap - self.stats.cost_usd - self._reserved - fixed
+            answer = request.max_tokens if rate_out <= 0 else \
+                min(request.max_tokens, int(max(0.0, room) * 1_000_000 / rate_out))
+            fits = room >= 0 and answer >= floor
+            if fits:
+                held = fixed + answer * rate_out / 1_000_000
+                self._reserved += held
+        if not fits:
+            self._shutdown(f"budget of ${self.cap:.2f} reached (spent "
+                           f"${self.stats.cost_usd:.3f}; the next call could cost "
+                           f"~${fixed + floor * rate_out / 1_000_000:.3f})")
+            return None
+        if answer < request.max_tokens:
+            request = AIRequest(**{**request.__dict__, "max_tokens": answer})
+        return request, held
 
     # --- failure handling -----------------------------------------------------------
 
@@ -366,5 +405,6 @@ class _Sentinel:
         return self.name
 
 
-_DROPPED, _SKIP, _REFUSED, _INVALID = (_Sentinel("dropped"), _Sentinel("skip"),
-                                       _Sentinel("refused"), _Sentinel("invalid"))
+_DROPPED, _SKIP, _REFUSED, _INVALID, _BUDGET = (
+    _Sentinel("dropped"), _Sentinel("skip"), _Sentinel("refused"), _Sentinel("invalid"),
+    _Sentinel("budget"))

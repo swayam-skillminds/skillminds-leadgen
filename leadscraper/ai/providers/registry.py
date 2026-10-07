@@ -3,7 +3,7 @@
 A provider entry in config is either a kind's name (``anthropic``) or a mapping::
 
     {name: groq, kind: openai_compatible, base_url: https://api.groq.com/openai/v1,
-     worker_model: ..., judge_model: ..., key_secret_name: groq-api-key,
+     worker_model: ..., judge_model: ..., key_secret_name: ai-groq-key,
      structured_output: true}
 
 Missing fields come from the kind's defaults. The legacy backend names
@@ -117,12 +117,36 @@ def _guard_key(kind: str, data: dict[str, Any], merged: dict[str, Any],
         raise ValueError(f"secret {secret!r} belongs to a notification target, not an AI "
                          "provider")
     owner = _reserved_secrets().get(secret)
-    if owner is None:
+    if owner is not None:
+        if owner != kind or custom_url:
+            raise ValueError(f"secret {secret!r} is {owner}'s key and is only sent to "
+                             f"{owner}'s own endpoint; give this provider a secret of its own "
+                             "(key_secret_name)")
         return
-    if owner != kind or custom_url:
-        raise ValueError(f"secret {secret!r} is {owner}'s key and is only sent to {owner}'s "
-                         "own endpoint; give this provider a secret of its own "
-                         "(key_secret_name)")
+    # Any other secret is bound to its endpoint by name: "ai-<site>-..." where
+    # <site> is the base URL's registrable name ("ai-groq-key" for api.groq.com).
+    # Without that, an entry could send the key of one endpoint to another.
+    site = _site_label(merged.get("base_url"))
+    if not secret.startswith("ai-") or not site or f"-{site}-" not in f"-{secret[3:]}-":
+        raise ValueError(f"secret {secret!r} can't be sent to {merged.get('base_url')!r}: name "
+                         f"this endpoint's key 'ai-{site or 'site'}-key' (secrets are bound to "
+                         "their endpoint by name)")
+
+
+def _site_label(base_url: str | None) -> str:
+    """'groq' for https://api.groq.com/openai/v1 (the registrable domain's name)."""
+    if not base_url:
+        return ""
+    try:
+        import tldextract
+
+        extract = tldextract.TLDExtract(suffix_list_urls=())
+        return (extract(base_url).domain or "").lower()
+    except Exception:                       # pragma: no cover - tldextract is a dependency
+        from urllib.parse import urlparse
+
+        parts = (urlparse(base_url).hostname or "").split(".")
+        return parts[-2].lower() if len(parts) >= 2 else ""
 
 
 def build(spec: ProviderSpec, **kwargs: Any) -> Provider:

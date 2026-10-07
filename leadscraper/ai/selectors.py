@@ -280,6 +280,19 @@ def trim_html(html: str, max_chars: int = 24_000, keep_items: int = 4) -> str:
     return out[:max_chars]
 
 
+def _profile(value, base_url: str, source: SourceText, *, trusted: bool) -> str | None:
+    """An http(s) profile link; one the model gave must be a link on the page."""
+    raw = str(value or "").strip()
+    if not raw:
+        return None
+    url = urljoin(base_url, raw)
+    if not url.startswith(("http://", "https://")):
+        return None
+    if not trusted and raw not in source.text and url not in source.text:
+        return None
+    return url
+
+
 # --- the engine -------------------------------------------------------------------------
 
 def _key(name: str | None) -> str:
@@ -349,7 +362,7 @@ class SelfHealingExtractor:
             except ValueError:
                 records = []
             if records:
-                return self._grounded(records, page, "stored", stored.version)
+                return self._grounded(records, page, "stored", stored.version, by_rule=True)
             self._record("selectors_stale", page.url,
                          f"{host} {page_type} selectors v{stored.version} matched nothing")
             self.store.retire(stored, "matched nothing (layout changed?)")
@@ -410,7 +423,7 @@ class SelfHealingExtractor:
             if accepted:
                 saved = self.store.save(host, page_type, selectors, page.url)
                 log.info("selectors for %s %s accepted (v%d)", host, page_type, saved.version)
-                return self._grounded(first, page, path, saved.version)
+                return self._grounded(first, page, path, saved.version, by_rule=True)
         reason = ("no second page of this type to validate on" if validation_page is None
                   else "proposed selectors did not reproduce the AI's records")
         self._record("selectors_failed", page.url, f"{host} {page_type}: {reason}")
@@ -423,7 +436,13 @@ class SelfHealingExtractor:
         return self._grounded([r.model_dump() for r in reference], page, "ai_per_page", None)
 
     def _grounded(self, records: list[dict], page: Page, path: str,
-                  version: int | None) -> Extraction:
+                  version: int | None, *, by_rule: bool = False) -> Extraction:
+        """Ground every record on the page.
+
+        Rule-read records come from one item element each, so their values are
+        that business's by construction; a record the model read must have each
+        contact detail next to its own name (a listing page names many).
+        """
         source = SourceText(prepare(page.html, page.url).source_text, self.region)
         out = Extraction(path=path, selector_version=version)
         for record in records:
@@ -434,11 +453,11 @@ class SelfHealingExtractor:
             grounded = ground_contacts({"phones": record.get("phone"),
                                         "emails": record.get("email"),
                                         "address": record.get("address"),
-                                        "website": record.get("website")}, source)
+                                        "website": record.get("website")}, source,
+                                       anchor=None if by_rule else name)
             out.dropped.extend(grounded.dropped)
-            profile = record.get("profile_url")
-            if profile and not str(profile).startswith("http"):
-                profile = urljoin(page.url, str(profile))
+            profile = _profile(record.get("profile_url"), page.url, source,
+                               trusted=by_rule)
             out.records.append({"name": name[:300], "phones": grounded.phones,
                                 "emails": grounded.emails, "address": grounded.address,
                                 "website": grounded.website, "profile_url": profile,

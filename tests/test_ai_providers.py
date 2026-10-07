@@ -270,13 +270,16 @@ def test_anthropic_web_search_tool_results_and_fallbacks():
 
 @pytest.mark.parametrize("status,kind,error", [
     (401, "authentication_error", AuthFailed),
-    (429, "rate_limit_error", QuotaExhausted),
+    (429, "rate_limit_error", ProviderError),        # a rate limit is not an empty account
+    (429, "rate_limit_error-credit", QuotaExhausted),
     (529, "overloaded_error", ProviderError),
     (400, "invalid_request_error", ProviderError),
 ])
 def test_anthropic_errors_map_onto_the_chain(status, kind, error):
+    message = "Your credit balance is too low" if kind.endswith("-credit") else "x"
+    kind = kind.removesuffix("-credit")
     provider = anthropic_provider(lambda r: _response(status, json={
-        "type": "error", "error": {"type": kind, "message": "x"}}))
+        "type": "error", "error": {"type": kind, "message": message}}))
     with pytest.raises(error):
         provider.complete(request(model="claude-haiku-4-5"))
 

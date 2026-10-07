@@ -277,3 +277,87 @@ def test_summaries_reject_outreach_copy(text, ok):
     from leadscraper.ai.features.summary import acceptable
 
     assert (acceptable(text) is not None) is ok
+
+
+# --- review findings (Phase 5 review), each with its regression test ----------------------
+
+def test_web_search_never_fetches_excluded_sites(tmp_path, monkeypatch):
+    """A.2.4: LinkedIn, Indeed, Glassdoor, Upwork are never fetched, whatever finds them."""
+    from leadscraper.sources.ai_web_search import AIWebSearchSource
+
+    findings = [{"name": "Lakeshore Family Dental",
+                 "source_url": "https://www.linkedin.com/company/lakeshore-dental-example"}]
+    ctx, fetch, failures = search_context(tmp_path, monkeypatch, findings,
+                                          ["https://www.linkedin.com/company/x"])
+    leads = list(AIWebSearchSource(ctx).discover(ctx.config.localities[0],
+                                                 ctx.config.categories[0]))
+    assert leads == [] and fetch.fetched == []
+    assert [r["reason"] for r in failures.records] == ["ai_excluded_host"]
+
+
+LISTING = ("<html><body><h1>Dentists in Austin</h1>"
+           "<div><h3>Lakeshore Family Dental</h3><p>Downtown clinic. Book online.</p></div>"
+           + "<p>" + "Filler text about dental care. " * 40 + "</p>"
+           "<div><h3>Bluebonnet Smiles</h3><p>Call (512) 555-0177. 9 Oak St, Austin</p></div>"
+           "</body></html>")
+
+
+def test_on_a_listing_page_contacts_must_sit_next_to_the_name(tmp_path, monkeypatch):
+    """A model must not hand business B's phone to business A on a directory page."""
+    from leadscraper.sources.ai_web_search import AIWebSearchSource
+
+    findings = [{"name": "Lakeshore Family Dental", "phone": "(512) 555-0177",
+                 "source_url": "https://dir.example/austin/dentists"},
+                {"name": "Bluebonnet Smiles", "phone": "(512) 555-0177",
+                 "address": "9 Oak St, Austin",
+                 "source_url": "https://dir.example/austin/dentists"}]
+    ctx, fetch, failures = search_context(tmp_path, monkeypatch, findings,
+                                          ["https://dir.example/austin/dentists"])
+    fetch.pages["https://dir.example/austin/dentists"] = LISTING
+    leads = {lead.business_name: lead for lead in AIWebSearchSource(ctx).discover(
+        ctx.config.localities[0], ctx.config.categories[0])}
+    assert leads["Lakeshore Family Dental"].phones == []          # B's phone, refused
+    assert leads["Bluebonnet Smiles"].phones == ["+15125550177"]
+    assert leads["Bluebonnet Smiles"].address == "9 Oak St, Austin"
+
+
+def test_handles_and_hosts_need_a_real_link_on_the_page():
+    page = SourceText("Contact us for a quote. We love bananas. Visit banana.com today. "
+                      "Follow @lakeshore_dental or instagram.com/smile.studio", "US")
+    assert not page.has_handle("contact") and not page.has_handle("us")
+    assert page.has_handle("lakeshore_dental") and page.has_handle("smile.studio")
+    assert not page.has_host("https://a.com") and not page.has_host("https://nana.com")
+    assert page.has_host("https://banana.com/some/path")
+    kept = ground_contacts({"website": "https://banana.com/deep/link?x=1"}, page)
+    assert kept.website == "https://banana.com/"                    # the path is not evidence
+
+
+def test_summaries_never_carry_contact_details():
+    from leadscraper.ai.features.summary import acceptable
+
+    assert acceptable("Family dental clinic; call 512 555 0142.") is None
+    assert acceptable("Clinic run by dr.rao@clinic.example.") is None
+    assert acceptable("See https://clinic.example for hours.") is None
+    assert acceptable("Family dental clinic in Baner with 4.8 stars from 212 reviews.")
+
+
+def test_model_profile_links_must_be_http_links_on_the_page(monkeypatch):
+    from leadscraper.ai.selectors import MemorySelectorStore, Page, SelfHealingExtractor
+
+    from test_ai_selectors import EXTRACT_SYSTEM
+
+    html = ("<html><body><div class='c'><h3>Lotus Family Dentistry</h3>"
+            "<a href='/p/lotus'>Profile</a><span>98200 00102</span></div></body></html>")
+
+    def model(system, user):
+        assert system == EXTRACT_SYSTEM
+        return {"items": [{"name": "Lotus Family Dentistry", "phone": "98200 00102",
+                           "profile_url": "javascript:alert(1)"}]}
+
+    llm(monkeypatch, model)
+    client = AIClient(resolve(Config({"ai": {"enabled": True, "providers": [local_provider()],
+                                             "features": ["source_discovery"]}})))
+    ex = SelfHealingExtractor(client, MemorySelectorStore(), region="IN")
+    result = ex.extract("dir.example", "listing", Page("https://dir.example/x", html))
+    assert result.records[0]["profile_url"] is None
+    assert result.records[0]["phones"] == ["+919820000102"]

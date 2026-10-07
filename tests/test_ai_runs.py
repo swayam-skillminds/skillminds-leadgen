@@ -176,7 +176,7 @@ def test_the_budget_cap_with_a_billed_provider(sources, monkeypatch, tmp_path):
     from leadscraper.db.models import AIUsage, OrgAttribute
     from leadscraper.paths import default_db_url
 
-    monkeypatch.setenv("LEADSCRAPER_SECRET_PRICEY_KEY", "sk-test")
+    monkeypatch.setenv("LEADSCRAPER_SECRET_AI_PRICEY_KEY", "sk-test")
 
     def responder(req):
         user = req.body["messages"][1]["content"]
@@ -190,8 +190,8 @@ def test_the_budget_cap_with_a_billed_provider(sources, monkeypatch, tmp_path):
     outcome = run(run_config("ai-billed", tmp_path, ai={
         "enabled": True, "budget_usd": 0.04, "features": ["lead_summary"], "batch_size": 1,
         "providers": [{"name": "pricey", "kind": "openai_compatible",
-                       "base_url": "https://pricey.example/v1", "worker_model": "w",
-                       "key_secret_name": "pricey-key", "retries": 0}],
+                       "base_url": "https://api.pricey.com/v1", "worker_model": "w",
+                       "key_secret_name": "ai-pricey-key", "retries": 0}],
         "prices": {"pricey": {"w": {"input": 10.0, "output": 50.0}}}}), events)
     assert outcome.status == "completed" and len(snapshot(outcome)) == 6
 

@@ -65,7 +65,7 @@ ai:
   providers:
     - anthropic                                   # defaults from ai/defaults.yaml
     - {name: groq, kind: openai_compatible, base_url: https://api.groq.com/openai/v1,
-       worker_model: llama-4-scout, key_secret_name: groq-api-key}
+       worker_model: llama-4-scout, key_secret_name: ai-groq-key}
     - claude_code_cli
 ```
 
@@ -111,15 +111,23 @@ python -m leadscraper ai test anthropic                  # one tiny call
   (A.2.2), so a provider entry cannot borrow another endpoint's key: a built-in
   provider's secret is refused with a custom `base_url` or another kind,
   `key_env` comes from defaults only (and is dropped for a custom `base_url`),
-  and notification secrets (`notify-*`) are refused.
+  notification secrets (`notify-*`) are refused, and any other secret is bound
+  to its endpoint by name: `ai-<site>-...`, where `<site>` is the base URL's
+  registrable name (`ai-groq-key` for `https://api.groq.com/openai/v1`). So an
+  entry can never send one endpoint's key to another.
 
 ## Budget, prices, cache, ledger
 
 - **Hard cap per run** (`ai.budget_usd`, default $2; `null` = no cap). Before
-  every call the client projects its cost (prompt tokens, an expected answer,
-  web searches at their price) and **does not make a call that would cross the
-  cap**: AI stops there, mid-run, and the run continues. One run, one cap,
-  shared by every lead type.
+  every call the client holds the call's worst case against the cap, under a
+  lock (so calls on parallel worker threads can't all pass against the same
+  spend): the prompt and schema (estimated at ~4 characters a token, plus a
+  30 % margin), the answer at its full `max_tokens`, and its web searches. An
+  answer the remaining budget can't cover in full gets a smaller `max_tokens`;
+  below 256 tokens the call isn't made and AI stops for the rest of the run,
+  which continues. The answer side is exact; the prompt side is an estimate,
+  so a provider tokenising far above 4 characters a token could overshoot by a
+  fraction of one call. One run, one cap, shared by every lead type.
 - **Prices are data.** `ai/defaults.yaml` <- workspace `ai.prices` <- the run's
   `ai.prices`, USD per million tokens, plus per 1,000 web searches. A model the
   table doesn't list costs its provider's `"*"` rate, a deliberately high guess

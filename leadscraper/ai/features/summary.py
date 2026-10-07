@@ -39,10 +39,16 @@ class SummaryBatch(BaseModel):
     items: list[Summary] = Field(default_factory=list)
 
 
+#: Contact details have no place in a summary: they are published facts with
+#: their own grounded columns, and a summary is not grounded.
+_CONTACT = re.compile(r"@|https?://|www\.|\d[\d\s().-]{5,}\d")
+
+
 def acceptable(text: str) -> str | None:
-    """The cleaned summary, or None when it is empty, too long or reads like copy."""
+    """The cleaned summary, or None when it is empty, too long, reads like copy, or
+    carries a phone number, email or link."""
     text = " ".join((text or "").split()).strip()
-    if not text or len(text) > 200 or _COPY.search(text):
+    if not text or len(text) > 200 or _COPY.search(text) or _CONTACT.search(text):
         return None
     return text
 

@@ -106,8 +106,12 @@ class AIDirectorySource(Source):
         return robots
 
     def _fetch(self, url: str, host: str, business: str = ""):
+        from ..ai.features.source_discovery import excluded
         from ..ai.selectors import Page
 
+        if excluded(url):
+            self.fail("ai_excluded_host", url=url, detail="excluded by policy (A.2.4)")
+            return None
         if not self._robots().allowed(url, rate_key=host):
             self.fail("robots_disallowed", url=url, detail="robots.txt disallows this page")
             return None
@@ -119,7 +123,11 @@ class AIDirectorySource(Source):
         except Exception as exc:
             self.fail("fetch_failed", url=url, detail=repr(exc)[:300])
             return None
-        return Page(url=response.url or url, html=response.text)
+        final = response.url or url
+        if excluded(final):                   # a redirect into an excluded site
+            self.fail("ai_excluded_host", url=final, detail="redirected to an excluded site")
+            return None
+        return Page(url=final, html=response.text)
 
     def _extractor(self):
         extractor = getattr(self, "_self_healing", None)

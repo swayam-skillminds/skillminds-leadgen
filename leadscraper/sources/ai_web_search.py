@@ -124,6 +124,12 @@ class AIWebSearchSource(Source):
         if urlparse(url).scheme not in ("http", "https"):
             self.fail("ai_unsourced", business=item.name, detail="no http(s) source URL")
             return None
+        from ..ai.features.source_discovery import excluded
+
+        if excluded(url):
+            self.fail("ai_excluded_host", url=url, business=item.name,
+                      detail="excluded by policy (A.2.4): never fetched")
+            return None
         if not returned_by_search(url, sources):
             self.fail("ai_unsourced", url=url, business=item.name,
                       detail="the source URL is not among the provider's search results")
@@ -149,8 +155,13 @@ class AIWebSearchSource(Source):
             self.fail("ai_ungrounded", url=url, business=item.name,
                       detail="the business's name is not on the fetched page")
             return None
+        # The business's own site carries only its own details; any other page (a
+        # directory, a news story) may list many, so each detail must sit next to
+        # this business's name.
+        own_site = bool(item.website) and _host(item.website) == _host(url)
         grounded = ground_contacts({"phones": item.phone, "emails": item.email,
-                                    "address": item.address, "website": item.website}, source)
+                                    "address": item.address, "website": item.website}, source,
+                                   anchor=None if own_site else item.name)
         if grounded.dropped:
             self.fail("ai_ungrounded_dropped", url=url, business=item.name,
                       detail="; ".join(grounded.dropped)[:400])

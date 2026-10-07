@@ -112,7 +112,12 @@ class AnthropicProvider(Provider):
         except anthropic.PermissionDeniedError as exc:
             raise AuthFailed(_short(exc)) from None
         except anthropic.RateLimitError as exc:
-            raise QuotaExhausted(_short(exc)) from None
+            # The SDK has already retried with back-off. A rate limit is not an
+            # empty account: skip this call, keep the provider for the next.
+            text = _short(exc)
+            if any(w in text.lower() for w in ("credit", "billing", "quota")):
+                raise QuotaExhausted(text) from None
+            raise ProviderError(text) from None
         except anthropic.BadRequestError as exc:
             text = _short(exc)
             if "credit balance" in text.lower() or "billing" in text.lower():

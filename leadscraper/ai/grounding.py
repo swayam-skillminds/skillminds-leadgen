@@ -66,15 +66,42 @@ class SourceText:
         return len(squashed.strip()) >= min_chars and squashed in self.squashed
 
     def has_handle(self, handle: str) -> bool:
+        """The page links the profile (instagram.com/<handle>) or writes @handle."""
         handle = str(handle or "").lstrip("@").strip().casefold()
-        return len(handle) >= 2 and re.search(
-            rf"(?<![\w.]){re.escape(handle)}(?![\w])", self.lowered) is not None
+        if not re.fullmatch(r"[a-z0-9_.]{2,30}", handle):
+            return False
+        pattern = (rf"(?:instagram\.com/{re.escape(handle)}|(?<![\w.])@{re.escape(handle)})"
+                   rf"(?![\w])")
+        return re.search(pattern, self.lowered) is not None
 
     def has_host(self, url: str) -> bool:
+        """The site's host appears as a URL or link on the page, not inside another word."""
         from ..core.normalize import domain_of
 
-        host = domain_of(url) or ""
-        return bool(host) and host.casefold() in self.lowered
+        host = (domain_of(url) or "").casefold()
+        if not host:
+            return False
+        pattern = (rf"(?:https?://|//|www\.|^|[\s\"'(<,;@])(?:www\.)?{re.escape(host)}"
+                   rf"(?=[/\s\"'?#:)>,;]|$)")
+        return re.search(pattern, self.lowered) is not None
+
+    def near(self, name: str, *, window: int = 400) -> "SourceText | None":
+        """Only the text around each mention of `name`, or None when it isn't on the page.
+
+        On a page listing many businesses (a directory, a search-result page)
+        a contact detail must sit next to *this* business's name: page-level
+        grounding would let a model hand business B's phone to business A.
+        """
+        words = [w for w in _NON_WORD.split((name or "").casefold()) if w]
+        if not words:
+            return None
+        pattern = r"[\W_]+".join(re.escape(w) for w in words)
+        spans = [m.span() for m in re.finditer(pattern, self.lowered)]
+        if not spans:
+            return None
+        text = self.text or ""
+        pieces = [text[max(0, start - window):end + window] for start, end in spans]
+        return SourceText(" … ".join(pieces), self.region)
 
 
 @dataclass
@@ -100,9 +127,17 @@ def _as_list(value) -> list[str]:
     return [str(value)] if str(value).strip() else []
 
 
-def ground_contacts(record: dict, source: SourceText) -> Grounded:
-    """Keep only the contact details of `record` that `source` really carries."""
+def ground_contacts(record: dict, source: SourceText, *, anchor: str | None = None) -> Grounded:
+    """Keep only the contact details of `record` that `source` really carries.
+
+    With `anchor` (the business's name), phones, emails and the address must sit
+    near a mention of it (:meth:`SourceText.near`): what a listing page needs.
+    The website and handle are links, judged on the whole page.
+    """
     out = Grounded()
+    whole = source
+    if anchor:
+        source = source.near(anchor) or SourceText("", source.region)
     for raw in _as_list(record.get("phones")):
         number = normalize_phone(raw, source.region)
         if number and source.has_phone(raw):
@@ -126,14 +161,23 @@ def ground_contacts(record: dict, source: SourceText) -> Grounded:
     handle = " ".join(_as_list(record.get("instagram"))).strip().lstrip("@")
     if handle:
         handle = handle.rstrip("/").rsplit("/", 1)[-1]
-        if source.has_handle(handle) and re.fullmatch(r"[A-Za-z0-9_.]{1,30}", handle):
+        if whole.has_handle(handle):
             out.instagram = handle.lower()
         else:
             out.dropped.append(f"instagram {handle[:40]!r} not in source")
     website = " ".join(_as_list(record.get("website"))).strip()
     if website:
-        if source.has_host(website):
-            out.website = website
+        if whole.has_host(website):
+            out.website = _site(website)
         else:
             out.dropped.append(f"website {website[:60]!r} not in source")
     return out
+
+
+def _site(url: str) -> str:
+    """Scheme and host of a grounded website: the model's path is not evidence."""
+    from urllib.parse import urlparse
+
+    parsed = urlparse(url if "://" in url else f"https://{url}")
+    scheme = parsed.scheme if parsed.scheme in ("http", "https") else "https"
+    return f"{scheme}://{(parsed.hostname or '').lower()}/"

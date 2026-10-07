@@ -815,7 +815,7 @@ class SettingsOut(BaseModel):
         "ai": {"providers": ["anthropic", {"name": "groq", "kind": "openai_compatible",
                                            "base_url": "https://api.groq.com/openai/v1",
                                            "worker_model": "llama-4-scout",
-                                           "key_secret_name": "groq-api-key"}],
+                                           "key_secret_name": "ai-groq-key"}],
                "prices": {}, "assist_budget_usd": 0.5,
                "assist_features": ["icp_builder", "planner", "source_discovery"]},
         "data_dir": "/data",
