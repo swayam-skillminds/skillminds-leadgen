@@ -287,6 +287,7 @@ class Signal(Base):
     """Dated evidence of buying intent or fit, from one lead type."""
 
     __tablename__ = "signals"
+    __table_args__ = (Index("ix_signals_lookup", "organization_id", "lead_type", "type", "key"),)
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     workspace_id: Mapped[int] = _workspace_fk()
@@ -296,6 +297,9 @@ class Signal(Base):
                                                nullable=True)
     type: Mapped[str] = mapped_column(String(50))
     lead_type: Mapped[str] = mapped_column(String(50))
+    #: What makes it the same signal when seen again (a job posting's URL, an
+    #: audit check's name); a re-find updates the row rather than adding one.
+    key: Mapped[str] = mapped_column(String(300), default="")
     title: Mapped[str] = mapped_column(String(500), default="")
     payload: Mapped[dict[str, Any]] = mapped_column(JSONType, default=dict)
     observed_at: Mapped[datetime] = _created()

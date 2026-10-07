@@ -663,6 +663,130 @@ class LeadStore:
             self._conn.commit()
         return {row.key: row.value for row in rows}
 
+    def attribute_times(self, key: str) -> dict[int, datetime]:
+        """When each of this project's organisations last had attribute `key` written."""
+        with self._lock:
+            rows = self._conn.execute(
+                select(ATTRS.c.organization_id, ATTRS.c.updated_at)
+                .join(ORGS, ORGS.c.id == ATTRS.c.organization_id)
+                .where(ATTRS.c.key == key, self._org_filter())).all()
+            self._conn.commit()
+        out = {}
+        for org_id, when in rows:
+            if when is not None and when.tzinfo is None:
+                when = when.replace(tzinfo=timezone.utc)
+            out[int(org_id)] = when
+        return out
+
+    # --- signals and tags (Phase 6: lead types that assess organisations) ---------------
+
+    def stamp(self, lead_id: int, *, source: str = "", url: str | None = None,
+              fields: Iterable[str] = ()) -> bool:
+        """Tag an organisation with this thread's lead type without touching its record.
+
+        A lead type that assesses an organisation another one found (an audit,
+        a job posting on its careers page) records that it did: the lead-type
+        tag, the run's membership ("updated", unless the run created it) and,
+        with ``source``, an evidence row. The record, its score and its
+        contacts stay exactly as they were. False if there is no such organisation.
+        """
+        with self._lock:
+            row = self._conn.execute(select(ORGS.c.lead_types).where(
+                ORGS.c.id == lead_id, self._org_filter())).first()
+            if row is None:
+                self._conn.commit()
+                return False
+            lead_types = list(row.lead_types or [])
+            if self.lead_type not in lead_types:
+                self._conn.execute(update(ORGS).where(ORGS.c.id == lead_id).values(
+                    lead_types=[*lead_types, self.lead_type]))
+            if source:
+                self._evidence(lead_id, source, url, list(fields))
+            self._note_run(lead_id, "updated")
+            self._conn.commit()
+            return True
+
+    def add_signal(self, lead_id: int, type_: str, *, key: str = "", title: str = "",
+                   payload: dict[str, Any] | None = None, strength: float = 0.5,
+                   published_at: datetime | None = None, expires_at: datetime | None = None,
+                   source_url: str | None = None, source: str = "") -> bool:
+        """Record a signal of this thread's lead type; True when it is new.
+
+        A signal is identified by (organisation, lead type, type, ``key``): seen
+        again, its row is refreshed (title, payload, strength, dates, when it was
+        observed, the run) instead of a second one being added. The organisation
+        is stamped with the lead type (``stamp``); its record is not touched.
+        """
+        now = utcnow()
+        values = {"title": (title or "")[:500], "payload": dict(payload or {}),
+                  "strength": max(0.0, min(1.0, float(strength))),
+                  "published_at": published_at, "expires_at": expires_at,
+                  "source_url": source_url[:2000] if source_url else None,
+                  "observed_at": now, "run_id": self.run_id}
+        with self._lock:
+            if not self.stamp(lead_id, source=source or self.lead_type, url=source_url,
+                              fields=[f"signal:{type_}"]):
+                return False
+            row = self._conn.execute(select(SIGNALS.c.id).where(
+                SIGNALS.c.organization_id == lead_id, SIGNALS.c.lead_type == self.lead_type,
+                SIGNALS.c.type == type_, SIGNALS.c.key == key[:300])
+                .order_by(SIGNALS.c.id)).first()
+            if row is None:
+                self._conn.execute(SIGNALS.insert().values(
+                    workspace_id=self.workspace_id, organization_id=lead_id, type=type_[:50],
+                    lead_type=self.lead_type, key=key[:300], **values))
+            else:
+                self._conn.execute(update(SIGNALS).where(SIGNALS.c.id == row.id).values(**values))
+            self._conn.commit()
+            return row is None
+
+    def prune_signals(self, lead_id: int, keep: Iterable[tuple[str, str]],
+                      types: Iterable[str] | None = None) -> int:
+        """Delete this lead type's signals on an organisation except the (type, key)s in ``keep``.
+
+        For assessments that are a snapshot (an audit): a finding that no
+        longer holds goes. ``types`` limits it to those signal types.
+        """
+        keep = {(t, k) for t, k in keep}
+        with self._lock:
+            query = select(SIGNALS.c.id, SIGNALS.c.type, SIGNALS.c.key).where(
+                SIGNALS.c.organization_id == lead_id, SIGNALS.c.lead_type == self.lead_type)
+            if types is not None:
+                query = query.where(SIGNALS.c.type.in_(list(types)))
+            gone = [r.id for r in self._conn.execute(query).all() if (r.type, r.key) not in keep]
+            if gone:
+                self._conn.execute(delete(SIGNALS).where(SIGNALS.c.id.in_(gone)))
+            self._conn.commit()
+        return len(gone)
+
+    def signals(self, lead_id: int, lead_type: str | None = None) -> list[dict[str, Any]]:
+        """An organisation's signals (this lead type's, or ``lead_type``'s), oldest first."""
+        with self._lock:
+            rows = self._conn.execute(select(SIGNALS).where(
+                SIGNALS.c.organization_id == lead_id,
+                SIGNALS.c.lead_type == (lead_type or self.lead_type))
+                .order_by(SIGNALS.c.id)).mappings().all()
+            self._conn.commit()
+        return [dict(r) for r in rows]
+
+    def tagged(self, lead_ids: Iterable[int] | None = None, *,
+               run_id: int | None = None) -> list[tuple[int, Lead, list[str]]]:
+        """(id, record, lead types) of this project's organisations, in id order.
+
+        ``run_id``: only the run's own organisations (its membership rows);
+        ``lead_ids``: only these.
+        """
+        query = select(ORGS.c.id, ORGS.c.record, ORGS.c.lead_types).where(self._org_filter())
+        if run_id is not None:
+            query = query.where(ORGS.c.id.in_(select(RUN_ORGS.c.organization_id).where(
+                RUN_ORGS.c.run_id == run_id)))
+        wanted = None if lead_ids is None else {int(i) for i in lead_ids}
+        with self._lock:
+            rows = self._conn.execute(query.order_by(ORGS.c.id)).all()
+            self._conn.commit()
+        return [(int(r.id), self._lead(r.record), list(r.lead_types or []))
+                for r in rows if wanted is None or int(r.id) in wanted]
+
     # --- url memo (resume support) ---------------------------------------------------
 
     def mark_seen(self, url: str, source: str) -> None:
@@ -789,6 +913,15 @@ class LeadStore:
                 .join(ORGS, ORGS.c.id == MARKS.c.organization_id)
                 .where(MARKS.c.enricher == enricher, self._org_filter())).all()
         return {int(r[0]) for r in rows}
+
+    def enriched_times(self, enricher: str) -> dict[int, datetime]:
+        """When `enricher` last went through each of this project's organisations."""
+        with self._lock:
+            rows = self._conn.execute(
+                select(MARKS.c.organization_id, MARKS.c.done_at)
+                .join(ORGS, ORGS.c.id == MARKS.c.organization_id)
+                .where(MARKS.c.enricher == enricher, self._org_filter())).all()
+        return {int(r[0]): _epoch_to_dt(r[1]) for r in rows if r[1] is not None}
 
     def is_enriched(self, lead_id: int, enricher: str) -> bool:
         with self._lock:

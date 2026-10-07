@@ -440,7 +440,7 @@ class _Run:
                     self.scheduler.skip_rest("run cancelled")
             if not control.stop_requested:
                 update_run(engine, run_id, checkpoint={"phase": "post"})
-                for key, session in self.sessions.items():
+                for key, session in self._post_order():
                     if control.stop_requested:
                         break
                     store.lead_type = key
@@ -486,6 +486,15 @@ class _Run:
                 store.close()
         outcome.status, outcome.error = status, error
         return outcome
+
+    def _post_order(self) -> list[tuple[str, Any]]:
+        """Sessions in post-discovery order: lead types that assess other lead types'
+        organisations (``LeadType.post_order`` > 0: an audit) after the ones that
+        find and enrich them; ties keep the registry order."""
+        def rank(item: tuple[int, tuple[str, Any]]) -> tuple[int, int]:
+            index, (key, _) = item
+            return int(getattr(registry.get(key), "post_order", 0) or 0), index
+        return [item for _, item in sorted(enumerate(self.sessions.items()), key=rank)]
 
     def _apply_workspace_settings(self, store: LeadStore) -> None:
         """Workspace settings (keep-awake, robots.txt) fill what the config leaves unset."""

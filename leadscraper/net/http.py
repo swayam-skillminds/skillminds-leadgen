@@ -366,6 +366,31 @@ class HttpClient:
         headers["User-Agent"] = random.choice(USER_AGENTS)
         return session.get(url, headers=headers, timeout=self.timeout, allow_redirects=True)
 
+    def probe(self, url: str, *, rate_key: str | None = None) -> int:
+        """The HTTP status of `url`, without downloading its body (a link check).
+
+        HEAD first; a server that refuses HEAD (405/501, some 403s) gets one
+        streamed GET whose body is never read. Paced like any request, no
+        retries. Raises like ``get_once`` for a dead domain or a dropped
+        connection, which a caller counts as "unreachable".
+        """
+        key = rate_key or domain_of(url) or "default"
+        host = domain_of(url) or key
+        self._guard_dead(host, _request_host(url))
+        session = self.session_for(host)
+        self.limiter.wait(key)
+        headers = dict(session.headers)
+        headers["User-Agent"] = random.choice(USER_AGENTS)
+        response = session.head(url, headers=headers, timeout=self.timeout, allow_redirects=True)
+        status = int(response.status_code)
+        response.close()
+        if status in (403, 405, 501):
+            self.limiter.wait(key)
+            with session.get(url, headers=headers, timeout=self.timeout, allow_redirects=True,
+                             stream=True) as response:
+                status = int(response.status_code)
+        return status
+
     def get_soup(self, url: str, **kwargs: Any) -> BeautifulSoup:
         """GET and parse. lxml when available, stdlib parser as a fallback."""
         response = self.get(url, **kwargs)

@@ -19,8 +19,6 @@ classified value by value.
 
 from __future__ import annotations
 
-import csv
-import io
 import re
 from dataclasses import dataclass, field
 from typing import Any, Iterable
@@ -223,22 +221,12 @@ def delete_entry(engine: Engine, ws: Workspace, list_id: int, entry_id: int) -> 
 
 def parse_file(data: bytes, filename: str) -> list[dict[str, str]]:
     """Entries from an uploaded CSV or XLSX (see the module docstring)."""
-    name = (filename or "").lower()
-    if name.endswith((".xlsx", ".xlsm")):
-        from openpyxl import load_workbook
+    from ..core.tables import TableError, read_table
 
-        try:
-            sheet = load_workbook(io.BytesIO(data), read_only=True, data_only=True).active
-        except Exception as exc:
-            raise Invalid(f"could not read {filename}: {exc}") from None
-        table = [["" if v is None else str(v) for v in row]
-                 for row in sheet.iter_rows(values_only=True)]
-    elif name.endswith((".csv", ".txt")) or not name:
-        text = data.decode("utf-8-sig", errors="replace")
-        table = list(csv.reader(io.StringIO(text)))
-    else:
-        raise Invalid("upload a .csv or .xlsx file")
-    table = [row for row in table if any(cell.strip() for cell in row)]
+    try:
+        table = read_table(data, filename)
+    except TableError as exc:
+        raise Invalid(str(exc)) from None
     if not table:
         return []
     header = [_HEADERS.get(cell.strip().lower()) for cell in table[0]]

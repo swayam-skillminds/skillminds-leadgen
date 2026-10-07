@@ -106,9 +106,14 @@ def _post(sessions: dict[str, Any], units: list[Planned], costs: CostModel) -> t
     by_session: dict[str, float] = defaultdict(float)
     for planned in units:
         by_session[planned.session.lead_type] += costs.cost(planned.unit).new
+    everyone = sum(by_session.values())
     for key, session in sessions.items():
+        # A session that assesses every lead type's organisations (an audit)
+        # is sized by the whole run's expected new organisations.
+        expected = everyone if getattr(session, "post_scope", "own") == "run" \
+            else by_session.get(key, 0.0)
         try:
-            m, sd = session.post_estimate(by_session.get(key, 0.0))
+            m, sd = session.post_estimate(expected)
         except Exception:
             m, sd = 0.0, 0.0
         mean += m

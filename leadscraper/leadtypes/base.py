@@ -114,6 +114,10 @@ class LeadType(ABC):
     config_model: type[BaseModel]
     #: ISO codes the lead type works in; None = anywhere.
     applicable_countries: frozenset[str] | None = None
+    #: Post-discovery order (Phase 6): a lead type that assesses organisations
+    #: other lead types found (``digital_audit``) runs its post-discovery work
+    #: after theirs. Lower first; ties keep the registry order.
+    post_order: int = 0
 
     @abstractmethod
     def sources(self, cfg: Any, geo: Any = None) -> dict[str, list[str]]:
@@ -160,6 +164,11 @@ class LeadType(ABC):
         """Scale this lead type's own knobs for a depth preset; returns what changed."""
         return []
 
+    def catalog_sources(self) -> list[dict[str, Any]]:
+        """Its own sources for the catalog (``GET /catalog/sources``), beyond the
+        shared source registry: name, kind, pack, applicable_countries, defaults."""
+        return []
+
 
 @dataclass
 class UnitOutcome:
@@ -184,6 +193,9 @@ class LeadTypeSession(ABC):
     """
 
     lead_type: str = ""
+    #: What ``post_estimate`` is sized by: "own" (this lead type's expected new
+    #: organisations) or "run" (every lead type's: it assesses them all).
+    post_scope: str = "own"
 
     @abstractmethod
     def units(self) -> list[WorkUnit]:
