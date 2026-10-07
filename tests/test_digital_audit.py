@@ -566,3 +566,93 @@ def test_an_upload_the_finders_hold_is_audited_with_its_details_but_not_rewritte
     [audit] = [a["value"] for a in rows(config, OrgAttribute) if a["key"] == "audit"]
     assert audit["status"] == "audited" and "outdated_tech" in audit["types"]   # its upload's site
     assert outcome.results["digital_audit"].new == 0
+
+
+# --- review fixes: internal addresses, blips, refusals, stops ---------------------------------
+
+@pytest.mark.parametrize("url", ["http://127.0.0.1:9/", "http://10.0.0.5/", "http://192.168.1.1/",
+                                 "http://169.254.169.254/latest/meta-data/", "http://[::1]/"])
+def test_public_only_clients_refuse_internal_addresses(url, monkeypatch):
+    from leadscraper.net.http import HttpClient, PrivateAddressError, private_address
+    from leadscraper.net.ratelimit import RateLimiter
+
+    monkeypatch.delenv("LEADSCRAPER_ALLOW_PRIVATE_TARGETS", raising=False)
+    client = HttpClient(RateLimiter((0, 0)), timeout=2, max_retries=1, public_only=True)
+    with pytest.raises(PrivateAddressError):
+        client.get_once(url)
+    with pytest.raises(PrivateAddressError):
+        client.get(url)                                   # not retried, not "unreachable"
+    monkeypatch.setenv("LEADSCRAPER_ALLOW_PRIVATE_TARGETS", "1")
+    assert private_address("10.0.0.5") is None            # a lab can opt in
+
+
+def test_the_tls_check_refuses_internal_addresses(monkeypatch):
+    from leadscraper.net.tls import certificate
+
+    monkeypatch.delenv("LEADSCRAPER_ALLOW_PRIVATE_TARGETS", raising=False)
+    cert_ = certificate("127.0.0.1", timeout=1)
+    assert not cert_.valid and not cert_.reachable and "internal address" in cert_.error
+
+
+def test_an_internal_target_is_not_checked_rather_than_unreachable(tmp_path):
+    from leadscraper.net.http import PrivateAddressError
+
+    web = sites()
+    web.add("https://intranet.example/", PrivateAddressError("intranet.example resolves to "
+                                                              "an internal address (10.0.0.5)"))
+    result = auditor(web, tmp_path).audit(Lead(business_name="Intranet", website="intranet.example"))
+    assert result.status == "refused" and result.findings == [] and not result.checked
+
+
+def test_one_blip_is_retried_before_claiming_unreachable(tmp_path):
+    web = sites()
+    attempts = []
+
+    def flaky(url):
+        attempts.append(url)
+        if len(attempts) == 1:
+            raise requests.exceptions.ConnectTimeout("blip")
+        return Page(fixture("sites/modern_dental_home.html"))
+
+    web.add(DENTAL, flaky)
+    result = auditor(web, tmp_path).audit(dental())
+    assert result.status == "audited" and len(attempts) == 2
+
+
+def test_a_stop_mid_site_leaves_no_half_audit(tmp_path):
+    section = DigitalAuditConfig(min_delay=0, max_delay=0)
+    kit = kit_for(sites(), tmp_path)
+    stopping = Auditor(section, kit.http, kit.robots, kit.failures, tls=cert(),
+                       clock=lambda: NOW, should_stop=lambda: True).audit(bistro())
+    assert stopping.status == "stopped" and not stopping.checked
+
+
+def test_a_refused_reaudit_keeps_the_previous_findings(tmp_path, monkeypatch, offline):
+    config, _ = run(tmp_path, monkeypatch, "kept", {**LOCAL, "digital_audit": AUDIT})
+    bistro_id = next(o["id"] for o in rows(config, Organization) if o["name"] == "Old Mill Bistro")
+    before = sorted(s["type"] for s in rows(config, Signal) if s["organization_id"] == bistro_id)
+    [audit_before] = [a for a in rows(config, OrgAttribute)
+                      if a["organization_id"] == bistro_id and a["key"] == "audit"]
+    offline.add(f"https://{BISTRO}/", Page("<html>slow down</html>", status=429))
+    offline.add(f"http://{BISTRO}/", Page("<html>slow down</html>", status=429))
+    _, again = run(tmp_path, monkeypatch, "kept",
+                   {**LOCAL, "digital_audit": {**AUDIT, "reaudit_after_days": 0}})
+    assert again.results["digital_audit"].stats["not_checked"] == 1
+    after = sorted(s["type"] for s in rows(config, Signal) if s["organization_id"] == bistro_id)
+    [audit_after] = [a for a in rows(config, OrgAttribute)
+                     if a["organization_id"] == bistro_id and a["key"] == "audit"]
+    assert after == before and audit_after["value"] == audit_before["value"]
+
+
+def test_targets_file_and_foreign_secrets_are_refused():
+    from pydantic import ValidationError
+
+    from leadscraper.services.configs import validate_document
+    from leadscraper.services.errors import Invalid
+
+    with pytest.raises(Invalid, match="targets_file"):
+        validate_document({"schema_version": 1, "name": "x", "project": "x",
+                           "geography": {"country": "IN", "places": ["Pune"]},
+                           "lead_types": {"digital_audit": {"targets_file": "/etc/hosts"}}})
+    with pytest.raises(ValidationError, match="must start with 'pagespeed'"):
+        DigitalAuditConfig(pagespeed={"key_secret_name": "anthropic-api-key"})

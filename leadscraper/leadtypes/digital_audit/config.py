@@ -56,6 +56,15 @@ class PageSpeedSettings(_Strict):
     min_delay: float = Field(1.0, ge=0)
     max_delay: float = Field(2.0, ge=0)
 
+    @field_validator("key_secret_name")
+    @classmethod
+    def _pagespeed_secret(cls, value: str | None) -> str | None:
+        # The key travels in the URL to googleapis.com: only a PageSpeed secret may.
+        if value and not value.startswith("pagespeed"):
+            raise ValueError("the PageSpeed key's secret name must start with 'pagespeed' "
+                             "(another secret is never sent to Google)")
+        return value
+
 
 class DigitalAuditConfig(_Strict):
     enabled: bool = True

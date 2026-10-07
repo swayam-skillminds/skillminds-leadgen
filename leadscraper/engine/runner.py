@@ -131,6 +131,9 @@ class LeadTypeContext:
     #: The run's AI client (Phase 5): one budget, cache and ledger for every
     #: lead type. None when AI is off.
     ai: Any = None
+    #: The run's per-host rate limiter, shared by every lead type (Phase 6): the
+    #: same company site is paced once, whoever fetches it.
+    limiter: Any = None
 
 
 @dataclass
@@ -358,6 +361,9 @@ class _Run:
         holding = False
         status, error = "completed", ""
         self.ai_client = self._ai_client(store)
+        from ..net.ratelimit import RateLimiter
+
+        limiter = RateLimiter()
         try:
             for key in keys:
                 lead_type = registry.get(key)
@@ -374,7 +380,7 @@ class _Run:
                     failure_sink=None if request.dry_run else failure_sink,
                     control=control, events=bus,
                     force_enrich=request.force_enrich or None,
-                    ai=self.ai_client,
+                    ai=self.ai_client, limiter=limiter,
                 )
                 outcome.contexts[key] = context
                 try:

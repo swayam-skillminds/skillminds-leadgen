@@ -106,6 +106,7 @@ class Pipeline:
         engine_driven: bool = False,
         force_enrich: bool | None = None,
         ai_client=None,
+        limiter: RateLimiter | None = None,
     ):
         self.config = config
         self.localities = localities
@@ -136,7 +137,9 @@ class Pipeline:
                                    sink=failure_sink)
         #: Told about every finished discovery unit (the run's work-unit history).
         self._unit_sink = unit_sink
-        self.limiter = RateLimiter()
+        #: The run's limiter when the engine shares one across lead types, so two
+        #: lead types never hit one site back to back.
+        self.limiter = limiter or RateLimiter()
         # The city (and, for venue runs, words like "villa") must not stop
         # "Mokshah" and "Mokshah Villa Igatpuri" sharing a dedup key.
         config.apply_name_noise()

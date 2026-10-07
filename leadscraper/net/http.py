@@ -195,6 +195,51 @@ def _request_host(url: str) -> str | None:
     return host.split(":", 1)[0] or None
 
 
+#: Set to "1" to let the public-only clients reach internal addresses (a lab, a test).
+PRIVATE_ENV = "LEADSCRAPER_ALLOW_PRIVATE_TARGETS"
+
+
+class PrivateAddressError(requests.exceptions.InvalidURL):
+    """A public-only client refused a host that resolves to an internal address."""
+
+
+def private_address(host: str | None) -> str | None:
+    """Why `host` is internal (loopback, private, link-local, reserved, multicast), or None.
+
+    For clients that fetch addresses users or third parties supplied (audit
+    targets, links in job ads): a site on the public internet never needs one.
+    Unresolvable names pass (the request fails on its own). Not cached: a host
+    that resolves privately later (DNS rebinding) is caught on that request.
+    """
+    import os
+
+    if not host or os.environ.get(PRIVATE_ENV) == "1":
+        return None
+    try:
+        infos = socket.getaddrinfo(host, None, type=socket.SOCK_STREAM)
+    except (OSError, UnicodeError, ValueError):
+        return None
+    for info in infos:
+        with contextlib.suppress(ValueError):
+            ip = ipaddress.ip_address(str(info[4][0]).split("%", 1)[0])
+            if ip.is_loopback or ip.is_private or ip.is_link_local or ip.is_reserved \
+                    or ip.is_unspecified or ip.is_multicast:
+                return f"resolves to an internal address ({ip})"
+    return None
+
+
+class PublicOnlyAdapter(requests.adapters.HTTPAdapter):
+    """Refuses internal addresses on every request it sends -- each redirect hop included."""
+
+    def send(self, request, **kwargs):
+        host = _request_host(request.url)
+        reason = private_address(host)
+        if reason:
+            raise PrivateAddressError(f"{host} {reason}: not fetched (set {PRIVATE_ENV}=1 to "
+                                      "allow internal targets)", request=request)
+        return super().send(request, **kwargs)
+
+
 class HttpClient:
     """Polite HTTP client. All source modules share one instance."""
 
@@ -208,8 +253,11 @@ class HttpClient:
         dead_domain_check: Callable[[str], bool] | None = None,
         on_dead_domain: Callable[[str, str], None] | None = None,
         accept_language: str = "en-US,en;q=0.9",
+        public_only: bool = False,
     ):
         self.limiter = limiter
+        #: Refuse hosts that resolve to internal addresses (``PublicOnlyAdapter``).
+        self.public_only = public_only
         #: From the run's country, so sites answer in the local variant.
         self.accept_language = accept_language
         self.timeout = timeout
@@ -252,9 +300,9 @@ class HttpClient:
                 # max_retries=0 because with_retry owns the retry policy --
                 # urllib3 retrying underneath it would multiply the attempts
                 # and quietly defeat give_up_on.
-                adapter = requests.adapters.HTTPAdapter(
-                    pool_connections=4, pool_maxsize=8, max_retries=0
-                )
+                adapter_class = PublicOnlyAdapter if self.public_only \
+                    else requests.adapters.HTTPAdapter
+                adapter = adapter_class(pool_connections=4, pool_maxsize=8, max_retries=0)
                 session.mount("http://", adapter)
                 session.mount("https://", adapter)
                 self._sessions[host] = session
@@ -271,7 +319,16 @@ class HttpClient:
             self.on_dead_domain(host, reason)
 
     def _guard_dead(self, host: str, resolve_target: str | None) -> None:
-        """Raise DeadDomainError before touching the network, when we can tell."""
+        """Raise DeadDomainError before touching the network, when we can tell.
+
+        A public-only client first refuses internal addresses: those are not
+        dead (and must not land in the dead-domain cache), they are off limits.
+        """
+        if self.public_only:
+            reason = private_address(resolve_target)
+            if reason:
+                raise PrivateAddressError(f"{resolve_target} {reason}: not fetched (set "
+                                          f"{PRIVATE_ENV}=1 to allow internal targets)")
         if self.dead_domain_check is not None and self.dead_domain_check(host):
             raise DeadDomainError(f"{host} is a known dead domain")
         if not resolve_target:
@@ -348,7 +405,7 @@ class HttpClient:
             attempts=self.max_retries,
             base=self.backoff_base,
             label=f"GET {url[:80]}",
-            give_up_on=(PermanentError,),
+            give_up_on=(PermanentError, PrivateAddressError),
         )
 
     def get_once(self, url: str, *, rate_key: str | None = None) -> requests.Response:

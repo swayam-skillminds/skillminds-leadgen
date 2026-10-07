@@ -101,10 +101,12 @@ class HiringLeadType(LeadType):
             careers = sources.careers_pages.model_copy(update={"max_orgs": 50})
             return ({"sources": sources.model_copy(update={"careers_pages": careers})},
                     ["hiring: careers pages of at most 50 organisations"])
-        if depth == "deep" and sources.hn_whos_hiring.months < 3:
-            hn = sources.hn_whos_hiring.model_copy(update={"months": 3})
-            return ({"sources": sources.model_copy(update={"hn_whos_hiring": hn})},
-                    ["hiring: the last 3 'Who is hiring?' threads"])
+        # (Not more HN threads: with posted_within_days at 30, an older thread's ads
+        # are filtered out anyway.)
+        if depth == "deep" and sources.careers_pages.max_orgs < 500:
+            careers = sources.careers_pages.model_copy(update={"max_orgs": 500})
+            return ({"sources": sources.model_copy(update={"careers_pages": careers})},
+                    ["hiring: careers pages of up to 500 organisations"])
         return {}, []
 
     def effective(self, cfg: Any) -> HiringConfig:

@@ -445,6 +445,12 @@ class LeadStore:
         conn.execute(delete(CONTACTS).where(
             CONTACTS.c.organization_id == victim,
             tuple_(CONTACTS.c.channel, CONTACTS.c.value).in_(held_contacts)))
+        # Signals: one row per (lead type, type, key); the survivor's copy stays.
+        held_signals = select(SIGNALS.c.lead_type, SIGNALS.c.type, SIGNALS.c.key).where(
+            SIGNALS.c.organization_id == survivor, SIGNALS.c.key != "")
+        conn.execute(delete(SIGNALS).where(
+            SIGNALS.c.organization_id == victim, SIGNALS.c.key != "",
+            tuple_(SIGNALS.c.lead_type, SIGNALS.c.type, SIGNALS.c.key).in_(held_signals)))
         for table in (CONTACTS, PEOPLE, SIGNALS, EVIDENCE):
             conn.execute(update(table).where(table.c.organization_id == victim)
                          .values(organization_id=survivor))

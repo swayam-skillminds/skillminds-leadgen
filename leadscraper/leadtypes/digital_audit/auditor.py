@@ -20,7 +20,7 @@ import requests
 
 from ...core.lead import Lead
 from ...core.normalize import domain_of, is_vendor_website, normalize_url
-from ...net.http import DeadDomainError
+from ...net.http import DeadDomainError, PrivateAddressError
 from ...net import tls as _tls
 from ...net.tls import Certificate
 from . import checks as C
@@ -35,12 +35,16 @@ _BUILDER_HOSTS = ("wixsite.com", "blogspot.com")
 
 STATUS_TEXT = {"audited": "OK", "no_website": "No website", "unreachable": "Unreachable",
                "blocked": "Not checked (site refused us)",
-               "robots": "Not checked (robots.txt)"}
+               "robots": "Not checked (robots.txt)",
+               "refused": "Not checked (internal address)",
+               "failed": "Not checked (audit failed)", "stopped": "Not checked (run stopped)"}
+#: Outcomes that say nothing about the site: the previous audit stands.
+NOT_CHECKED = frozenset({"blocked", "robots", "refused", "failed", "stopped"})
 
 
 @dataclass
 class AuditResult:
-    #: audited | no_website | unreachable | blocked | robots
+    #: audited | no_website | unreachable | blocked | robots | refused | failed | stopped
     status: str
     url: str | None = None
     findings: list[C.Finding] = field(default_factory=list)
@@ -53,6 +57,11 @@ class AuditResult:
     @property
     def score(self) -> int:
         return C.audit_score(self.findings)
+
+    @property
+    def checked(self) -> bool:
+        """It says something about the site (blocked, refused, failed or stopped: nothing)."""
+        return self.status not in NOT_CHECKED
 
     def summary(self, now: datetime) -> dict[str, Any]:
         """The ``audit`` attribute: what the workbook and the API show."""
@@ -81,7 +90,8 @@ def own_website(lead: Lead) -> str | None:
 class Auditor:
     def __init__(self, cfg: DigitalAuditConfig, http, robots, failures, *,
                  pagespeed=None, tls: Callable[[str], Certificate] | None = None,
-                 clock: Callable[[], datetime] | None = None):
+                 clock: Callable[[], datetime] | None = None,
+                 should_stop: Callable[[], bool] | None = None):
         self.cfg = cfg
         self.http = http
         self.robots = robots
@@ -91,6 +101,8 @@ class Auditor:
         self.tls = tls or (lambda host: _tls.certificate(host))
         self.clock = clock or (lambda: datetime.now(timezone.utc))
         self.checks = set(cfg.checks)
+        #: The run's stop request, checked between a site's requests too.
+        self.should_stop = should_stop or (lambda: False)
 
     def _fail(self, reason: str, lead: Lead, url: str | None, detail: str = "") -> None:
         self.failures.record(SOURCE, reason, url=url, business=lead.business_name,
@@ -102,7 +114,7 @@ class Auditor:
         except Exception as exc:  # one site's surprise never ends the audit
             log.exception("audit of %s failed", lead.business_name)
             self._fail("audit_failed", lead, lead.website, repr(exc))
-            return AuditResult(status="unreachable", url=lead.website,
+            return AuditResult(status="failed", url=lead.website,
                                notes=[f"audit failed: {exc!r}"[:200]])
 
     # --- one site ------------------------------------------------------------------------
@@ -158,6 +170,8 @@ class Auditor:
             self._add(result, C.check_copyright(facts, self.clock(),
                                                 self.cfg.stale_copyright_years))
         pages = [facts]
+        if self.should_stop():
+            return self._stopped(result)
         if {"contact_form", "booking"} & self.checks and facts.contact_links \
                 and not facts.has_contact_form:
             contact = self._page(lead, facts.contact_links[0], rate_key)
@@ -170,12 +184,23 @@ class Auditor:
                                               self.cfg.booking_categories))
         if "broken_links" in self.checks and self.cfg.max_links:
             links = self._links(lead, facts.internal_links[:self.cfg.max_links], rate_key)
+            if links is None:
+                return self._stopped(result)
             finding = C.check_broken_links(links)
             if finding is not None:
                 finding.url = response.url
             self._add(result, finding)
         if "pagespeed" in self.checks and self.pagespeed is not None:
+            if self.should_stop():
+                return self._stopped(result)
             self._pagespeed(lead, result, response.url)
+        return result
+
+    @staticmethod
+    def _stopped(result: AuditResult) -> AuditResult:
+        """A stop mid-site: half an audit is no audit (the previous one stands)."""
+        result.status = "stopped"
+        result.notes.append("the run stopped during this site's audit")
         return result
 
     @staticmethod
@@ -205,7 +230,12 @@ class Auditor:
         for scheme in ("https", "http"):
             url = f"{scheme}://{netloc}{path}"
             try:
-                response = self.http.get_once(url, rate_key=rate_key)
+                response = self._fetch_home(url, rate_key)
+            except PrivateAddressError as exc:
+                result.status = "refused"
+                result.notes.append(str(exc)[:200])
+                self._fail("private_address", lead, url, str(exc))
+                return None, None
             except DeadDomainError as exc:
                 self._unreachable(lead, result, url, f"the domain doesn't resolve ({exc})")
                 return None, None
@@ -235,6 +265,16 @@ class Auditor:
         self._unreachable(lead, result, f"https://{netloc}{path}",
                           "no answer over HTTPS or HTTP (" + "; ".join(errors) + ")")
         return None, https_error
+
+    def _fetch_home(self, url: str, rate_key: str):
+        """The homepage, with one more try after a dropped connection or a timeout:
+        "unreachable" is a claim, and one blip doesn't make it."""
+        try:
+            return self.http.get_once(url, rate_key=rate_key)
+        except (DeadDomainError, PrivateAddressError, requests.exceptions.SSLError):
+            raise
+        except requests.RequestException:
+            return self.http.get_once(url, rate_key=rate_key)
 
     def _unreachable(self, lead: Lead, result: AuditResult, url: str, why: str) -> None:
         result.status = "unreachable"
@@ -275,13 +315,18 @@ class Auditor:
             return None
         return C.page_facts(response.text or "", response.url)
 
-    def _links(self, lead: Lead, links: list[str], rate_key: str) -> dict[str, str]:
+    def _links(self, lead: Lead, links: list[str], rate_key: str) -> dict[str, str] | None:
+        """Link -> "ok" or why it is broken; None when the run stopped meanwhile."""
         results: dict[str, str] = {}
         for link in links:
+            if self.should_stop():
+                return None
             if not self.robots.allowed(link, rate_key=rate_key):
                 continue
             try:
                 status = self.http.probe(link, rate_key=rate_key)
+            except PrivateAddressError:
+                continue                         # not ours to check, not broken
             except DeadDomainError:
                 results[link] = "unreachable"
                 continue

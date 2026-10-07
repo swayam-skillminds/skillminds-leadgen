@@ -490,9 +490,11 @@ def test_plan_sources_and_depth():
     assert HIRING.sources(config) == {"discovery": ["board_search", "greenhouse",
                                                     "hn_whos_hiring", "lever"],
                                       "enrichment": ["careers_pages"]}
-    assert HIRING.effective(config).sources.hn_whos_hiring.months == 1
+    assert HIRING.effective(config).sources.careers_pages.max_orgs == 200
     config.set("depth", "deep")
-    assert HIRING.effective(config).sources.hn_whos_hiring.months == 3
+    assert HIRING.effective(config).sources.careers_pages.max_orgs == 500
+    config.set("depth", "quick")
+    assert HIRING.effective(config).sources.careers_pages.max_orgs == 50
     assert registry.get("hiring") is HIRING
 
 
@@ -623,3 +625,89 @@ def test_a_later_stage_runs_when_the_budget_skips_the_earlier_one():
                           on_skip=lambda p, reason: skipped.append(p))
     assert scheduler.next_ready(set()) is board
     assert skipped == [big] and scheduler.next_ready(set()) is EXHAUSTED
+
+
+# --- review fixes: careers precision, shared boards, rescans, consolidation ------------------
+
+AGENCY_NAV = """<!doctype html><html><body>
+<nav><a href="/seo">SEO Services</a> <a href="/digital-marketing">Digital Marketing</a>
+<a href="/it-support">IT Support</a></nav><h1>Careers</h1>
+{body}
+<footer><a href="/testing">Software Testing</a></footer></body></html>"""
+
+
+def test_careers_pages_list_roles_not_menus_and_respect_no_openings():
+    from leadscraper.leadtypes.hiring.session import _titles
+    from leadscraper.net.http import HttpClient
+
+    def titles(body):
+        soup = HttpClient.soup(AGENCY_NAV.format(body=body))
+        return [p.title for p in _titles(soup, "https://agency.example/careers", "Agency",
+                                         "agency.example")]
+
+    assert titles("<p>We have no openings right now. Check back soon.</p>") == []
+    assert titles("<ul><li>Senior PHP Developer</li><li>Office Manager</li>"
+                  "<li>SEO</li></ul>") == ["Senior PHP Developer", "Office Manager"]
+
+
+def test_a_board_read_in_discovery_still_reaches_the_organisation_whose_careers_page_links_it(
+        tmp_path, monkeypatch):
+    class Marigold(Source):
+        name = "stub"
+
+        def discover(self, locality, category) -> Iterator[Lead]:
+            yield self.make_lead(business_name="Marigold Software Labs LLP",
+                                 website="https://marigold.example/", locality=locality.name,
+                                 category=category.name, phones=["+912000000021"])
+
+    web = job_web()
+    web.add("https://marigold.example/", Page(
+        '<html><body><a href="https://jobs.lever.co/marigold-labs">Careers</a></body></html>'))
+    patch_kit(monkeypatch, web)
+    monkeypatch.setattr(pipeline_mod, "DISCOVERY_SOURCES", {"stub": Marigold})
+    monkeypatch.setattr(pipeline_mod, "ENRICHMENT_SOURCES", {})
+    config, outcome = run(tmp_path, monkeypatch, "shared-board", {**LOCAL, "hiring": {
+        "boards": ["lever:marigold-labs"],
+        "sources": {**FAST, "hn_whos_hiring": {"enabled": False},
+                    "careers_pages": {"min_delay": 0, "max_delay": 0}}}})
+    assert outcome.ok
+    by_org = signals_by_org(config)
+    assert len(by_org["Marigold Software Labs LLP"]) == 2              # attached, not dropped
+    assert sum("/postings/marigold-labs" in u for u in web.calls) == 1   # read once
+
+
+def test_a_site_whose_board_failed_is_scanned_again(tmp_path, monkeypatch, careers):
+    careers.add("https://boards-api.greenhouse.io/v1/boards/kestrelrobotics/jobs",
+                Page(status=503))
+    config, _ = run(tmp_path, monkeypatch, "retry", {**LOCAL, "hiring": CAREERS_ONLY})
+    careers.calls.clear()
+    run(tmp_path, monkeypatch, "retry", {**LOCAL, "hiring": CAREERS_ONLY})
+    assert "https://kestrel.example/" in careers.calls                # not marked done
+    assert "https://lotus.example/" not in careers.calls              # this one was
+
+
+def test_consolidation_keeps_one_copy_of_a_signal(tmp_path):
+    from leadscraper.db.store import LeadStore
+
+    store = LeadStore(tmp_path / "s.sqlite3", project="fold")
+    a, _, _ = store.upsert(Lead(business_name="Fold Alpha", phones=["+912000000031"]))
+    b, _, _ = store.upsert(Lead(business_name="Fold Beta", phones=["+912000000032"]))
+    store.lead_type = "hiring"
+    for org in (a, b):
+        store.add_signal(org, "job_posting", key="https://jobs.example/1", title="Developer")
+    store.add_signal(b, "job_posting", key="https://jobs.example/2", title="QA Engineer")
+    assert store.fold_pair(a, b)
+    keys = sorted(s["key"] for s in store.signals(a))
+    store.close()
+    assert keys == ["https://jobs.example/1", "https://jobs.example/2"]
+
+
+def test_lead_types_share_one_pace_per_site(tmp_path, monkeypatch, careers):
+    _, outcome = run(tmp_path, monkeypatch, "pace", {**LOCAL, "hiring": CAREERS_ONLY})
+    limiter = outcome.contexts["local_business"].limiter
+    assert limiter is not None and outcome.contexts["hiring"].limiter is limiter
+    assert outcome.contexts["local_business"].pipeline.limiter is limiter
+    from leadscraper.leadtypes.toolkit import Kit
+
+    monkeypatch.undo()                                      # the real Kit.build
+    assert Kit.build(outcome.contexts["hiring"]).limiter is limiter

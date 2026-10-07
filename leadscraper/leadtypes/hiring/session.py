@@ -28,6 +28,7 @@ from urllib.parse import urljoin, urlsplit
 from ...core.lead import Lead
 from ...core.normalize import domain_of, is_vendor_website, normalize_url
 from ...engine.costs import UnitCost, prior_cost
+from ...net.http import PrivateAddressError
 from ...sources.jobs import hn
 from ...sources.jobs.ats import HOSTS, fetch_board
 from ...sources.jobs.base import BoardRef, Posting, find_boards
@@ -88,7 +89,11 @@ class HiringSession(LeadTypeSession):
         self.clock = clock or (lambda: datetime.now(timezone.utc))
         self.ai = getattr(context, "ai", None)
         self._lock = threading.Lock()
-        self._fetched: set[str] = set()
+        #: Boards read this run, by key: a board found again (a careers page linking a
+        #: configured board) is not fetched twice, but its postings still reach the
+        #: organisation that asks.
+        self._boards: dict[str, Any] = {}
+        self._board_locks: dict[str, threading.Lock] = {}
         self.units_done = 0
         self.stats: dict[str, int] = {"postings_seen": 0, "postings_matched": 0, "boards": 0,
                                       "new": 0, "merged": 0, "signals": 0, "careers_scanned": 0,
@@ -188,18 +193,24 @@ class HiringSession(LeadTypeSession):
     def read_board(self, ref: BoardRef, *, org_id: int | None = None,
                    company_url: str | None = None) -> UnitOutcome:
         with self._lock:
-            if ref.key in self._fetched:
-                return UnitOutcome(status="done")
-            self._fetched.add(ref.key)
-        result = fetch_board(self.kit.http, ref, limit=self.section.sources.ats.max_postings)
+            lock = self._board_locks.setdefault(ref.key, threading.Lock())
+        with lock:                                   # one fetch per board per run
+            result = self._boards.get(ref.key)
+            fresh = result is None
+            if fresh:
+                result = fetch_board(self.kit.http, ref,
+                                     limit=self.section.sources.ats.max_postings)
+                self._boards[ref.key] = result
         if result.error:
-            self.kit.failures.record(ref.kind, result.error, url=result.page,
-                                     detail=result.detail)
+            if fresh:
+                self.kit.failures.record(ref.kind, result.error, url=result.page,
+                                         detail=result.detail)
             return UnitOutcome(status="failed", error=f"{result.error}: {result.detail}"[:300])
         matches = [m for m in (self.accept(p) for p in result.postings) if m is not None]
-        with self._lock:
-            self.stats["boards"] += 1
-            self.stats["postings_seen"] += len(result.postings)
+        if fresh:
+            with self._lock:
+                self.stats["boards"] += 1
+                self.stats["postings_seen"] += len(result.postings)
         outcome = self.record(result.company, matches, org_id=org_id, company_url=company_url,
                               source=ref.kind, page=result.page)
         outcome.found = len(result.postings)
@@ -430,7 +441,6 @@ class HiringSession(LeadTypeSession):
             self.stats["careers_scanned"] += 1
         if home is None:
             return
-        self.store.mark_enriched(org_id, CAREERS_MARK)
         page_url, soup = home
         boards = find_boards(_urls(soup, page_url))
         careers_url = None
@@ -443,15 +453,16 @@ class HiringSession(LeadTypeSession):
                     boards = find_boards(_urls(soup, careers_url))
                 else:
                     careers_url = None
-        for ref in boards:
-            self.read_board(ref, org_id=org_id, company_url=site)
-        if boards or not careers_url:
-            return
-        matches = [m for m in (self.accept(p, check_location=False)
-                               for p in _titles(soup, careers_url, lead.business_name, host))
-                   if m is not None]
-        self.record(lead.business_name, matches, org_id=org_id, source="careers_pages",
-                    page=careers_url)
+        outcomes = [self.read_board(ref, org_id=org_id, company_url=site) for ref in boards]
+        if not (boards or not careers_url):
+            matches = [m for m in (self.accept(p, check_location=False)
+                                   for p in _titles(soup, careers_url, lead.business_name, host))
+                       if m is not None]
+            self.record(lead.business_name, matches, org_id=org_id, source="careers_pages",
+                        page=careers_url)
+        # Scanned: not again within rescan_after_days -- unless a board failed to answer.
+        if all(o.status != "failed" for o in outcomes):
+            self.store.mark_enriched(org_id, CAREERS_MARK)
 
     def _fetch(self, lead: Lead, url: str, host: str):
         if not self.kit.robots.allowed(url, rate_key=host):
@@ -460,6 +471,10 @@ class HiringSession(LeadTypeSession):
             return None
         try:
             response = self.kit.http.get_once(url, rate_key=host)
+        except PrivateAddressError as exc:
+            self.kit.failures.record("careers_pages", "private_address", url=url,
+                                     business=lead.business_name, detail=str(exc)[:200])
+            return None
         except Exception as exc:
             self.kit.failures.record("careers_pages", "fetch_failed", url=url,
                                      business=lead.business_name, detail=type(exc).__name__)
@@ -512,13 +527,36 @@ def _careers_link(soup, base: str) -> str | None:
     return None
 
 
+#: A job title names a person's role; "SEO Services" or "IT Support" in a menu does not.
+_ROLE_NOUN = re.compile(r"\b(?:engineer|developer|programmer|architect|tester|sdet|analyst|"
+                        r"scientist|administrator|admin|executive|specialist|manager|lead|"
+                        r"head|director|consultant|designer|technician|officer|associate|"
+                        r"intern|trainee|coordinator|marketer|strategist|writer|expert|"
+                        r"professional|support engineer|devops|sre)s?\b", re.I)
+_NO_OPENINGS = re.compile(r"\bno (?:current |open )?(?:openings|vacancies|open positions|"
+                          r"positions open|open roles|jobs)\b|not hiring\b|"
+                          r"no positions (?:available|at the moment)", re.I)
+
+
 def _titles(soup, page: str, company: str, host: str) -> list[Posting]:
-    """Job-title-like lines on a careers page (headings, list items, links), no date known."""
+    """Job titles listed on a careers page, no date known.
+
+    Only the page's own content counts: navigation, header, footer, sidebars
+    and forms name services and pages, not openings. A title must name a role
+    ("Senior PHP Developer", not "SEO Services"); a page that says it has no
+    openings has none.
+    """
+    for tag in soup.find_all(["nav", "header", "footer", "aside", "form", "script", "style",
+                              "noscript"]):
+        tag.decompose()
+    if _NO_OPENINGS.search(soup.get_text(" ", strip=True)):
+        return []
     seen: set[str] = set()
     out: list[Posting] = []
     for tag in soup.find_all(["h1", "h2", "h3", "h4", "h5", "li", "a", "td", "dt"]):
         text = " ".join(tag.get_text(" ", strip=True).split())
-        if not text or len(text) > 120 or len(text.split()) > 12 or text.casefold() in seen:
+        if not text or len(text) > 120 or len(text.split()) > 12 or text.casefold() in seen \
+                or not _ROLE_NOUN.search(text):
             continue
         seen.add(text.casefold())
         url = page

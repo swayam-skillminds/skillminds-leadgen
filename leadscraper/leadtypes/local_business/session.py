@@ -36,6 +36,7 @@ class LocalBusinessSession(LeadTypeSession):
             engine_driven=True,
             force_enrich=getattr(context, "force_enrich", None),
             ai_client=getattr(context, "ai", None),
+            limiter=getattr(context, "limiter", None),
         )
         context.pipeline = self.pipeline
         self._units = self.pipeline.discovery_units()

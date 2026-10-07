@@ -32,7 +32,13 @@ class Certificate:
 
 
 def certificate(host: str, port: int = 443, *, timeout: float = 10.0) -> Certificate:
-    """The certificate `host` serves on `port`; never raises."""
+    """The certificate `host` serves on `port`; never raises. Internal addresses are refused
+    (``net.http.private_address``), like the audit's HTTP requests."""
+    from .http import private_address
+
+    refused = private_address(host)
+    if refused:
+        return Certificate(valid=False, reachable=False, error=f"not checked: {refused}")
     context = ssl.create_default_context()
     try:
         with socket.create_connection((host, port), timeout=timeout) as raw:

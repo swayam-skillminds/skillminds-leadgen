@@ -74,6 +74,9 @@ class DigitalAuditSession(LeadTypeSession):
         options: dict[str, Any] = {"pagespeed": pagespeed, "clock": self.clock}
         if tls is not None:
             options["tls"] = tls
+        control = getattr(context, "control", None)
+        if control is not None:
+            options["should_stop"] = lambda: bool(control.stop_requested)
         self.auditor = Auditor(section, self.kit.http, self.kit.robots, self.kit.failures,
                                **options)
 
@@ -240,7 +243,16 @@ class DigitalAuditSession(LeadTypeSession):
             list(pool.map(one, todo))
 
     def write(self, org_id: int, result: AuditResult) -> None:
-        """Store one audit: its findings as signals (replacing the last audit's), its summary."""
+        """Store one audit: its findings as signals (replacing the last audit's), its summary.
+
+        An audit that said nothing about the site (refused, robots.txt, failed,
+        stopped) changes nothing: the previous audit and its findings stand, and
+        the site is audited again next run.
+        """
+        if not result.checked:
+            with self._lock:
+                self.stats["not_checked"] += 1
+            return
         now = self.clock()
         store = self.store
         store.stamp(org_id, source=KEY, url=result.url, fields=["audit"])
@@ -260,8 +272,6 @@ class DigitalAuditSession(LeadTypeSession):
                 self.stats["no_website"] += 1
             elif result.status == "unreachable":
                 self.stats["unreachable"] += 1
-            elif result.status in ("blocked", "robots"):
-                self.stats["not_checked"] += 1
 
     # --- the end ----------------------------------------------------------------------
 
