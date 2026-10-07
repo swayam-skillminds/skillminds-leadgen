@@ -18,6 +18,9 @@ Workspace -> Project -> Run, and the organisation-centric lead database:
 * ``suppression_*``, ``schedules`` and ``notification_targets`` (Phase 3):
   lists of organisations to exclude or flag, recurring runs of a saved
   config, and where to tell our own users that a run finished.
+* ``org_attributes``, ``candidate_sources``, ``selector_sets`` (Phase 5): AI
+  attributes (always labelled), proposed sources awaiting approval, and the
+  self-healing selectors of the generic extractor.
 
 Every user-owned table carries ``workspace_id`` (A.2.2): one default
 workspace for now, so authentication can arrive later without a migration
@@ -406,6 +409,98 @@ class AIUsage(Base):
     output_tokens: Mapped[int] = mapped_column(Integer, default=0)
     cost_usd: Mapped[float] = mapped_column(Float, default=0.0)
     created_at: Mapped[datetime] = _created()
+    #: Phase 5: answers served from the response cache (cost nothing).
+    cache_hits: Mapped[int] = mapped_column(Integer, default=0)
+    #: Phase 5: calls that failed, were refused, or gave invalid output.
+    failures: Mapped[int] = mapped_column(Integer, default=0)
+    #: Phase 5: provider web searches (billed per search).
+    searches: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class OrgAttribute(Base):
+    """An attribute of an organisation that is not a published fact (Phase 5).
+
+    Industry tags, a company-size *estimate*, a one-line summary: written by an
+    AI feature (``origin = "ai"``, ``estimated`` when it is a guess) and always
+    shown labelled as such. Never a contact detail: those are ``contacts``,
+    and only ever published or (Phase 6) explicitly inferred.
+    """
+
+    __tablename__ = "org_attributes"
+    __table_args__ = (UniqueConstraint("organization_id", "key"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    workspace_id: Mapped[int] = _workspace_fk()
+    organization_id: Mapped[int] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), index=True)
+    #: industry | company_size | summary
+    key: Mapped[str] = mapped_column(String(50))
+    value: Mapped[Any] = mapped_column(JSONType)
+    #: ai | rule
+    origin: Mapped[str] = mapped_column(String(20), default="ai")
+    #: True for a guess (company size); the workbook says "estimate".
+    estimated: Mapped[bool] = mapped_column(Boolean, default=False)
+    #: "provider/model" that produced it.
+    producer: Mapped[str] = mapped_column(String(160), default="")
+    lead_type: Mapped[str] = mapped_column(String(50), default="")
+    run_id: Mapped[int | None] = mapped_column(ForeignKey("runs.id", ondelete="SET NULL"),
+                                               nullable=True)
+    created_at: Mapped[datetime] = _created()
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class CandidateSource(Base):
+    """A directory or feed proposed by ``source_discovery`` (Phase 5), awaiting approval.
+
+    Approved candidates are scraped by the generic AI-assisted extractor
+    (``ai_directory``) in runs whose country (and place / category, when the
+    candidate names one) matches.
+    """
+
+    __tablename__ = "candidate_sources"
+    __table_args__ = (UniqueConstraint("workspace_id", "url"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    workspace_id: Mapped[int] = _workspace_fk()
+    name: Mapped[str] = mapped_column(String(300))
+    #: A listing page (or feed) URL.
+    url: Mapped[str] = mapped_column(String(2000))
+    host: Mapped[str] = mapped_column(String(255), index=True)
+    country: Mapped[str] = mapped_column(String(2), default="")
+    place: Mapped[str] = mapped_column(String(200), default="")
+    category: Mapped[str] = mapped_column(String(200), default="")
+    #: directory | feed
+    kind: Mapped[str] = mapped_column(String(30), default="directory")
+    page_type: Mapped[str] = mapped_column(String(50), default="listing")
+    rationale: Mapped[str] = mapped_column(Text, default="")
+    #: proposed | approved | rejected
+    status: Mapped[str] = mapped_column(String(20), default="proposed", index=True)
+    #: "provider/model" that proposed it (or "user").
+    proposed_by: Mapped[str] = mapped_column(String(160), default="")
+    terms_note: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = _created()
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class SelectorSetRow(Base):
+    """Self-healing selectors (Phase 5): one versioned set per (host, page type)."""
+
+    __tablename__ = "selector_sets"
+    __table_args__ = (Index("ix_selector_sets_lookup", "workspace_id", "host", "page_type"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    workspace_id: Mapped[int] = mapped_column(ForeignKey("workspaces.id", ondelete="CASCADE"))
+    host: Mapped[str] = mapped_column(String(255))
+    page_type: Mapped[str] = mapped_column(String(50))
+    version: Mapped[int] = mapped_column(Integer, default=1)
+    selectors: Mapped[dict[str, Any]] = mapped_column(JSONType, default=dict)
+    #: active | stale
+    status: Mapped[str] = mapped_column(String(20), default="active")
+    sample_url: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    note: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = _created()
+    validated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class SuppressionList(Base):

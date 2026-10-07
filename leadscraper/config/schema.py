@@ -115,15 +115,90 @@ class Scoring(_Strict):
     weights: ScoreWeights = Field(default_factory=ScoreWeights)
 
 
+class AIProviderEntry(BaseModel):
+    """One provider in the fallback chain; unset fields come from its kind's defaults."""
+
+    model_config = ConfigDict(extra="allow")
+
+    name: str = Field(..., min_length=1, description="anthropic | openai | gemini | "
+                                                      "openai_compatible | claude_code_cli, "
+                                                      "or your own name with `kind`.")
+    kind: str | None = Field(None, description="The API it speaks, when `name` is your own.")
+    worker_model: str | None = Field(None, description="Cheap model for bulk calls.")
+    judge_model: str | None = Field(None, description="Stronger model for hard calls.")
+    base_url: str | None = None
+    key_secret_name: str | None = Field(None, description="Secret holding the API key "
+                                                          "(never the key itself).")
+    structured_output: bool | None = None
+    web_search: bool | None = None
+    context_tokens: int | None = Field(None, gt=0)
+    timeout: float | None = Field(None, gt=0)
+    retries: int | None = Field(None, ge=0, le=5)
+    enabled: bool = True
+
+    @model_validator(mode="after")
+    def _known_kind(self) -> "AIProviderEntry":
+        from ..ai.providers.registry import KINDS, kind_of
+
+        if kind_of(self.kind or self.name) is None:
+            raise ValueError(f"unknown AI provider {self.kind or self.name!r} "
+                             f"(known: {', '.join(KINDS)}); give `kind` for your own name")
+        return self
+
+
 class AISettings(BaseModel):
-    """The optional AI layer. Model ids and backend options pass through."""
+    """The optional AI layer (Phase 5). Off unless enabled; every feature opt-in."""
 
     model_config = ConfigDict(extra="allow")
 
     enabled: bool = False
-    provider: str | None = Field(None, description="claude_cli | anthropic_api | auto")
-    features: list[str] = Field(default_factory=list)
-    budget_usd: float | None = Field(2.0, ge=0, description="Hard cap; null = no cap.")
+    provider: str | None = Field(None, description="One provider (legacy): claude_cli | "
+                                                   "anthropic_api | auto | a provider kind.")
+    providers: list[str | AIProviderEntry] | None = Field(
+        None, description="The fallback chain, first preferred. Default: the workspace's "
+                          "providers, else the Claude Code subscription.")
+    features: list[str] = Field(
+        default_factory=list, description="icp_builder, planner, source_discovery, "
+        "web_search_discovery, extraction_fallback, normalisation, venue_classification, "
+        "signal_interpretation, lead_summary. Empty: extract, names, venues (legacy).")
+    budget_usd: float | None = Field(2.0, ge=0, description="Hard cap per run, USD; null = no "
+                                                            "cap.")
+    allow_billed_api: bool | None = Field(
+        None, description="false: never use a provider that bills separately (an API key), "
+                          "even when named.")
+    prices: dict[str, dict[str, Any]] | None = Field(
+        None, description="Price overrides: {provider: {model: {input, output}}} in USD per "
+                          "million tokens.")
+
+    @field_validator("features")
+    @classmethod
+    def _known_features(cls, value: list[str]) -> list[str]:
+        from ..ai.catalog import FEATURES, LEGACY, known
+
+        unknown = [f for f in value if not known(f)]
+        if unknown:
+            raise ValueError(f"unknown AI feature(s) {unknown} (known: {', '.join(FEATURES)}; "
+                             f"legacy: {', '.join(sorted(LEGACY))})")
+        return value
+
+    @field_validator("provider")
+    @classmethod
+    def _known_provider(cls, value: str | None) -> str | None:
+        from ..ai.providers.registry import kind_of
+
+        if value is not None and value != "auto" and kind_of(value) is None:
+            raise ValueError(f"unknown AI provider {value!r}")
+        return value
+
+    @field_validator("providers")
+    @classmethod
+    def _known_providers(cls, value):
+        from ..ai.providers.registry import kind_of
+
+        for entry in value or []:
+            if isinstance(entry, str) and kind_of(entry) is None:
+                raise ValueError(f"unknown AI provider {entry!r}")
+        return value
 
 
 class SheetsSettings(BaseModel):

@@ -1,0 +1,82 @@
+# Default models, capabilities and list prices of the AI providers (Phase 5.1).
+#
+# This is data, not code: model ids and prices change. Override any of it
+#   * per workspace:  PATCH /settings {"ai": {"providers": [...], "prices": {...}}}
+#   * per run:        ai.providers / ai.prices in the run config
+# Prices are USD per million tokens (input / output), and USD per 1,000 web
+# searches. "*" is a provider's price for a model this table doesn't list.
+# Endpoints and prices verified 2026-10-07 (docs/sources.md, "AI providers").
+
+providers:
+  anthropic:
+    worker_model: claude-haiku-4-5
+    judge_model: claude-opus-5-5
+    key_secret_name: anthropic-api-key
+    key_env: [ANTHROPIC_API_KEY]
+    capabilities: {structured_output: true, tool_use: true, web_search: true,
+                   context_tokens: 200000}
+  openai:
+    worker_model: gpt-6-luna
+    judge_model: gpt-6-astra
+    base_url: https://api.openai.com/v1
+    key_secret_name: openai-api-key
+    key_env: [OPENAI_API_KEY]
+    capabilities: {structured_output: true, tool_use: true, web_search: true,
+                   context_tokens: 128000}
+  gemini:
+    worker_model: gemini-3.5-flash-lite
+    judge_model: gemini-3.1-pro-preview
+    base_url: https://generativelanguage.googleapis.com
+    key_secret_name: gemini-api-key
+    key_env: [GEMINI_API_KEY, GOOGLE_API_KEY]
+    capabilities: {structured_output: true, tool_use: true, web_search: true,
+                   context_tokens: 1000000}
+  # OpenRouter, Groq, a local Ollama or LM Studio: give base_url and the model ids.
+  # structured_output: true only when the endpoint supports json_schema
+  # response_format (most do for some models); JSON + validation otherwise.
+  openai_compatible:
+    worker_model: null
+    judge_model: null
+    base_url: null
+    key_secret_name: null
+    capabilities: {structured_output: false, tool_use: false, web_search: false,
+                   context_tokens: 32000}
+  # Your Claude Code subscription, through the `claude` CLI. No API key, no
+  # separate bill; its reported cost is the list-price equivalent.
+  claude_code_cli:
+    worker_model: claude-haiku-4-5
+    judge_model: claude-opus-5-5
+    capabilities: {structured_output: false, tool_use: false, web_search: false,
+                   context_tokens: 200000}
+
+prices:
+  anthropic:
+    claude-haiku-4-5: {input: 1.0, output: 5.0}
+    claude-sonnet-5-5: {input: 2.0, output: 10.0}
+    claude-sonnet-5: {input: 2.0, output: 10.0}
+    claude-sonnet-4-6: {input: 3.0, output: 15.0}
+    claude-opus-5-5: {input: 4.0, output: 20.0}
+    claude-opus-5: {input: 5.0, output: 25.0}
+    claude-opus-4-8: {input: 5.0, output: 25.0}
+    "*": {input: 5.0, output: 25.0}
+    web_search: {per_1k: 10.0}
+  claude_code_cli:
+    claude-haiku-4-5: {input: 1.0, output: 5.0}
+    claude-sonnet-5-5: {input: 2.0, output: 10.0}
+    claude-opus-5-5: {input: 4.0, output: 20.0}
+    claude-opus-5: {input: 5.0, output: 25.0}
+    "*": {input: 5.0, output: 25.0}
+  openai:
+    gpt-6-luna: {input: 0.10, output: 0.50}
+    gpt-6-astra: {input: 10.0, output: 50.0}
+    "*": {input: 10.0, output: 50.0}
+    web_search: {per_1k: 10.0}
+  gemini:
+    gemini-3.5-flash-lite: {input: 0.30, output: 2.50}
+    gemini-3.1-pro-preview: {input: 2.0, output: 12.0}
+    "*": {input: 2.0, output: 12.0}
+    web_search: {per_1k: 14.0}
+  # Remote compatible endpoints differ widely; set real prices for yours. A
+  # local endpoint (localhost) is free whatever this says.
+  openai_compatible:
+    "*": {input: 1.0, output: 3.0}

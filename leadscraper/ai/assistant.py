@@ -1,122 +1,63 @@
-"""Optional AI layer.
+"""The local_business AI tasks, over the Phase 5 client (``ai.client``).
 
-Two backends, chosen automatically:
+Before Phase 5 this module was the whole AI layer: two backends, a cache and a
+budget. Those now live in ``ai/providers``, ``ai/cache.py`` and ``ai/client.py``;
+what stays here is :class:`AIAssistant`, the four batch tasks the
+``local_business`` pipeline has always called (contact extraction, name
+polish, venue classification, duplicate adjudication), with their prompts
+unchanged byte for byte -- so the Mumbai and Nashik response caches stay valid.
 
-  * ``claude_cli``  -- shells out to the Claude Code CLI in ``--print`` mode.
-    Uses your Claude Code SUBSCRIPTION, so no API key is needed. Each
-    invocation spawns a process (~10s), so this backend is only economic in
-    batches -- see ``batch_size`` in config.yaml.
-  * ``anthropic_api`` -- the official SDK, used when ANTHROPIC_API_KEY is set.
-    Far faster and cheaper per call; preferred when a key is available.
+The pre-Phase-5 names (``AIBackend``, ``ClaudeCLIBackend``, ``pick_backend``,
+``safe_model``, ``QuotaExhausted`` ...) are kept: an ``AIBackend`` passed to
+:class:`AIAssistant` becomes a provider of its own (tests use stub backends).
 
-Design rules, because this bolts onto a scraper that must not crash:
-  * AI is OFF by default and every call degrades to None on failure.
-  * Results are cached in SQLite, so re-runs never pay twice.
-  * A hard USD budget disables the layer once exceeded.
+Design rules, unchanged:
+  * AI is OFF by default and every call degrades to None/{} on failure.
+  * Results are cached, so re-runs never pay twice.
+  * A hard USD budget disables the layer once reached.
 """
 
 from __future__ import annotations
 
-import hashlib
 import json
 import logging
 import os
-import re
-import sqlite3
 import subprocess
-import threading
-import time
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Iterable, Any
+from dataclasses import dataclass
+from typing import Any, Iterable, Union
+
+from pydantic import BaseModel, Field
+
+from .cache import ResponseCache  # noqa: F401  (re-exported)
+from .client import AIClient, ClientStats
+from .providers.base import AIRequest, AIResponse, Provider, ProviderError, ProviderSpec
+from .providers.base import QuotaExhausted  # noqa: F401  (re-exported)
+from .providers.claude_code_cli import QUOTA_MARKERS as _QUOTA_MARKERS  # noqa: F401
+from .providers.claude_code_cli import is_quota_error
+from .schema import parse_json as _parse_json
+from .settings import (  # noqa: F401  (re-exported)
+    BLOCKED_MODEL_FAMILIES, DEFAULT_JUDGE_MODEL, DEFAULT_MODEL, ResolvedAI, resolve, safe_model,
+)
 
 log = logging.getLogger(__name__)
 
-# Bulk extraction/classification is exactly the "worker" role Haiku is for.
-DEFAULT_MODEL = "claude-haiku-4-5"
-# Used for the few genuinely judgement-heavy calls (duplicate adjudication).
-DEFAULT_JUDGE_MODEL = "claude-opus-5"
-
-# Model families that are billed as EXTRA credits rather than drawn from a
-# normal Claude Code subscription allowance. Never selected, whatever config says.
-BLOCKED_MODEL_FAMILIES = ("fable", "mythos")
-
-# Text that means "you are out of allowance", not "this request was bad".
-_QUOTA_MARKERS = (
-    "usage limit", "usage_limit", "rate limit", "rate_limit", "quota",
-    "limit reached", "limit exceeded", "out of credits", "insufficient credits",
-    "too many requests", "upgrade your plan", "resets at", "try again later",
-    "429",
-)
-
-
-class QuotaExhausted(RuntimeError):
-    """The subscription allowance is spent. Stop asking; fall back to non-AI."""
-
-
-def is_quota_error(*texts: str) -> bool:
-    """True when any of `texts` looks like an allowance/rate-limit message."""
-    blob = " ".join(t for t in texts if t).lower()
-    return any(marker in blob for marker in _QUOTA_MARKERS)
-
-
-def safe_model(requested: str, fallback: str) -> str:
-    """Refuse externally-credited model families, whatever the config says."""
-    name = (requested or "").strip().lower()
-    if not name:
-        return fallback
-    if any(family in name for family in BLOCKED_MODEL_FAMILIES):
-        log.warning(
-            "model %r is in an externally-credited family (%s) -- using %r instead",
-            requested, "/".join(BLOCKED_MODEL_FAMILIES), fallback,
-        )
-        return fallback
-    return requested
-
-
-_FENCE = re.compile(r"^\s*```(?:json)?\s*|\s*```\s*$", re.M)
-
-
-def _as_number(value, default, cast):
-    """Cast a config value, treating only None/blank/invalid as 'use default'.
-
-    Deliberately NOT `value or default` -- a legitimate 0 must survive.
-    """
-    if value is None or value == "":
-        return cast(default)
-    try:
-        return cast(value)
-    except (TypeError, ValueError):
-        return cast(default)
+#: Kept for callers that used it as the AIStats type.
+AIStats = ClientStats
 
 
 def strip_json_fence(text: str) -> str:
-    """Models wrap JSON in markdown fences even when told not to."""
-    return _FENCE.sub("", text or "").strip()
+    import re
+
+    return re.sub(r"^\s*```(?:json)?\s*|\s*```\s*$", "", text or "", flags=re.M).strip()
 
 
 def parse_json(text: str) -> Any | None:
     """Best-effort JSON parse of a model response. None if it isn't JSON."""
-    cleaned = strip_json_fence(text)
-    if not cleaned:
-        return None
-    try:
-        return json.loads(cleaned)
-    except json.JSONDecodeError:
-        pass
-    # Fall back to the outermost {...} or [...] span.
-    for opener, closer in (("[", "]"), ("{", "}")):
-        start, end = cleaned.find(opener), cleaned.rfind(closer)
-        if start != -1 and end > start:
-            try:
-                return json.loads(cleaned[start:end + 1])
-            except json.JSONDecodeError:
-                continue
-    return None
+    return _parse_json(text)
 
 
-# --- backends --------------------------------------------------------------
+# --- the pre-Phase-5 backend interface -------------------------------------------
 
 @dataclass
 class AIResult:
@@ -126,9 +67,9 @@ class AIResult:
 
 
 class AIBackend(ABC):
+    """A completion backend of the original layer: ``complete(system, user, model=)``."""
+
     name = "backend"
-    #: True when using this backend produces a bill SEPARATE from any
-    #: Claude Code subscription. Checked before every run.
     bills_separately = False
 
     @abstractmethod
@@ -140,88 +81,69 @@ class AIBackend(ABC):
         return True
 
 
-class ClaudeCLIBackend(AIBackend):
-    """Claude Code CLI in --print mode. Subscription auth, no API key.
+class LegacyBackendProvider(Provider):
+    """An ``AIBackend`` speaking the Phase 5 provider interface."""
 
-    Consumes your Claude Code subscription allowance -- the same bucket your
-    interactive sessions use. It does NOT create a separate invoice.
-    """
+    kind = "legacy"
+
+    def __init__(self, backend: AIBackend, *, worker_model: str = DEFAULT_MODEL,
+                 judge_model: str = DEFAULT_JUDGE_MODEL):
+        super().__init__(ProviderSpec(name=getattr(backend, "name", "backend"), kind="legacy",
+                                      worker_model=worker_model, judge_model=judge_model))
+        self.backend = backend
+        self.bills_separately = bool(getattr(backend, "bills_separately", False))
+
+    def problem(self) -> str | None:
+        return None if self.backend.available else f"backend {self.name} unavailable"
+
+    def complete(self, request: AIRequest) -> AIResponse:
+        try:
+            result = self.backend.complete(request.system, request.user, model=request.model,
+                                           max_tokens=request.max_tokens)
+        except QuotaExhausted:
+            raise
+        except subprocess.TimeoutExpired as exc:
+            raise ProviderError("backend timed out") from exc
+        except Exception as exc:
+            # Some CLI/network failures only reveal the quota in their text.
+            if is_quota_error(repr(exc)):
+                raise QuotaExhausted(f"allowance reached ({str(exc)[:120]})") from exc
+            raise ProviderError(repr(exc)[:300]) from exc
+        return AIResponse(text=result.text or "", model=result.model or request.model,
+                          reported_cost=float(result.cost_usd or 0.0))
+
+
+class ClaudeCLIBackend(AIBackend):
+    """The Claude Code CLI as an ``AIBackend`` (now ``providers.claude_code_cli``)."""
 
     name = "claude_cli"
     bills_separately = False
 
     def __init__(self, timeout: int = 180, binary: str = "claude"):
-        self.timeout = timeout
+        from .providers.claude_code_cli import ClaudeCodeCLIProvider
+        from .providers.registry import make_spec
+
+        spec = make_spec({"name": "claude_code_cli", "timeout": timeout, "binary": binary})
+        self._provider = ClaudeCodeCLIProvider(spec)
         self.binary = binary
 
     @property
     def available(self) -> bool:
         from shutil import which
+
         return which(self.binary) is not None
 
     def complete(self, system: str, user: str, *, model: str, max_tokens: int = 4000) -> AIResult:
-        command = [
-            self.binary, "-p",
-            "--system-prompt", system,
-            "--model", model,
-            "--output-format", "json",
-            # Strip Claude Code's own tooling: without these each call drags in
-            # ~30k tokens of tools/skills context and costs ~8x more.
-            "--disallowed-tools", "*",
-            "--strict-mcp-config",
-            "--setting-sources", "",
-            "--exclude-dynamic-system-prompt-sections",
-        ]
-        completed = subprocess.run(
-            command,
-            input=user,              # via stdin: page text can exceed argv limits
-            capture_output=True,
-            text=True,
-            timeout=self.timeout,
-        )
-        if completed.returncode != 0:
-            if is_quota_error(completed.stderr, completed.stdout):
-                raise QuotaExhausted(completed.stderr.strip()[:200] or "usage limit reached")
-            raise RuntimeError(
-                f"claude CLI exited {completed.returncode}: {completed.stderr[:300]}"
-            )
-        try:
-            payload = json.loads(completed.stdout)
-        except json.JSONDecodeError:
-            if is_quota_error(completed.stdout, completed.stderr):
-                raise QuotaExhausted("usage limit reported by the CLI") from None
-            raise RuntimeError(f"claude CLI returned non-JSON: {completed.stdout[:200]}") from None
-        if payload.get("is_error"):
-            detail = str(payload.get("result") or payload)[:300]
-            if is_quota_error(detail, payload.get("subtype", "")):
-                raise QuotaExhausted(detail)
-            raise RuntimeError(f"claude CLI reported an error: {detail}")
-        return AIResult(
-            text=payload.get("result", "") or "",
-            cost_usd=float(payload.get("total_cost_usd") or 0.0),
-            model=model,
-        )
+        response = self._provider.complete(AIRequest(system=system, user=user, model=model,
+                                                     max_tokens=max_tokens))
+        return AIResult(text=response.text, cost_usd=response.reported_cost or 0.0, model=model)
 
 
 class AnthropicAPIBackend(AIBackend):
-    """Official SDK. Used when ANTHROPIC_API_KEY (or an auth token) is present.
-
-    This is pay-as-you-go API billing, SEPARATE from a Claude Code
-    subscription. It is never selected unless explicitly configured.
-    """
+    """The Anthropic API as an ``AIBackend`` (now ``providers.anthropic``)."""
 
     name = "anthropic_api"
     bills_separately = True
-
-    # Published rates, $ per million tokens, for local cost accounting.
-    PRICES = {
-        "claude-haiku-4-5": (1.0, 5.0),
-        "claude-sonnet-5": (2.0, 10.0),
-        "claude-opus-5": (5.0, 25.0),
-    }
-
-    def __init__(self):
-        self._client = None
 
     @property
     def available(self) -> bool:
@@ -234,62 +156,30 @@ class AnthropicAPIBackend(AIBackend):
             return False
         return True
 
-    def _get_client(self):
-        if self._client is None:
-            import anthropic
-            self._client = anthropic.Anthropic()
-        return self._client
-
     def complete(self, system: str, user: str, *, model: str, max_tokens: int = 4000) -> AIResult:
-        import anthropic
+        from .prices import PriceTable
+        from .providers.anthropic import AnthropicProvider
+        from .providers.registry import make_spec
 
-        try:
-            return self._complete(system, user, model=model, max_tokens=max_tokens)
-        except anthropic.RateLimitError as exc:
-            raise QuotaExhausted(str(exc)[:200]) from exc
-
-    def _complete(self, system: str, user: str, *, model: str, max_tokens: int = 4000) -> AIResult:
-        response = self._get_client().messages.create(
-            model=model,
-            max_tokens=max_tokens,
-            system=system,
-            messages=[{"role": "user", "content": user}],
-        )
-        text = "".join(block.text for block in response.content if block.type == "text")
-        rate_in, rate_out = self.PRICES.get(model, (0.0, 0.0))
-        cost = (response.usage.input_tokens * rate_in
-                + response.usage.output_tokens * rate_out) / 1_000_000
-        return AIResult(text=text, cost_usd=cost, model=model)
+        spec = make_spec("anthropic")
+        response = AnthropicProvider(spec).complete(
+            AIRequest(system=system, user=user, model=model, max_tokens=max_tokens))
+        cost = PriceTable().cost(spec, model, response.input_tokens, response.output_tokens)
+        return AIResult(text=response.text, cost_usd=cost, model=model)
 
 
-def pick_backend(
-    preferred: str = "claude_cli",
-    timeout: int = 180,
-    *,
-    allow_billed: bool = False,
-) -> AIBackend | None:
-    """Choose a backend.
-
-    `allow_billed` is the safety catch: unless it is explicitly True, a
-    backend that bills separately from the Claude Code subscription is never
-    selected -- not even by "auto", and not even when an API key happens to
-    be sitting in the environment. Spending money must be an explicit choice.
-    """
+def pick_backend(preferred: str = "claude_cli", timeout: int = 180, *,
+                 allow_billed: bool = False) -> AIBackend | None:
+    """Choose a pre-Phase-5 backend. A billed one only with ``allow_billed``."""
     api, cli = AnthropicAPIBackend(), ClaudeCLIBackend(timeout=timeout)
     candidates = {"anthropic_api": api, "claude_cli": cli}
-
     if preferred in candidates:
         backend = candidates[preferred]
         if backend.bills_separately and not allow_billed:
-            log.warning(
-                "backend %r bills separately from your Claude Code subscription; "
-                "refusing to use it because ai.allow_billed_api is false", preferred
-            )
+            log.warning("backend %r bills separately from your Claude Code subscription; "
+                        "refusing to use it because ai.allow_billed_api is false", preferred)
             return None
         return backend if backend.available else None
-
-    # "auto": subscription first, and only fall through to the billed API
-    # when the user has explicitly allowed it.
     order = (cli, api) if not allow_billed else (api, cli)
     for backend in order:
         if backend.bills_separately and not allow_billed:
@@ -299,136 +189,150 @@ def pick_backend(
     return None
 
 
-# --- cache -----------------------------------------------------------------
+# --- what the tasks return (validated; ids may come back as numbers) -------------
 
-class ResponseCache:
-    """Content-addressed cache so repeated runs never pay for the same call."""
-
-    def __init__(self, path: str | Path):
-        self.path = Path(path)
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self._lock = threading.Lock()
-        self._conn = sqlite3.connect(self.path, check_same_thread=False)
-        self._conn.execute(
-            "CREATE TABLE IF NOT EXISTS ai_cache ("
-            " key TEXT PRIMARY KEY, response TEXT NOT NULL, created_at REAL NOT NULL)"
-        )
-        self._conn.commit()
-        self.hits = 0
-
-    @staticmethod
-    def key_for(system: str, user: str, model: str) -> str:
-        digest = hashlib.sha256(f"{model}\x00{system}\x00{user}".encode()).hexdigest()
-        return digest[:48]
-
-    def get(self, key: str) -> str | None:
-        with self._lock:
-            row = self._conn.execute(
-                "SELECT response FROM ai_cache WHERE key = ?", (key,)
-            ).fetchone()
-        if row:
-            self.hits += 1
-            return row[0]
-        return None
-
-    def put(self, key: str, response: str) -> None:
-        with self._lock:
-            self._conn.execute(
-                "INSERT OR REPLACE INTO ai_cache (key, response, created_at) VALUES (?, ?, ?)",
-                (key, response, time.time()),
-            )
-            self._conn.commit()
-
-    def close(self) -> None:
-        with self._lock:
-            self._conn.close()
+Id = Union[str, int]
 
 
-# --- assistant -------------------------------------------------------------
+class ExtractedPage(BaseModel):
+    id: Id
+    business_name: str | None = None
+    phones: list[str] = Field(default_factory=list)
+    emails: list[str] = Field(default_factory=list)
+    address: str | None = None
+    instagram: str | None = None
 
-@dataclass
-class AIStats:
-    calls: int = 0
-    cache_hits: int = 0
-    failures: int = 0
-    cost_usd: float = 0.0
-    seconds: float = 0.0
-    per_task: dict[str, int] = field(default_factory=dict)
-    shutdown_reason: str = ""
 
+class ExtractBatch(BaseModel):
+    items: list[ExtractedPage] = Field(default_factory=list)
+
+
+class NameVerdict(BaseModel):
+    id: Id
+    business_name: str | None = None
+    is_business: bool | None = None
+    matches_category: bool | None = None
+
+
+class NameBatch(BaseModel):
+    items: list[NameVerdict] = Field(default_factory=list)
+
+
+class VenueVerdict(BaseModel):
+    id: Id
+    is_venue: bool | None = None
+    venue_type: str | None = None
+    managed_by: str | None = None
+    event_friendly: bool | None = None
+
+
+class VenueBatch(BaseModel):
+    items: list[VenueVerdict] = Field(default_factory=list)
+
+
+class DuplicateVerdict(BaseModel):
+    id: Id
+    same_business: bool = False
+    confidence: float = 0.0
+    reason: str = ""
+
+
+class DuplicateBatch(BaseModel):
+    items: list[DuplicateVerdict] = Field(default_factory=list)
+
+
+# --- the assistant ---------------------------------------------------------------
 
 class AIAssistant:
-    """High-level AI operations for the scraper.
+    """High-level AI operations for the local_business pipeline.
 
-    Every public method returns a plain value or None -- never raises -- so
-    callers can treat AI as a bonus rather than a dependency.
+    Every public method returns a plain value -- never raises -- so callers can
+    treat AI as a bonus rather than a dependency.
     """
 
-    def __init__(self, config, failures=None, backend: AIBackend | None = None):
+    def __init__(self, config, failures=None, backend: AIBackend | None = None, *,
+                 client: AIClient | None = None):
         self.config = config
         self.failures = failures
-        self.enabled = bool(config.get("ai.enabled", False))
-        self.model = safe_model(config.get("ai.model", DEFAULT_MODEL), DEFAULT_MODEL)
-        self.judge_model = safe_model(
-            config.get("ai.judge_model", DEFAULT_JUDGE_MODEL), DEFAULT_JUDGE_MODEL
-        )
-        # `or <default>` is wrong for numerics: a configured 0 is falsy, so
-        # `--ai-budget 0` would silently become the default and spend money.
-        self.batch_size = max(1, _as_number(config.get("ai.batch_size"), 12, int))
-        # None / "unlimited" -> no cap: run until the subscription allowance
-        # itself runs out, which the quota detector then handles.
-        raw_budget = config.get("ai.max_cost_usd", 5.0)
-        if raw_budget is None or str(raw_budget).strip().lower() in ("", "none", "unlimited"):
-            self.max_cost = float("inf")
+        if client is not None:
+            self.client = client
+            self._owns_client = False
+            if client.failures is None:        # the run's client: report into our log
+                client.failures = failures
         else:
-            self.max_cost = max(0.0, _as_number(raw_budget, 5.0, float))
-        self.features = set(config.get("ai.features", []) or [])
-        self.stats = AIStats()
-        self._budget_warned = False
-        self.allow_billed = bool(config.get("ai.allow_billed_api", False))
-        #: Set once the subscription allowance is spent -- AI then stays off
-        #: for the rest of the run and the scraper continues without it.
-        self.quota_exhausted = False
-        self._consecutive_failures = 0
-        #: Give up on AI entirely after this many back-to-back failures, so a
-        #: broken backend can't cost hours of process spawns.
-        self._failure_limit = _as_number(config.get("ai.failure_limit"), 4, int)
+            settings = resolve(config)
+            providers = None
+            if backend is not None:
+                first = settings.specs[0] if settings.specs else None
+                providers = [LegacyBackendProvider(
+                    backend,
+                    worker_model=safe_model(config.get("ai.model") or
+                                            (first.worker_model if first else None),
+                                            DEFAULT_MODEL),
+                    judge_model=safe_model(config.get("ai.judge_model") or
+                                           (first.judge_model if first else None),
+                                           DEFAULT_JUDGE_MODEL))]
+            cache_path = (config.path_for("ai_cache", "data/ai_cache.sqlite3")
+                          if settings.enabled else None)
+            self.client = AIClient(settings, failures=failures, cache_path=cache_path,
+                                   providers=providers)
+            self._owns_client = True
+        self.batch_size = self.client.settings.batch_size
+        if self.client.settings.enabled and not self.client.enabled:
+            log.warning("AI is enabled but no provider is usable (%s). Continuing without AI.",
+                        "; ".join(f"{k}: {v}" for k, v in self.client.unavailable.items())
+                        or "none configured")
 
-        self.backend = backend
-        if self.enabled and self.backend is None:
-            self.allow_billed = bool(config.get("ai.allow_billed_api", False))
-            self.backend = pick_backend(
-                config.get("ai.backend", "claude_cli") or "claude_cli",
-                timeout=_as_number(config.get("ai.timeout"), 180, int),
-                allow_billed=self.allow_billed,
-            )
-            if self.backend is None:
-                log.warning(
-                    "AI is enabled but no backend is usable: install the `claude` CLI "
-                    "or set ANTHROPIC_API_KEY. Continuing without AI."
-                )
-                self.enabled = False
+    # --- the client's state, under the pre-Phase-5 names ----------------------------
 
-        self.cache = ResponseCache(config.path_for("ai_cache", "data/ai_cache.sqlite3")) \
-            if self.enabled else None
-
-    # --- plumbing ---------------------------------------------------------
+    @property
+    def enabled(self) -> bool:
+        return self.client.enabled
 
     @property
     def active(self) -> bool:
-        return bool(
-            self.enabled
-            and self.backend is not None
-            and not self.over_budget
-            and not self.quota_exhausted
-        )
+        return self.client.active
+
+    @property
+    def backend(self) -> Provider | None:
+        return self.client.first()
+
+    @property
+    def model(self) -> str:
+        first = self.client.first()
+        if first is not None and first.spec.worker_model:
+            return first.spec.worker_model
+        return safe_model(self.config.get("ai.model"), DEFAULT_MODEL)
+
+    @property
+    def judge_model(self) -> str:
+        first = self.client.first()
+        if first is not None and first.spec.judge_model:
+            return first.spec.judge_model
+        return safe_model(self.config.get("ai.judge_model"), DEFAULT_JUDGE_MODEL)
+
+    @property
+    def max_cost(self) -> float:
+        return self.client.cap
 
     @property
     def over_budget(self) -> bool:
-        return self.stats.cost_usd >= self.max_cost
+        return self.client.over_budget
+
+    @property
+    def features(self) -> set[str]:
+        return set(self.client.settings.features)
+
+    @property
+    def stats(self) -> ClientStats:
+        return self.client.stats
+
+    @property
+    def quota_exhausted(self) -> bool:
+        return self.client.shut_down
 
     def uses(self, feature: str) -> bool:
-        return self.active and (not self.features or feature in self.features)
+        return self.client.uses(feature)
 
     def _prompt(self, template: str) -> str:
         """A system prompt for this run's city and profile.
@@ -442,7 +346,6 @@ class AIAssistant:
         city = str(self.config.get("city") or info.name)
         text = template.replace("Mumbai", city)
         if info.code != "IN":
-            # The templates' phone hint is India's; every other run gets its own.
             text = text.replace(
                 "Indian phone numbers may be written with or without +91.",
                 f"Phone numbers in {info.name} may be written with or without "
@@ -452,86 +355,11 @@ class AIAssistant:
                         .replace("event-vendor lead list", "high-end venue list"))
         return text
 
-    def _call(self, system: str, user: str, *, task: str, model: str | None = None) -> Any | None:
-        """One cached, budgeted, failure-tolerant completion returning parsed JSON."""
-        if not self.active:
-            if self.over_budget and not self._budget_warned:
-                self._budget_warned = True
-                log.warning("AI budget of $%.2f reached -- AI features disabled for the rest "
-                            "of this run", self.max_cost)
-            return None
-
-        model = model or self.model
-        key = ResponseCache.key_for(system, user, model)
-        cached = self.cache.get(key) if self.cache else None
-        if cached is not None:
-            self.stats.cache_hits += 1
-            return parse_json(cached)
-
-        started = time.time()
-        try:
-            result = self.backend.complete(system, user, model=model)
-        except QuotaExhausted as exc:
-            self._shutdown(f"subscription allowance reached ({str(exc)[:120]})")
-            return None
-        except subprocess.TimeoutExpired:
-            self._fail(task, "ai_timeout", "backend timed out")
-            self._note_failure(task)
-            return None
-        except Exception as exc:
-            # Some CLI/network failures only reveal the quota in their text.
-            if is_quota_error(repr(exc)):
-                self._shutdown(f"subscription allowance reached ({str(exc)[:120]})")
-                return None
-            self._fail(task, "ai_call_failed", repr(exc))
-            self._note_failure(task)
-            return None
-        finally:
-            self.stats.seconds += time.time() - started
-
-        self._consecutive_failures = 0
-        self.stats.calls += 1
-        self.stats.cost_usd += result.cost_usd
-        self.stats.per_task[task] = self.stats.per_task.get(task, 0) + 1
-
-        parsed = parse_json(result.text)
-        if parsed is None:
-            self._fail(task, "ai_bad_json", (result.text or "")[:200])
-            return None
-        if self.cache:
-            self.cache.put(key, result.text)
-        return parsed
-
-    def _shutdown(self, why: str) -> None:
-        """Turn AI off for the rest of the run and carry on without it."""
-        if self.quota_exhausted:
-            return
-        self.quota_exhausted = True
-        self.stats.shutdown_reason = why
-        log.warning("AI disabled for the rest of this run: %s. "
-                    "Scraping continues in non-AI mode.", why)
-        if self.failures is not None:
-            self.failures.record("ai", "ai_disabled", detail=why[:300])
-
-    def _note_failure(self, task: str) -> None:
-        """Trip the circuit breaker after repeated back-to-back failures."""
-        self._consecutive_failures += 1
-        if self._consecutive_failures >= self._failure_limit:
-            self._shutdown(
-                f"{self._consecutive_failures} consecutive AI failures (last task: {task})"
-            )
-
-    def _fail(self, task: str, reason: str, detail: str) -> None:
-        self.stats.failures += 1
-        log.debug("AI %s failed (%s): %s", task, reason, detail[:150])
-        if self.failures is not None:
-            self.failures.record("ai", reason, detail=f"{task}: {detail}"[:400])
-
     def close(self) -> None:
-        if self.cache:
-            self.cache.close()
+        if self._owns_client:
+            self.client.close()
 
-    # --- task 1: contact extraction from raw page text --------------------
+    # --- task 1: contact extraction from raw page text --------------------------------
 
     EXTRACT_SYSTEM = (
         "You extract business contact details from scraped web page text for a "
@@ -551,29 +379,22 @@ class AIAssistant:
         """Pull contacts out of page text the selectors couldn't parse.
 
         `pages` is [(id, page_text), ...]. Returns {id: {fields}} for whatever
-        the model could read; ids it couldn't handle are simply absent.
+        the model could read; ids it couldn't handle are simply absent. The
+        caller grounds every value against the page (``ai.grounding``).
         """
         if not self.uses("extract") or not pages:
             return {}
-
         out: dict[str, dict] = {}
         for chunk in self._chunks(pages):
-            payload = [
-                {"id": page_id, "text": (text or "")[:6000]}
-                for page_id, text in chunk
-            ]
-            parsed = self._call(
-                self._prompt(self.EXTRACT_SYSTEM),
-                json.dumps(payload, ensure_ascii=False),
-                task="extract",
-            )
-            for record in self._as_records(parsed):
-                record_id = str(record.get("id", ""))
-                if record_id:
-                    out[record_id] = record
+            payload = [{"id": page_id, "text": (text or "")[:6000]} for page_id, text in chunk]
+            result = self.client.call("extract", system=self._prompt(self.EXTRACT_SYSTEM),
+                                      user=json.dumps(payload, ensure_ascii=False),
+                                      output=ExtractBatch)
+            for record in (result.data.items if result else []):
+                out[str(record.id)] = {**record.model_dump(), "id": str(record.id)}
         return out
 
-    # --- task 2: business name + category sanity ---------------------------
+    # --- task 2: business name + category sanity --------------------------------------
 
     NAME_SYSTEM = (
         "You clean up business names harvested from search-engine result titles "
@@ -595,21 +416,16 @@ class AIAssistant:
         """`items` is [{id, title, category, locality}, ...] -> {id: verdict}."""
         if not self.uses("names") or not items:
             return {}
-
         out: dict[str, dict] = {}
         for chunk in self._chunks(items):
-            parsed = self._call(
-                self._prompt(self.NAME_SYSTEM),
-                json.dumps(chunk, ensure_ascii=False),
-                task="names",
-            )
-            for record in self._as_records(parsed):
-                record_id = str(record.get("id", ""))
-                if record_id:
-                    out[record_id] = record
+            result = self.client.call("names", system=self._prompt(self.NAME_SYSTEM),
+                                      user=json.dumps(chunk, ensure_ascii=False),
+                                      output=NameBatch)
+            for record in (result.data.items if result else []):
+                out[str(record.id)] = {**record.model_dump(), "id": str(record.id)}
         return out
 
-    # --- task 3: venue classification ---------------------------------------
+    # --- task 3: venue classification -------------------------------------------------
 
     VENUE_SYSTEM = (
         "You classify scraped listings for a high-end venue list around Mumbai: villas, "
@@ -639,14 +455,14 @@ class AIAssistant:
             "{types}", ", ".join(f'"{t}"' for t in venue_types))
         out: dict[str, dict] = {}
         for chunk in self._chunks(items):
-            parsed = self._call(system, json.dumps(chunk, ensure_ascii=False), task="venues")
-            for record in self._as_records(parsed):
-                record_id = str(record.get("id", ""))
-                if record_id:
-                    out[record_id] = record
+            result = self.client.call("venues", system=system,
+                                      user=json.dumps(chunk, ensure_ascii=False),
+                                      output=VenueBatch)
+            for record in (result.data.items if result else []):
+                out[str(record.id)] = {**record.model_dump(), "id": str(record.id)}
         return out
 
-    # --- task 4: duplicate adjudication -----------------------------------
+    # --- task 4: duplicate adjudication (judge tier) ---------------------------------
 
     DEDUP_SYSTEM = (
         "You decide whether two scraped listings describe the SAME real business.\n"
@@ -664,22 +480,16 @@ class AIAssistant:
         """`pairs` is [{id, a, b}, ...] -> {id: {same_business, confidence, reason}}."""
         if not self.uses("dedup") or not pairs:
             return {}
-
         out: dict[str, dict] = {}
         for chunk in self._chunks(pairs):
-            parsed = self._call(
-                self.DEDUP_SYSTEM,
-                json.dumps(chunk, ensure_ascii=False),
-                task="dedup",
-                model=self.judge_model,
-            )
-            for record in self._as_records(parsed):
-                record_id = str(record.get("id", ""))
-                if record_id:
-                    out[record_id] = record
+            result = self.client.call("dedup", system=self.DEDUP_SYSTEM,
+                                      user=json.dumps(chunk, ensure_ascii=False),
+                                      output=DuplicateBatch, tier="judge", max_tokens=16000)
+            for record in (result.data.items if result else []):
+                out[str(record.id)] = {**record.model_dump(), "id": str(record.id)}
         return out
 
-    # --- helpers ----------------------------------------------------------
+    # --- helpers ------------------------------------------------------------------
 
     def _chunks(self, items: list):
         for start in range(0, len(items), self.batch_size):
@@ -698,21 +508,26 @@ class AIAssistant:
         return []
 
     def report(self) -> str:
-        stats = self.stats
+        stats = self.client.stats
         if not (stats.calls or stats.cache_hits):
             return ""
-        billed = self.backend.bills_separately if self.backend else False
-        basis = ("billed to your API account" if billed
-                 else "drawn from your Claude Code subscription -- not a separate bill")
+        billed = self.client.billed()
+        basis = ("billed to your API account(s)" if billed
+                 else "drawn from your Claude Code subscription or a local model -- "
+                      "not a separate bill")
+        cap = self.client.cap
         lines = [
             f"  AI calls               : {stats.calls}"
             f" (cache hits {stats.cache_hits}, failures {stats.failures})",
             f"  AI usage               : ${stats.cost_usd:.3f} of "
-            + ("no cap" if self.max_cost == float("inf") else f"${self.max_cost:.2f} budget")
-            + f" ({basis})",
-            f"  AI time                : {stats.seconds / 60:.1f} min"
-            f" via {self.backend.name if self.backend else 'n/a'}",
+            + ("no cap" if cap == float("inf") else f"${cap:.2f} budget") + f" ({basis})",
+            f"  AI time                : {stats.seconds / 60:.1f} min",
         ]
+        by_provider = self.client.ledger.by("provider")
+        if by_provider:
+            lines.append("  AI by provider         : " + ", ".join(
+                f"{name} ${row['cost_usd']:.3f} ({row['calls']} calls)"
+                for name, row in by_provider.items()))
         if stats.per_task:
             detail = ", ".join(f"{k}={v}" for k, v in sorted(stats.per_task.items()))
             lines.append(f"  AI calls by task       : {detail}")

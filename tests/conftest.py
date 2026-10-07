@@ -32,3 +32,26 @@ def _isolated_data_dir(tmp_path_factory, monkeypatch):
     # Runs never hold a real OS keep-awake lock in tests (test_keepawake mocks it).
     monkeypatch.setenv("LEADSCRAPER_KEEP_AWAKE", "0")
 
+
+
+@pytest.fixture(autouse=True)
+def _no_real_ai(request, monkeypatch):
+    """No test reaches a real AI provider (Phase 5): no keys, no `claude` CLI.
+
+    Provider tests inject fake transports; a test that forgets would find every
+    provider "not configured" and AI off -- never a live call. Tests marked
+    ``live`` (opt-in, ``-m live``) keep the real environment.
+    """
+    if request.node.get_closest_marker("live"):
+        return
+    for name in ("ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN", "OPENAI_API_KEY",
+                 "GEMINI_API_KEY", "GOOGLE_API_KEY"):
+        monkeypatch.delenv(name, raising=False)
+    for name in list(os.environ):
+        if name.startswith("LEADSCRAPER_SECRET_"):
+            monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("LEADSCRAPER_NO_KEYRING", "1")
+    monkeypatch.delenv("LEADSCRAPER_SECRETS_DIR", raising=False)
+    from leadscraper.ai.providers import claude_code_cli
+
+    monkeypatch.setattr(claude_code_cli, "_which", lambda name: None)
