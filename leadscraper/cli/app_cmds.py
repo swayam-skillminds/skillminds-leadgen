@@ -59,9 +59,14 @@ def _service_call(fn):
 # --- api, status ------------------------------------------------------------------------------
 
 def cmd_api(args: argparse.Namespace) -> int:
-    import uvicorn
-
     from ..api import create_app
+
+    if args.openapi:
+        spec = create_app(db_url=args.db).openapi()
+        Path(args.openapi).write_text(json.dumps(spec, indent=1) + "\n", encoding="utf-8")
+        print(f"wrote {args.openapi} ({len(spec['paths'])} paths)")
+        return 0
+    import uvicorn
 
     if args.host not in ("127.0.0.1", "localhost", "::1"):
         print(f"warning: serving on {args.host} without authentication -- keep it on a "
@@ -373,6 +378,8 @@ def add_parsers(sub) -> dict:
                      help="interface (default 127.0.0.1; 0.0.0.0 in a container)")
     api.add_argument("--port", type=int, default=8000)
     api.add_argument("-v", "--verbose", action="store_true")
+    api.add_argument("--openapi", metavar="FILE",
+                     help="write the OpenAPI document to FILE and exit (client generation)")
 
     status = _db(sub.add_parser("status", help="health checks, active and queued runs"))
     status.add_argument("--json", action="store_true")

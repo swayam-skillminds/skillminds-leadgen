@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A failure-tolerant Python lead generator. It discovers businesses from free public sources (Playwright + `requests`, no paid APIs), merges them into one deduplicated **organisation** per business inside a **project**, scores and ranks them, and exports to CSV and Google Sheets. It is being turned into a backend application (`APP-BUILD-PROMPT.md`; Phases 0–2 are done, see `docs/phase-*-report.md`). Despite the directory name it does **not** use LangGraph; orchestration is plain Python (`engine/runner.py` drives each lead type's session unit by unit; `docs/engine.md`).
+A failure-tolerant Python lead generator. It discovers businesses from free public sources (Playwright + `requests`, no paid APIs), merges them into one deduplicated **organisation** per business inside a **project**, scores and ranks them, and exports to XLSX / CSV / JSON / Google Sheets. It is a backend application with an HTTP API, a CLI and a worker over one services layer (`APP-BUILD-PROMPT.md`; Phases 0–3 are done, see `docs/phase-*-report.md`; the API is documented in `docs/api.md`, deployment in `docs/deploy.md`). Despite the directory name it does **not** use LangGraph; orchestration is plain Python (`engine/runner.py` drives each lead type's session unit by unit; `docs/engine.md`).
 
 Runs are described by **run configs** (`config/schema.py`, `schema_version: 1`). Two presets reproduce the original runs:
 - `presets/mumbai-event-vendors.yaml` (Mumbai event vendors), imported from `config.yaml`.
@@ -20,8 +20,10 @@ python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"          # pyproject.toml is the only dependency list; extras: dev, ai, postgres
 playwright install chromium
 
-# Tests (all offline; `live` deselected, `postgres` skipped without LEADSCRAPER_TEST_POSTGRES_URL)
+# Tests (all offline; `live` deselected, `postgres` skipped without LEADSCRAPER_TEST_POSTGRES_URL;
+# `browser` skips without Chromium unless LEADSCRAPER_REQUIRE_BROWSER=1, as in CI)
 python -m pytest tests/ -q                                    # ~35 s (incl. a real worker kill/resume)
+ruff check leadscraper tests tools run.py                     # lint (CI runs it)
 python -m pytest tests/test_pipeline.py::test_name -q         # one test
 python -m pytest -q -m "not characterisation" --deselect tests/test_engine.py   # fast loop (~6 s)
 LEADSCRAPER_TEST_POSTGRES_URL=postgresql+psycopg://USER@HOST:PORT/THROWAWAY_DB \
@@ -46,6 +48,16 @@ python run.py --resume RUN_ID | --queue | --force-enrich | --workers N
 python -m leadscraper estimate --config FILE [--time-budget M] [--json]
 python -m leadscraper worker [--once] | worker stop | worker list
 python -m leadscraper runs list | show ID | pause ID | resume ID | cancel ID | events ID [--follow]
+
+# API and server mode (Phase 3; docs/api.md, docs/deploy.md)
+python -m leadscraper api [--host H --port P] | api --openapi FILE   # /api/v1/docs; never scrapes itself
+docker compose up -d [--profile postgres]                     # API + worker (+ Postgres) on a server
+python -m leadscraper status | projects | export --run ID --format xlsx|csv|json [--scope run|new|project]
+python -m leadscraper runs rerun ID | diff ID [--against ID] | failures ID
+python -m leadscraper config save FILE | list | show ID | versions ID | export ID   # saved configs (DB)
+python -m leadscraper bundle export -o F [--leads --history] | bundle import F
+python -m leadscraper suppression list|create|import · schedules list|create|delete|run · purge · secrets set|check
+python tools/ci_bundle.py make DIR | check DIR                # the cross-OS bundle round trip (CI)
 
 # Application database and configs
 python -m leadscraper migrate-legacy --config config.yaml     # import data/leads.sqlite3 (a COPY) -> project
@@ -79,9 +91,15 @@ leadtypes/   base.py (the A.7 contract), registry.py, local_business/ (config, p
 packs/       in/ (justdial, sulekha, indiamart), events/ (wedmegood, weddingwire),
              hospitality/ (stay platforms + venues.py), social/ (facebook, instagram, linkedin_serp)
 sources/     base.py (Source/Enricher contract), registry.py, core sources: google_maps, google_search, website, maps_lookup
-net/         http.py, browser.py, ratelimit.py
+net/         http.py (+ get_once), browser.py, ratelimit.py, robots.py (robots.txt, RFC 9309)
 export/      csv_writer.py, sheets.py            ai/  assistant.py (Phase 5 splits it)
-cli/         python -m leadscraper …; run.py is a shim over cli/run_cmd.py
+services/    the one core under API, CLI and worker (Phase 3): projects, configs (versioned), runs
+             (queue/control/rerun/diff/events), organizations (filter/provenance/erase), exports, suppression,
+             schedules, notifications, settings, retention, health, catalog (+ source health), schema_hints,
+             estimates (estimate/preview), bundle; errors.py (NotFound/Conflict/Invalid), workspace.py, query.py
+api/         app.py (create_app, /api/v1), deps.py (current_workspace), schemas.py (models + examples),
+             routers/ (system, projects, configs, runs, operations)
+cli/         python -m leadscraper …; run.py is a shim over cli/run_cmd.py; app_cmds.py = Phase 3 commands
 ```
 
 **Flow:** `cli/run_cmd.py` (or `engine/worker.py`) → `engine/runner.execute` → each lead type's session (`LOCAL_BUSINESS.open()` → `LocalBusinessSession` over `Pipeline`):
@@ -102,6 +120,18 @@ Output is flushed periodically and on exit. Ctrl-C pauses (in-flight units finis
 - Depth presets live in each lead type's `apply_depth`; `balanced` changes nothing. Learned `unit_stats` keys carry `@quick`/`@deep`.
 - Store writes are tagged per thread (`LeadStore.tag_thread`), because units of different lead types can run side by side.
 - `LEADSCRAPER_PLUGINS=module` loads extra lead types in any process (used by the worker-kill test).
+
+**Services and API (Phase 3, `docs/api.md`):**
+- Business logic lives in `services/` only. Routers and CLI commands parse input, call one service function `(engine, workspace, …)` and render the result. Services raise `NotFound` / `Conflict` / `Invalid` (→ 404 / 409 / 422; CLI exit 2).
+- Every request resolves its workspace in `api/deps.py: current_workspace` (one default workspace until login exists). The API has no auth: it binds to localhost by default.
+- The API never scrapes. `POST /runs` and `POST /preview` insert queued runs. The worker executes them in its own database (`RunRequest.engine`), geocodes API-queued configs, fires due schedules, purges by retention hourly, and stores a preview's sample on the run (`stats.preview`). `runner.execute` notifies the workspace's targets after a run; a failure there is logged, never raised.
+- A dry run (estimate) drops the project it created if nothing was written (`LeadStore.drop_project_if_unused`).
+- Run membership: `run_organizations.action` is new / updated / **unchanged** (found again with nothing to add; upgraded to updated by a later write). It powers `GET /runs/{id}/diff` and `scope=new` exports.
+- Exports are rebuilt from the DB with the run's own config and the shared order `db.store.sort_leads`. Suppression lists named in `filters.suppression_lists`, plus the workspace's "Erasure requests" list, apply to exports and to the run's CSV/Sheet (exclude only; flags are API/CLI-export columns).
+- Secrets never reach the DB, logs, bundles or exports: `core/secrets.py` (env `LEADSCRAPER_SECRET_<NAME>` → `/run/secrets` / `LEADSCRAPER_SECRETS_DIR` → keyring). Configs refer to secrets by name (`*_secret_name`); `scrub()` removes secret-looking keys from exported documents.
+- Saved configs are compared in their stored (JSON) form: YAML integer keys become strings in the JSON column (venue price bands; `venues.py` reads them with `float(k)`).
+- Workspace settings (`keep_awake`, `robots_txt`, `retention`) fill what a run config leaves unset (`services/settings.apply_to_config`). robots.txt is honoured by the website enricher (`net/robots.py`), on by default.
+- SQLite migrations run with foreign keys off (`db/engine.init_schema`): batch mode rebuilds tables, and a DROP with FKs on cascade-deleted child rows.
 
 **Core invariant: nothing crashes the run.**
 - `Source.discover` yields partial `Lead`s and must never raise; problems go to `ctx.failures` with a reason code (`login_wall`, `phone_hidden`, `no_businesses_parsed`, …). That's the JSONL, `skipped.csv`, the Sheet's Skipped tab and, inside a run, the `failures` table.
@@ -183,6 +213,6 @@ The Google service-account key is looked up as: `GOOGLE_SERVICE_ACCOUNT_JSON` (i
 
 ## Scope notes
 
-`APP-BUILD-PROMPT.md` is the build plan (Section A context + Phases 0–8, one phase per session; Phases 0–2 are done). It supersedes `REBUILD-PROMPT.md`, of which only Parts 0, 2 and 3 still apply. Follow them only when asked to do that work.
+`APP-BUILD-PROMPT.md` is the build plan (Section A context + Phases 0–8, one phase per session; Phases 0–3 are done). It supersedes `REBUILD-PROMPT.md`, of which only Parts 0, 2 and 3 still apply. Follow them only when asked to do that work.
 
 The hard boundary applies to the project generally: this tool **generates** leads and must not grow outreach/CRM features (contact status, email sending, sequences, and so on). LinkedIn is never logged into or crawled; only search-indexed public profile URLs are recorded. `docs/sources.md` lists every external endpoint with its terms note and last live check; several inherited sources are flagged for review against A.2.4.

@@ -205,8 +205,6 @@ class RunConfig(_Strict):
         if f.min_rating is not None or f.must_have or f.exclude_chains:
             notes.append("filters.min_rating / must_have / exclude_chains are not applied yet: "
                          "every lead is kept and exported")
-        if f.suppression_lists:
-            notes.append("filters.suppression_lists: suppression lists arrive in Phase 3")
         if self.icp != ICP():
             notes.append("icp is recorded with the run but does not steer it yet")
         if self.output.excel:
