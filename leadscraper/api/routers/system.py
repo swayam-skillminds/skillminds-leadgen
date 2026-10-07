@@ -14,7 +14,7 @@ from ...services import bundle, catalog, estimates, health, retention, schema_hi
 from ...services.runs import resolve_document
 from ...services.workspace import Workspace
 from .. import schemas as s
-from ..deps import current_workspace, get_engine
+from ..deps import current_workspace, get_engine, read_upload
 
 router = APIRouter()
 
@@ -139,6 +139,6 @@ async def get_bundle(project_id: list[int] | None = Query(None),
 async def post_bundle(file: UploadFile = File(...), leads: bool = True, history: bool = True,
                       engine: Engine = Depends(get_engine),
                       ws: Workspace = Depends(current_workspace)) -> Any:
-    data = await file.read()
+    data = await read_upload(file)
     return await run_in_threadpool(bundle.import_bundle, engine, ws, data, leads=leads,
                                    history=history)

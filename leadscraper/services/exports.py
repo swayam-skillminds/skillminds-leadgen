@@ -24,6 +24,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import re
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
@@ -180,13 +181,25 @@ def build_table(engine: Engine, ws: Workspace, *, run_id: int | None = None,
 
 # --- formats ------------------------------------------------------------------------------
 
+#: A scraped value that a spreadsheet would run as a formula (CSV/formula injection):
+#: it starts with = or @ (or a tab / CR), or with + / - and then something that is
+#: not a number -- "+91 98200 12345" stays as it is, "+HYPERLINK(...)" does not.
+_FORMULA = re.compile(r"^(?:[=@\t\r]|[+-](?![\d\s().+-]*$))")
+
+
+def safe_cell(value: Any) -> Any:
+    """Neutralise formula-looking text for CSV (a leading apostrophe, as Excel shows it)."""
+    if isinstance(value, str) and value and _FORMULA.match(value):
+        return "'" + value
+    return value
+
 def to_csv(table: ExportTable) -> bytes:
     buffer = io.StringIO()
     writer = csv.writer(buffer)
     writer.writerow(table.headers)
     for _, lead, flags in table.rows:
         record = table.record(lead, flags)
-        writer.writerow([record.get(h, "") for h in table.headers])
+        writer.writerow([safe_cell(record.get(h, "")) for h in table.headers])
     return buffer.getvalue().encode("utf-8-sig")
 
 
@@ -252,6 +265,8 @@ def to_xlsx(table: ExportTable) -> bytes:
     for label, value in _overview(table):
         overview.append([label, value])
         overview.cell(overview.max_row, 1).font = bold
+        if isinstance(value, str) and value:
+            overview.cell(overview.max_row, 2).data_type = "s"
     overview.column_dimensions["A"].width = 32
     overview.column_dimensions["B"].width = 60
 
@@ -269,8 +284,13 @@ def to_xlsx(table: ExportTable) -> bytes:
         row = records.max_row
         for col, header in enumerate(table.headers, start=1):
             cell = records.cell(row, col)
+            if isinstance(cell.value, str) and cell.value:
+                # Always a literal string: a scraped "=HYPERLINK(...)" must
+                # never become a live formula in the deliverable.
+                cell.data_type = "s"
             if header in _TEXT_COLUMNS and cell.value not in (None, ""):
                 cell.value = str(cell.value)
+                cell.data_type = "s"
                 cell.number_format = "@"
             if header in _URL_COLUMNS and isinstance(cell.value, str) \
                     and cell.value.startswith("http"):

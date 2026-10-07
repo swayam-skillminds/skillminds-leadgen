@@ -145,14 +145,15 @@ def update_project(engine: Engine, ws: Workspace, project_id: int,
 def delete_project(engine: Engine, ws: Workspace, project_id: int) -> dict[str, Any]:
     """Delete a project with its organisations and run history. Irreversible."""
     project = get_project(engine, ws, project_id)
-    with engine.connect() as conn:
+    with engine.begin() as conn:
+        # Checked and deleted in one transaction, queued runs included: a worker
+        # must not claim a run into a project that is being deleted.
         active = [int(r[0]) for r in conn.execute(select(RUNS.c.id).where(
             RUNS.c.project_id == project_id,
-            RUNS.c.status.in_(["running", "pausing", "stopping"])))]
-    if active:
-        raise Conflict(f"project {project_id} has active runs "
-                       f"({', '.join(map(str, active))}); cancel them first")
-    with engine.begin() as conn:
+            RUNS.c.status.in_(["queued", "running", "pausing", "stopping"])))]
+        if active:
+            raise Conflict(f"project {project_id} has queued or active runs "
+                           f"({', '.join(map(str, active))}); cancel them first")
         conn.execute(delete(PROJECTS).where(PROJECTS.c.id == project_id,
                                             PROJECTS.c.workspace_id == ws.id))
     return project

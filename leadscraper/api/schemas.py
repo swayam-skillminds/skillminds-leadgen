@@ -622,6 +622,7 @@ class EraseResult(BaseModel):
     count: int
     dry_run: bool
     suppression_list: str | None
+    failures_removed: int = 0
 
 
 # --- suppression -----------------------------------------------------------------------------------
@@ -774,7 +775,7 @@ class NotificationCreate(BaseModel):
          "events": ["run_completed", "needs_attention"]},
         {"name": "Ops mail", "kind": "email",
          "config": {"host": "smtp.example.com", "port": 587, "username": "leads",
-                    "password_secret_name": "smtp-password", "from": "leads@example.com",
+                    "password_secret_name": "notify-smtp-password", "from": "leads@example.com",
                     "to": ["ops@example.com"]}}, extra="forbid")
 
     name: str = Field(..., min_length=1)

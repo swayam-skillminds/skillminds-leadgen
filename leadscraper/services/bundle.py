@@ -33,7 +33,8 @@ is refused before anything is written. Import is additive and idempotent:
   fact kept); into a project that already has organisations they are merged
   through the identity rules (``LeadStore.upsert``), as a run would;
 * history runs come in as finished history -- a run that was active when the
-  bundle was made is imported as ``failed``, so no worker picks it up.
+  bundle was made is imported as ``failed``, so no worker picks it up -- and
+  a run already imported (same ref and creation time) is skipped.
 
 Everything is plain JSON with ISO-8601 UTC times and ``/`` paths inside the
 zip, so a bundle made on Windows imports on macOS or Linux and vice versa
@@ -119,6 +120,17 @@ def _restore(table, data: dict[str, Any]) -> dict[str, Any]:
             value = datetime.fromisoformat(value)
         out[column.name] = value
     return out
+
+
+def _iso(value: Any) -> str:
+    """A timestamp in one comparable form (SQLite hands back naive datetimes)."""
+    if isinstance(value, str):
+        value = datetime.fromisoformat(value)
+    if isinstance(value, datetime):
+        if value.tzinfo is None:
+            value = value.replace(tzinfo=timezone.utc)
+        return value.astimezone(timezone.utc).isoformat()
+    return str(value)
 
 
 def _dump(data: Any) -> bytes:
@@ -262,6 +274,7 @@ def read_manifest(data: bytes) -> dict[str, Any]:
     except zipfile.BadZipFile:
         raise Invalid("not a bundle: the file is not a zip archive") from None
     with zf:
+        _check_sizes(zf)
         try:
             manifest = json.loads(zf.read("manifest.json"))
         except KeyError:
@@ -277,6 +290,23 @@ def read_manifest(data: bytes) -> dict[str, Any]:
         raise Invalid(f"the bundle was made by a newer version (database schema {revision}); "
                       "upgrade this installation first")
     return manifest
+
+
+#: Limits on what a bundle may unpack to (a zip bomb would exhaust memory).
+MAX_UNPACKED = 2 * 1024 ** 3
+MAX_RATIO = 200
+
+
+def _check_sizes(zf: zipfile.ZipFile) -> None:
+    total = 0
+    for info in zf.infolist():
+        total += info.file_size
+        if info.file_size > 1024 ** 2 and info.file_size > MAX_RATIO * max(1, info.compress_size):
+            raise Invalid(f"refusing {info.filename}: it would unpack {info.file_size} bytes "
+                          f"from {info.compress_size} (not a bundle this tool made)")
+    if total > MAX_UNPACKED:
+        raise Invalid(f"refusing a bundle that unpacks to {total} bytes "
+                      f"(limit {MAX_UNPACKED})")
 
 
 def _known_revision(revision: str) -> bool:
@@ -490,8 +520,19 @@ def _import_history(engine: Engine, ws: Workspace, project_id: int, rows: list[d
                     org_map: dict[int, int], report: dict) -> None:
     from ..db.runs import TERMINAL
 
+    with engine.connect() as conn:
+        # A run this bundle (or an identical one) already brought in: same ref
+        # and creation time. Importing twice must not duplicate history.
+        seen_runs = {(str((r.request or {}).get("imported_from_bundle", {}).get("ref")),
+                      _iso(r.created_at))
+                     for r in conn.execute(select(RUNS.c.request, RUNS.c.created_at).where(
+                         RUNS.c.project_id == project_id))
+                     if (r.request or {}).get("imported_from_bundle")}
     with engine.begin() as conn:
         for row in rows:
+            if (str(row.get("ref")), _iso(row.get("created_at"))) in seen_runs:
+                report["runs_skipped"] = report.get("runs_skipped", 0) + 1
+                continue
             values = _restore(RUNS, row)
             values["config_snapshot"] = row.get("config_snapshot") or {}
             if values.get("status") not in TERMINAL:

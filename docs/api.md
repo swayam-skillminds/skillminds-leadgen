@@ -27,6 +27,7 @@ docker compose up -d                       # both, on a server (docs/deploy.md)
 | Sorting | `sort=-score,name`: comma-separated fields, with `-` for descending. Each list names its sortable fields in its summary, and any other field is a 422. |
 | Times | ISO 8601, UTC. |
 | CORS | Off unless `LEADSCRAPER_CORS_ORIGINS=https://ui.example,…` is set. |
+| Browser guards | With no login, `Host` must be in `LEADSCRAPER_ALLOWED_HOSTS` (default localhost names; `*` = any), and a write (POST/PATCH/DELETE) carrying a foreign `Origin` is refused (403). Uploads are capped at `LEADSCRAPER_MAX_UPLOAD_MB` (200). |
 | Secrets | Never returned: webhook URLs are masked (`https://hooks.slack.com/***`), an SMTP password is a secret *name* plus a `secret_configured` flag, and config exports and bundles drop secret-looking keys. |
 
 ## Endpoints
@@ -65,7 +66,7 @@ docker compose up -d                       # both, on a server (docs/deploy.md)
 | `GET` | `/projects/{id}/export.{csv\|json\|xlsx}` | The whole project, regenerated from the database. |
 | `GET` | `/organizations` | `project_id` or `run_id` (with `change=new\|updated\|unchanged`), `q` (name), `locality`, `category`, `lead_type`, `has=phone&has=email` (website, socials, address), `min_score`, `max_score`, `domain`; sort by score, name, locality, category, created_at, updated_at, fit, intent, reach. |
 | `GET` | `/organizations/{id}` | The merged record, contacts (with source, `published`/`inferred`, confidence), people, signals, evidence (source, URL, fields, run, time), identity keys, and the runs that touched it. |
-| `POST` | `/organizations/erase` | A data-subject request: `domain` and/or `phone` (`region` for a number without +code), optional `project_id`, `dry_run`. Deletes every matching organisation, in every project, with everything hanging off it. With `suppress` (the default) the value goes on the **Erasure requests** list, which every export applies, so a later run that finds it again never exports it. A shared host (gmail.com, facebook.com) is refused: it identifies nobody. |
+| `POST` | `/organizations/erase` | A data-subject request: `domain` and/or `phone` (`region` for a number without +code), optional `project_id`, `dry_run`. Deletes every matching organisation, in every project, with everything hanging off it. With `suppress` (the default) the value goes on the **Erasure requests** list, which every export applies, so a later run that finds it again never exports it. A shared host (gmail.com, facebook.com) is refused: it identifies nobody. Failure rows naming the business are removed too. Files written before the request (a project's CSV, `skipped.csv`, failure logs, earlier exports, a Google Sheet) are not rewritten: regenerate them, and the next export or run writes them without it. |
 
 ### Saved configs
 
@@ -116,7 +117,7 @@ A saved config's `id` is its first version's row id, stable across versions and 
 | `GET` / `POST` | `/schedules` | `{saved_config_id, cron, timezone, only_new, overrides: {depth, time_budget_minutes}}`. Cron has five fields, names and steps, and `@daily`/`@weekly`/`@monthly`; it is read in the IANA timezone. |
 | `GET` / `PATCH` / `DELETE` | `/schedules/{id}` | Disabling clears `next_run_at`. |
 | `POST` | `/schedules/{id}/run` | Queue its run now. |
-| `GET` / `POST` | `/notifications` | `desktop` (local mode only), `webhook` (`{url}`; Slack/Teams read the `text` field), `email` (`{host, port, security, username, password_secret_name, from, to}`). Events: `run_completed`, `run_failed`, `needs_attention` (completed, but a lead type failed, ≥25 % of units failed, or sources were blocked ≥5 times). |
+| `GET` / `POST` | `/notifications` | `desktop` (local mode only), `webhook` (`{url}`; Slack/Teams read the `text` field), `email` (`{host, port, security, username, password_secret_name, from, to}`; the secret's name must start with `notify-`). Webhook and SMTP hosts on loopback, link-local or private addresses are refused unless `LEADSCRAPER_ALLOW_PRIVATE_TARGETS=1`. Events: `run_completed`, `run_failed`, `needs_attention` (completed, but a lead type failed, ≥25 % of units failed, or sources were blocked ≥5 times). |
 | `GET` / `PATCH` / `DELETE` | `/notifications/{id}` | |
 | `POST` | `/notifications/{id}/test` | Sends a test message; `{ok, error}`. |
 

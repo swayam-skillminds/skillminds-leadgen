@@ -11,7 +11,12 @@ Erasure (data-subject deletion requests) deletes every organisation holding a
 domain or phone, in every project of the workspace, with everything hanging
 off it; by default the value also goes on the "Erasure requests" suppression
 list, which every export applies, so it never reappears in an export even if
-a later run finds it again.
+a later run finds it again. Failure rows naming the business go too.
+
+Not reached by erasure (documented in docs/api.md): files already written to
+disk or to a Google Sheet before the request (a project's CSV, skipped.csv,
+failure logs, earlier exports) -- regenerate or delete those; the next run
+or ``export`` writes them without the erased organisation.
 """
 
 from __future__ import annotations
@@ -24,7 +29,8 @@ from sqlalchemy.engine import Engine
 from ..core.identity import identity_domain
 from ..core.normalize import normalize_phone
 from ..db.models import (
-    Contact, Evidence, IdentityKey, Organization, Person, Run, RunOrganization, Signal,
+    Contact, Evidence, FailureRow, IdentityKey, Organization, Person, Run, RunOrganization,
+    Signal,
 )
 from .errors import Invalid, NotFound
 from .query import Page, aware, clamp, fetch_page, order_by
@@ -38,6 +44,7 @@ EVIDENCE = Evidence.__table__
 KEYS = IdentityKey.__table__
 MEMBERS = RunOrganization.__table__
 RUNS = Run.__table__
+FAILURES = FailureRow.__table__
 
 SORTABLE = {"score": ORGS.c.score, "name": ORGS.c.name, "locality": ORGS.c.locality,
             "category": ORGS.c.category, "created_at": ORGS.c.created_at,
@@ -198,9 +205,15 @@ def erase(engine: Engine, ws: Workspace, *, domain: str | None = None, phone: st
     with engine.connect() as conn:
         found = [{"id": int(r.id), "project_id": int(r.project_id), "name": r.name}
                  for r in conn.execute(query.order_by(ORGS.c.id))]
+    failures_removed = 0
     if not dry_run and found:
         with engine.begin() as conn:
             conn.execute(delete(ORGS).where(ORGS.c.id.in_([f["id"] for f in found])))
+            # Failure rows that name the business (a page that could not be read).
+            for item in found:
+                failures_removed += conn.execute(delete(FAILURES).where(
+                    FAILURES.c.project_id == item["project_id"],
+                    FAILURES.c.business == item["name"])).rowcount or 0
     suppressed = None
     if suppress and not dry_run:
         from .suppression import ERASURE_LIST, add_entries, ensure_list
@@ -209,4 +222,4 @@ def erase(engine: Engine, ws: Workspace, *, domain: str | None = None, phone: st
         add_entries(engine, ws, listing["id"], values)
         suppressed = listing["name"]
     return {"erased": found, "count": len(found), "dry_run": dry_run,
-            "suppression_list": suppressed}
+            "suppression_list": suppressed, "failures_removed": failures_removed}

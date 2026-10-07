@@ -9,6 +9,13 @@ Targets are per workspace:
 * ``email`` -- SMTP to our own addresses. The password is a secret
   *reference* (``password_secret_name``), resolved by ``core.secrets``.
 
+Guard rails, because the API has no login yet: a target may only reference
+secrets named ``notify-*`` (so it cannot send, say, a database password to a
+mail server of its choosing), and webhook / SMTP hosts that resolve to
+loopback, link-local or private addresses are refused unless
+``LEADSCRAPER_ALLOW_PRIVATE_TARGETS=1`` (an internal mail relay, say).
+Errors are stored as a short line, never a response body.
+
 Events: ``run_completed``, ``run_failed``, ``needs_attention``. A run "needs
 attention" when it completed but a lead type failed, a quarter or more of its
 units failed, or its sources were blocked five or more times -- the cases a
@@ -48,6 +55,8 @@ FAILURES = FailureRow.__table__
 PROJECTS = Project.__table__
 
 EVENTS = ("run_completed", "run_failed", "needs_attention")
+SECRET_PREFIX = "notify-"
+PRIVATE_ENV = "LEADSCRAPER_ALLOW_PRIVATE_TARGETS"
 BLOCK_REASONS = ("blocked", "login_wall", "captcha", "rate_limited")
 TIMEOUT = 10
 
@@ -72,7 +81,9 @@ class EmailConfig(BaseModel):
     security: str = Field("starttls", pattern="^(starttls|ssl|none)$")
     username: str | None = None
     password_secret_name: str | None = Field(
-        None, description="Name of the secret holding the SMTP password (never the password).")
+        None, pattern=r"^notify-[A-Za-z0-9_.-]{1,90}$",
+        description="Name of the secret holding the SMTP password (never the password); "
+                    "it must start with 'notify-'.")
     sender: str = Field(..., alias="from")
     to: list[str] = Field(..., min_length=1)
 
@@ -228,6 +239,30 @@ def summary_text(engine: Engine, run: dict[str, Any], events: list[str],
 
 # --- sending -------------------------------------------------------------------------------
 
+def check_host(host: str) -> None:
+    """Refuse loopback / link-local / private destinations (unless allowed by env)."""
+    import ipaddress
+    import os
+    import socket
+
+    if os.environ.get(PRIVATE_ENV) == "1" or not host:
+        return
+    try:
+        addresses = {info[4][0] for info in socket.getaddrinfo(host, None)}
+    except OSError:
+        return                       # unresolvable: the send fails on its own
+    for address in addresses:
+        ip = ipaddress.ip_address(address.split("%", 1)[0])
+        if ip.is_loopback or ip.is_link_local or ip.is_private or ip.is_reserved \
+                or ip.is_unspecified or ip.is_multicast:
+            raise RuntimeError(f"{host} resolves to a private address ({ip}); set "
+                               f"{PRIVATE_ENV}=1 to allow internal targets")
+
+
+def _short(exc: Exception) -> str:
+    return f"{type(exc).__name__}: {str(exc).splitlines()[0][:200] if str(exc) else ''}"
+
+
 def _send_desktop(title: str, text: str) -> None:
     import os
 
@@ -258,9 +293,13 @@ def _send_desktop(title: str, text: str) -> None:
 
 
 def _send_webhook(config: dict[str, Any], text: str, payload: dict[str, Any]) -> None:
+    from urllib.parse import urlsplit
+
     import requests
 
-    response = requests.post(config["url"], json={"text": text, **payload}, timeout=TIMEOUT)
+    check_host(urlsplit(config["url"]).hostname or "")
+    response = requests.post(config["url"], json={"text": text, **payload}, timeout=TIMEOUT,
+                             allow_redirects=False)
     if response.status_code >= 400:
         raise RuntimeError(f"webhook answered HTTP {response.status_code}")
 
@@ -271,8 +310,11 @@ def _send_email(config: dict[str, Any], subject: str, text: str) -> None:
     message["From"] = config["from"]
     message["To"] = ", ".join(config["to"])
     message.set_content(text)
+    check_host(config["host"])
     password = None
     if config.get("password_secret_name"):
+        if not config["password_secret_name"].startswith(SECRET_PREFIX):
+            raise RuntimeError(f"secret names for notifications start with {SECRET_PREFIX!r}")
         password = get_secret(config["password_secret_name"])
         if password is None:
             raise RuntimeError(f"secret {config['password_secret_name']!r} is not configured")
@@ -335,7 +377,7 @@ def notify_run(engine: Engine, run_id: int) -> list[dict[str, Any]]:
         try:
             send(target, "Lead run " + payload["event"].replace("_", " "), text, payload)
         except Exception as exc:
-            error = f"{type(exc).__name__}: {exc}"
+            error = _short(exc)
             log.warning("notification %r (%s) failed: %s", target["name"], target["kind"], error)
         try:
             _record(engine, int(target["id"]), error)
@@ -354,6 +396,6 @@ def send_test(engine: Engine, ws: Workspace, target_id: int) -> dict[str, Any]:
              "This is a test notification from the Skillminds lead generator.",
              {"event": "test", "events": ["test"]})
     except Exception as exc:
-        error = f"{type(exc).__name__}: {exc}"
+        error = _short(exc)
     _record(engine, target_id, error)
     return {"ok": not error, "error": error}

@@ -136,8 +136,21 @@ def init_schema(engine: Engine) -> None:
             connection.exec_driver_sql("PRAGMA foreign_keys=OFF")
             connection.commit()
         try:
-            with connection.begin():
-                _create_or_upgrade(connection)
+            try:
+                with connection.begin():
+                    if not sqlite:
+                        # Two processes (the API and a worker) starting at once
+                        # must not both migrate: one waits, then finds it done.
+                        connection.exec_driver_sql("SELECT pg_advisory_xact_lock(4207211)")
+                    _create_or_upgrade(connection)
+            except Exception:
+                # Another process may have migrated under us (SQLite has no
+                # advisory lock): fine if the schema is current now.
+                with connection.begin():
+                    if current_revision(connection) != head_revision():
+                        raise
+                log.info("schema at %s was brought current by another process",
+                         engine.url.render_as_string(hide_password=True))
         finally:
             if sqlite:
                 connection.rollback()        # whatever a failed migration left open

@@ -28,6 +28,8 @@ KEEPALIVE_SECONDS = 15.0
 #: A run_state event with one of these ends the stream: the run stopped
 #: (a resumed run streams again from a new connection with Last-Event-ID).
 STOPPED = frozenset(TERMINAL | {"paused", "queued"})
+#: Run statuses in which nothing more will be written until someone acts.
+FINAL = frozenset(TERMINAL | {"paused"})
 
 
 def _stops(event: dict) -> bool:
@@ -172,8 +174,12 @@ async def events(run_id: int, request: Request, after: int = Query(0, ge=0),
                 cursor = event["seq"]
                 last_sent = time.monotonic()
                 yield _sse(event)
-            if any(_stops(e) for e in batch):
-                return
+            if batch and _stops(batch[-1]):
+                # The newest event says the run stopped; a replayed old one
+                # (paused, then resumed) does not end the stream: check the row.
+                row = await run_in_threadpool(runs.run_row, engine, ws, run_id)
+                if row["status"] in FINAL:
+                    return
             if batch:
                 continue
             if not follow:

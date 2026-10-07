@@ -54,6 +54,7 @@ it 1 GB per concurrent browser unit (`runtime.discovery_workers`, default 3).
    ANTHROPIC_API_KEY=...                  # the AI layer's API backend
    GOOGLE_SERVICE_ACCOUNT_JSON=/run/secrets/google.json
    LEADSCRAPER_CORS_ORIGINS=https://leads.example.com   # once a UI exists
+   LEADSCRAPER_ALLOWED_HOSTS=localhost,127.0.0.1,leads.example.com   # names the API answers to
    ```
 4. **Start it**:
 
@@ -83,6 +84,14 @@ it 1 GB per concurrent browser unit (`runtime.discovery_workers`, default 3).
      }
      ```
    Never publish port 8000 directly on a public interface.
+
+   Two guards stay on behind the proxy too:
+   - only the host names in `LEADSCRAPER_ALLOWED_HOSTS` are served (a DNS-rebinding guard; add
+     your domain or VPN name);
+   - a write (POST, PATCH, DELETE) from a browser page whose origin isn't an allowed host or
+     in `LEADSCRAPER_CORS_ORIGINS` is refused with 403.
+
+   Uploads are capped at `LEADSCRAPER_MAX_UPLOAD_MB` (default 200).
 
 6. **Migrate existing data** (optional). Import an original lead store from a copy on the server:
    ```bash

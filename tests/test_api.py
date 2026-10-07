@@ -22,11 +22,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from leadscraper.api import create_app  # noqa: E402
 from leadscraper.core.lead import Lead  # noqa: E402
-from leadscraper.db.engine import open_database  # noqa: E402
 from leadscraper.engine.clock import FakeClock  # noqa: E402
 from leadscraper.engine.worker import Worker  # noqa: E402
 from leadscraper.leadtypes.local_business import pipeline as pipeline_mod  # noqa: E402
-from leadscraper.paths import default_db_url  # noqa: E402
 from leadscraper.sources.base import Source  # noqa: E402
 
 CLOCK = FakeClock()
@@ -77,7 +75,9 @@ def config_document(name: str = "API dentists", sources=("google_maps",)) -> dic
 
 @pytest.fixture
 def engine():
-    engine = open_database(default_db_url())
+    from app_db import fresh_application_db
+
+    engine = fresh_application_db()
     yield engine
     engine.dispose()
 
@@ -290,3 +290,24 @@ def test_preview_is_queued_and_its_sample_lands_on_the_run(client, engine, fixtu
     assert preview["estimate"]["units_queued"] == 2
     names = {p["name"] for p in client.get(f"{PREFIX}/projects").json()["items"]}
     assert "Prev" not in names                                 # the real project is untouched
+
+
+def test_cross_site_writes_and_foreign_hosts_are_refused(client, monkeypatch):
+    """No login yet: a web page must not drive the API through the user's browser."""
+    evil = client.post(f"{PREFIX}/projects", json={"name": "X"},
+                       headers={"Origin": "https://evil.example"})
+    assert evil.status_code == 403 and "cross-site" in evil.json()["detail"]
+    local = client.post(f"{PREFIX}/projects", json={"name": "Y"},
+                        headers={"Origin": "http://localhost:3000"})
+    assert local.status_code == 201
+    assert client.get(f"{PREFIX}/projects", headers={"Origin": "https://evil.example"}) \
+        .status_code == 200                                   # reads are not side effects
+    rebinding = client.get(f"{PREFIX}/projects", headers={"Host": "attacker.example"})
+    assert rebinding.status_code == 400                      # DNS rebinding: unknown Host
+
+
+def test_uploads_are_capped(client, monkeypatch):
+    monkeypatch.setenv("LEADSCRAPER_MAX_UPLOAD_MB", "0.001")
+    response = client.post(f"{PREFIX}/bundle/import",
+                           files={"file": ("b.zip", b"x" * 5000, "application/zip")})
+    assert response.status_code == 422 and "larger than" in response.json()["detail"]

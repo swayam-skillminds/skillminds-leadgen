@@ -8,8 +8,9 @@ Workspace settings (``retention``):
   (the run row, its units, failures and summary stay in history);
 * ``seen_urls_days`` -- fetched-URL memos (those pages get fetched again).
 
-Per project, ``retention_days`` purges organisations not updated for that
-long (lead retention), with everything hanging off them.
+Per project, ``retention_days`` purges organisations not seen for that long
+-- neither changed nor found again by any run -- with everything hanging off
+them (lead retention).
 
 The worker runs this at most once an hour; ``leadscraper purge`` runs it on
 demand (``--dry-run`` to see what would go).
@@ -26,7 +27,7 @@ from typing import Any
 from sqlalchemy import delete, func, select
 from sqlalchemy.engine import Engine
 
-from ..db.models import Organization, Project, Run, RunEvent, SeenUrl
+from ..db.models import Organization, Project, Run, RunEvent, RunOrganization, SeenUrl
 from ..db.runs import TERMINAL
 from .query import utcnow
 from .settings import effective
@@ -39,6 +40,7 @@ RUNS = Run.__table__
 SEEN = SeenUrl.__table__
 ORGS = Organization.__table__
 PROJECTS = Project.__table__
+MEMBERS = RunOrganization.__table__
 
 
 def _old_logs(days: int) -> list[Path]:
@@ -80,7 +82,14 @@ def purge(engine: Engine, ws: Workspace, *, dry_run: bool = False) -> dict[str, 
                                        PROJECTS.c.retention_days.is_not(None))).all()
         for project_id, name, days in projects:
             cutoff = now - timedelta(days=int(days))
-            condition = (ORGS.c.project_id == project_id) & (ORGS.c.updated_at < cutoff)
+            # "Not seen for N days": neither changed nor found again by a run
+            # since the cutoff. A re-find that adds nothing leaves updated_at
+            # alone but makes the organisation a member of that run.
+            seen_since = (select(MEMBERS.c.organization_id)
+                          .join(RUNS, RUNS.c.id == MEMBERS.c.run_id)
+                          .where(RUNS.c.project_id == project_id, RUNS.c.created_at >= cutoff))
+            condition = ((ORGS.c.project_id == project_id) & (ORGS.c.updated_at < cutoff)
+                         & ORGS.c.id.not_in(seen_since))
             count = int(conn.execute(select(func.count()).select_from(ORGS)
                                      .where(condition)).scalar_one())
             if count:

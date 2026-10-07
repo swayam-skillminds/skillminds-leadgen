@@ -11,6 +11,8 @@ Status handling follows RFC 9309:
 * 2xx -- the rules apply;
 * 4xx (404, 410, ...) -- there are no rules: everything is allowed;
 * 5xx -- the site is unavailable: assume everything is disallowed (this run);
+* 429 -- we are being throttled: also disallowed for this run (a policy
+  choice beyond the RFC, which would allow it);
 * the request fails outright -- allowed; the page fetch will fail on its own
   and be recorded as such.
 
@@ -46,6 +48,8 @@ class RobotsCache:
             log.debug("robots.txt of %s unavailable (%s): allowed", origin, exc)
             return True
         status = int(getattr(response, "status_code", 200) or 200)
+        if status == 429:
+            return False             # throttled: stay off the site this run
         if 400 <= status < 500:
             return True
         if status >= 500:

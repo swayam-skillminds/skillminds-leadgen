@@ -11,7 +11,7 @@ from ...services import configs
 from ...services.errors import ServiceError
 from ...services.workspace import Workspace
 from .. import schemas as s
-from ..deps import current_workspace, get_engine
+from ..deps import current_workspace, get_engine, read_upload
 
 router = APIRouter(tags=["configs"])
 
@@ -63,7 +63,7 @@ def import_config(body: s.ConfigImport, engine: Engine = Depends(get_engine),
 async def import_config_file(file: UploadFile = File(...), name: str | None = Form(None),
                              engine: Engine = Depends(get_engine),
                              ws: Workspace = Depends(current_workspace)):
-    return configs.import_config(engine, ws, await file.read(), filename=file.filename,
+    return configs.import_config(engine, ws, await read_upload(file), filename=file.filename,
                                  name=name)
 
 

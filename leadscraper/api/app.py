@@ -10,6 +10,15 @@ a private network; ``docs/deploy.md`` covers putting it behind a reverse
 proxy with access control on a server. When login arrives it goes into
 ``api/deps.py: current_workspace``.
 
+Because there is no login, two browser attacks are closed off here:
+
+* **DNS rebinding** -- only ``Host`` headers in ``LEADSCRAPER_ALLOWED_HOSTS``
+  (default: localhost names; ``*`` allows any) are served;
+* **cross-site requests** -- a POST / PATCH / DELETE carrying an ``Origin``
+  header is refused unless that origin is a configured CORS origin or an
+  allowed host, so a web page cannot cancel runs or purge data through the
+  user's browser.
+
 Errors are JSON ``{"detail": str, "errors": [...]}``: 404 not found, 409 a
 conflict with the current state (a duplicate name, a run that cannot be
 paused), 422 invalid input (a config that fails the schema, with the
@@ -20,8 +29,11 @@ from __future__ import annotations
 
 import os
 
+from urllib.parse import urlsplit
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy.engine import Engine
 
@@ -32,6 +44,13 @@ from .routers import configs, operations, projects, runs, system
 
 PREFIX = "/api/v1"
 CORS_ENV = "LEADSCRAPER_CORS_ORIGINS"
+HOSTS_ENV = "LEADSCRAPER_ALLOWED_HOSTS"
+DEFAULT_HOSTS = "localhost,127.0.0.1,::1,testserver"
+UNSAFE = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+
+
+def _env_list(name: str, default: str = "") -> list[str]:
+    return [item.strip() for item in os.environ.get(name, default).split(",") if item.strip()]
 
 TAGS = [
     {"name": "system", "description": "Health and the run-config schema with UI hints."},
@@ -75,10 +94,25 @@ def create_app(engine: Engine | None = None, *, db_url: str | None = None) -> Fa
         return JSONResponse(status_code=exc.status,
                             content={"detail": exc.detail, "errors": exc.errors})
 
-    origins = [o.strip() for o in os.environ.get(CORS_ENV, "").split(",") if o.strip()]
+    origins = _env_list(CORS_ENV)
+    hosts = _env_list(HOSTS_ENV, DEFAULT_HOSTS)
+
+    @app.middleware("http")
+    async def refuse_cross_site_writes(request: Request, call_next):
+        origin = request.headers.get("origin")
+        if request.method in UNSAFE and origin and "*" not in hosts:
+            origin_host = (urlsplit(origin).hostname or "").lower()
+            if origin not in origins and origin_host not in hosts:
+                return JSONResponse(status_code=403, content={
+                    "detail": f"cross-site request from {origin} refused; add it to "
+                              f"{CORS_ENV} to allow it", "errors": []})
+        return await call_next(request)
+
     if origins:
         app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"],
                            allow_headers=["*"], expose_headers=["Content-Disposition"])
+    if "*" not in hosts:
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=hosts)
 
     for module in (system, projects, configs, runs, operations):
         app.include_router(module.router, prefix=PREFIX, responses=ERRORS)

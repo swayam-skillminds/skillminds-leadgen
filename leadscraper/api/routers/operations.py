@@ -10,7 +10,7 @@ from sqlalchemy.engine import Engine
 from ...services import notifications, schedules, suppression
 from ...services.workspace import Workspace
 from .. import schemas as s
-from ..deps import current_workspace, get_engine
+from ..deps import current_workspace, get_engine, read_upload
 
 router = APIRouter()
 
@@ -89,7 +89,7 @@ def delete_entry(list_id: int, entry_id: int, engine: Engine = Depends(get_engin
 async def import_entries(list_id: int, file: UploadFile = File(...),
                          engine: Engine = Depends(get_engine),
                          ws: Workspace = Depends(current_workspace)):
-    return suppression.import_file(engine, ws, list_id, await file.read(),
+    return suppression.import_file(engine, ws, list_id, await read_upload(file),
                                    file.filename or "upload.csv")
 
 

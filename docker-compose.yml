@@ -16,6 +16,8 @@ x-app: &app
   environment:
     LEADSCRAPER_DB_URL: ${LEADSCRAPER_DB_URL:-sqlite:////data/leadscraper.sqlite3}
     LEADSCRAPER_CORS_ORIGINS: ${LEADSCRAPER_CORS_ORIGINS:-}
+    # Host names the API answers to (DNS-rebinding guard); add your domain or VPN name.
+    LEADSCRAPER_ALLOWED_HOSTS: ${LEADSCRAPER_ALLOWED_HOSTS:-localhost,127.0.0.1}
     # Optional credentials, passed by name (never baked into the image).
     ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     GOOGLE_SERVICE_ACCOUNT_JSON: ${GOOGLE_SERVICE_ACCOUNT_JSON:-}

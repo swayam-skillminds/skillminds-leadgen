@@ -34,6 +34,7 @@ def test_statuses_follow_rfc_9309():
     assert RobotsCache(StubHttp(404, "")).allowed("https://a.example/private/x")
     assert RobotsCache(StubHttp(403, "")).allowed("https://a.example/private/x")
     assert not RobotsCache(StubHttp(503, "")).allowed("https://a.example/")
+    assert not RobotsCache(StubHttp(429, "")).allowed("https://a.example/")
     assert RobotsCache(StubHttp(error=ConnectionError("down"))).allowed("https://a.example/")
 
 

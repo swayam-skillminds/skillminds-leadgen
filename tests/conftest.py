@@ -31,3 +31,4 @@ def _isolated_data_dir(tmp_path_factory, monkeypatch):
         monkeypatch.setenv("LEADSCRAPER_DB_URL", engine_db)
     # Runs never hold a real OS keep-awake lock in tests (test_keepawake mocks it).
     monkeypatch.setenv("LEADSCRAPER_KEEP_AWAKE", "0")
+
