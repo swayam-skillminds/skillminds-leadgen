@@ -39,7 +39,7 @@ docker compose up -d                       # both, on a server (docs/deploy.md)
 | `GET` | `/health` | Database, Chromium, disk, configured keys (booleans only), worker heartbeat. `ok` / `degraded` / `down` (503 only when the database is unreachable). |
 | `GET` | `/schema/run-config?country=&verticals=` | The run-config JSON Schema; `ui` hints per field path (label, help, widget, default, enum, required, wizard step, advanced); a minimal `example`; `applicability` (which lead types and sources run in that country, and why not); the `events` schema. |
 | `GET` | `/catalog/lead-types?country=` | Each lead type: description, where it applies, signal specs, Records columns, config schema. |
-| `GET` | `/catalog/sources?country=&verticals=&kind=&applicable=` | Each source: pack, applicability and reason, scope, `fills`, default settings, endpoint, method, terms note, `review` flag, last live check, and **health** (below). |
+| `GET` | `/catalog/sources?country=&verticals=&kind=&applicable=` | Each source: pack, applicability and reason, scope, `fills`, default settings, endpoint, method, terms note, `review` flag, last live check, and **health** (below). Since Phase 6 it also lists the sources a lead type runs itself (`lead_type: hiring` -- the five ATS boards, `hn_whos_hiring`, `careers_pages`, `board_search`; `lead_type: digital_audit` -- `upload`, `site_audit`, `pagespeed`). |
 | `GET` | `/presets` | Shipped presets and the user's own (imported through bundles). |
 
 **Source health** rolls up the workspace's last 20 finished runs: units, productive / empty / failed units, failures by reason, blocks (`blocked`, `login_wall`, …), and success / failure / block rates. The status is:
@@ -119,6 +119,7 @@ A saved config's `id` is its first version's row id, stable across versions and 
 | `POST` | `/suppression-lists/{id}/import` | CSV or XLSX upload. Columns headed name / domain / website / phone are read as such; without a header, values are classified one by one. |
 | `GET` / `POST` | `/schedules` | `{saved_config_id, cron, timezone, only_new, overrides: {depth, time_budget_minutes}}`. Cron has five fields, names and steps, and `@daily`/`@weekly`/`@monthly`; it is read in the IANA timezone. |
 | `GET` / `PATCH` / `DELETE` | `/schedules/{id}` | Disabling clears `next_run_at`. |
+| `POST` | `/audit/targets` | Phase 6: a CSV or XLSX of businesses or domains (columns name / website / phone / category / place and synonyms; without a header, each cell is a site or a name) → `{targets, read, skipped}`, ready for `lead_types.digital_audit.targets`. Nothing is stored or run. CLI: `leadscraper audit targets FILE`. |
 | `POST` | `/schedules/{id}/run` | Queue its run now. |
 | `GET` / `POST` | `/notifications` | `desktop` (local mode only), `webhook` (`{url}`; Slack/Teams read the `text` field), `email` (`{host, port, security, username, password_secret_name, from, to}`; the secret's name must start with `notify-`). Webhook and SMTP hosts on loopback, link-local or private addresses are refused unless `LEADSCRAPER_ALLOW_PRIVATE_TARGETS=1`. Events: `run_completed`, `run_failed`, `needs_attention` (completed, but a lead type failed, ≥25 % of units failed, or sources were blocked ≥5 times). |
 | `GET` / `PATCH` / `DELETE` | `/notifications/{id}` | |

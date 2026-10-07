@@ -224,9 +224,20 @@ lead_types:
     categories: [{name: Dentists}]
 ```
 
+Lead types beyond local businesses (Phase 6, `docs/lead-types.md`) find a
+reason to buy now. Add them to the same config:
+
+```yaml
+lead_types:
+  local_business: {categories: [{name: Dentists}]}
+  hiring: {boards: [greenhouse:acme]}          # tech roles: ATS boards, HN, careers pages
+  digital_audit: {}                            # audit every organisation the run found
+```
+
 ```bash
 python run.py --config my-run.yaml --dry-run          # plan; no requests
 python run.py --config presets/nashik-venues.yaml     # a shipped preset
+python -m leadscraper audit targets my-list.xlsx      # a list of businesses -> digital_audit YAML
 python -m leadscraper presets                         # list presets
 python -m leadscraper config validate my-run.yaml
 python -m leadscraper db info                         # projects and sizes

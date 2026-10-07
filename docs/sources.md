@@ -80,6 +80,44 @@ becomes "Bangalore" on Justdial).
 | `instagram` (enricher) | `https://www.instagram.com/{handle}/` | requests | 8–20 s, at most 150 profiles a run | Public profiles only, never logged into. Rate-limits fast | Not re-verified in Phase 1 |
 | `linkedin_serp` | SERP `site:linkedin.com/in "…"` | via `google_search` | 15–30 s | **LinkedIn is never fetched**: only profile URLs a search engine already indexed are recorded (A.2.4) | n/a |
 
+## `hiring` lead type (Phase 6.2; every country)
+
+Re-verified live on **2026-10-07** (A.9.2). Each ATS board is one company's
+published postings, read through the JSON the ATS serves for career sites.
+The tests use fictional fixtures in exactly these shapes; `pytest -m live
+tests/test_hiring.py` reads one real public board per ATS and the current HN
+thread (all passed on 2026-10-07).
+
+| Source | Endpoint | Method | Auth | Default delays | Terms note | Last verified |
+|---|---|---|---|---|---|---|
+| `greenhouse` | `https://boards-api.greenhouse.io/v1/boards/{token}/jobs` (+ `/{token}` for the name) | requests, JSON | none | 1–2.5 s per API host | Greenhouse's Job Board API docs: board data is public, GET needs no auth. Each job carries `company_name` | **2026-10-07**: 200, `jobs[]` {title, absolute_url, location.name, first_published, updated_at, company_name}, `meta.total` |
+| `lever` | `https://api.lever.co/v0/postings/{token}?mode=json` | requests, JSON | none | 1–2.5 s | Lever Postings API (github.com/lever/postings-api): published postings, public. No company name: the board token stands in | **2026-10-07**: 200, `[]` {text, hostedUrl, categories.location, workplaceType, createdAt (epoch ms)} |
+| `ashby` | `https://api.ashbyhq.com/posting-api/job-board/{token}` | requests, JSON | none | 1–2.5 s | Ashby's public job posting API, meant for career sites (its docs). Unlisted jobs (`isListed: false`) are skipped | **2026-10-07**: 200, `jobs[]` {title, jobUrl, location, isRemote, workplaceType, publishedAt, isListed} |
+| `workable` | `https://apply.workable.com/api/v1/widget/accounts/{token}` | requests, JSON | none | 1–2.5 s | The JSON behind Workable's documented embeddable jobs widget; not itself a documented API (the documented API needs the employer's token). **To review against A.2.4** | **2026-10-07**: 200 for a real account (`{name, jobs[]}` with title, url, city, country, telecommuting, published_on); 404 otherwise |
+| `smartrecruiters` | `https://api.smartrecruiters.com/v1/companies/{token}/postings?limit=100&offset=…` | requests, JSON | none observed | 1–2.5 s | Answers without a key for companies with a public feed (verified), but SmartRecruiters' docs now describe API-key/OAuth access for the Posting API. **To review against A.2.4** | **2026-10-07**: 200 without auth, `content[]` {id, name, releasedDate, location{fullLocation, remote}, company{name}} |
+| `hn_whos_hiring` | `https://hn.algolia.com/api/v1/search_by_date?tags=story,author_whoishiring`, then `/api/v1/items/{thread id}` | requests, JSON; two requests per monthly thread | none | 1–2.5 s | The public HN Search API by Algolia; 10,000 requests/hour/IP is the commonly cited limit. Ads are posted by the hiring companies themselves | **2026-10-07**: 200; "Ask HN: Who is hiring? (October 2026)", 236 top-level ads |
+| `careers_pages` | the organisation's own site: home, then one careers page | requests | none | 1.5–4 s per site | The business's public pages; robots.txt honoured. ATS boards found there are read through the ATS's API above | n/a (any site) |
+| `board_search` (opt-in) | Google search (then DuckDuckGo) for `site:boards.greenhouse.io …` pages naming the place | via `google_search`'s SERP client, no browser | none | 12–28 s | As `google_search`: Google's terms restrict automated queries. **Off by default; to review against A.2.4** | not re-verified (same client as `google_search`) |
+
+**Excluded** (A.2.4): Upwork, Indeed, Glassdoor, LinkedIn Jobs.
+
+**Country job boards** (Phase 6.2 "in packs only where terms allow"): none
+qualifies yet, so no pack carries one; the first that does would add a
+hiring unit applicable to its countries.
+
+| Board | Checked 2026-10-07 | Verdict |
+|---|---|---|
+| Naukri (IN) | Terms: no "automated program … spiders, robots, crawlers to access, … scrape, crawl or otherwise extract data" | Excluded |
+| Arbeitnow (EU/UK; free keyless API at `/api/job-board-api`) | API works (200, 325 jobs/page); its terms' use licence forbids use "for any commercial purpose", and API use requires a link back | Excluded: we are a commercial lead generator |
+
+## `digital_audit` lead type (Phase 6.1; every country)
+
+| Source | Endpoint | Method | Auth | Default delays | Terms note | Last verified |
+|---|---|---|---|---|---|---|
+| `upload` | your own list: `targets`, `domains`, `targets_file`, `POST /audit/targets` | none | — | — | Your data | n/a |
+| `site_audit` | the organisation's own site: one TLS handshake, the homepage (HTTPS, then HTTP), at most one contact page, a HEAD (or streamed GET) per checked homepage link (8 by default) | requests + `ssl` | none | 1–3 s per site; 6 sites at once | The business's public pages. **robots.txt honoured for every page and every link** (`runtime.robots_txt`, on by default); a site that refuses us is recorded and left unjudged. Never logs in, never submits a form | **2026-10-07**: `pytest -m live tests/test_digital_audit.py` audits example.com (IANA's reserved site): reachable over HTTPS, valid certificate |
+| `pagespeed` | `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=…&strategy=mobile&category=performance&key=…` | requests, JSON | an API key (secret `pagespeed-api-key`): optional on paper, needed in practice | 1–2 s; at most 25 calls a run | Google's official, free API; its docs recommend a key for automated use. The key goes only to `www.googleapis.com` and is never logged or recorded | **2026-10-07**: keyless request answered 429 "Quota exceeded for quota metric 'Queries' and limit 'Queries per day'"; no key was available to test a 200 |
+
 ## Open questions for the project owner
 
 A.2.4 says: never scrape sites whose terms prohibit it when a public API
@@ -89,6 +127,10 @@ that line:
 - Google Maps and Search: the Places and Custom Search APIs are paid.
 - Airbnb and Booking.com.
 - Instagram and Facebook: the Graph APIs are restricted.
+
+Phase 6 adds three of its own to review: `workable` (an undocumented widget
+endpoint), `smartrecruiters` (its docs now describe key-based access) and the
+opt-in `board_search` (Google SERP).
 
 Phase 1 moved these sources into packs without changing their behaviour.
 Whether each one stays, moves to an official API, or is retired is a
