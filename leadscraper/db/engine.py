@@ -124,26 +124,47 @@ def refuse_legacy_store(url: str) -> None:
 
 def init_schema(engine: Engine) -> None:
     """Create, upgrade, or refuse -- see the module docstring."""
+    refuse_legacy_store(str(engine.url))
+    sqlite = is_sqlite(str(engine.url))
+    with _init_lock, engine.connect() as connection:
+        if sqlite:
+            # SQLite migrations run in batch mode, which rebuilds a table (copy,
+            # DROP the old one, rename). With foreign keys enforced, that DROP
+            # cascade-deletes every child row -- a run's units, failures and
+            # memberships -- so they are off for the migration. Set outside any
+            # transaction: SQLite ignores the pragma inside one.
+            connection.exec_driver_sql("PRAGMA foreign_keys=OFF")
+            connection.commit()
+        try:
+            with connection.begin():
+                _create_or_upgrade(connection)
+        finally:
+            if sqlite:
+                connection.rollback()        # whatever a failed migration left open
+                connection.exec_driver_sql("PRAGMA foreign_keys=ON")
+                connection.commit()
+
+
+def _create_or_upgrade(connection) -> None:
     from alembic import command
 
-    refuse_legacy_store(str(engine.url))
-    with _init_lock, engine.begin() as connection:
-        if _sqlite_file(str(engine.url)) is not None:
-            connection.exec_driver_sql("PRAGMA journal_mode=WAL")
-        tables = set(inspect(connection).get_table_names())
-        if "leads" in tables and "alembic_version" not in tables:
-            raise LegacyDatabaseError(
-                f"{engine.url} is an original lead store; import it with "
-                "`python -m leadscraper migrate-legacy` instead of opening it")
-        if not (tables - {"alembic_version"}):
-            # Fresh database: the models are the schema; record it as current.
-            Base.metadata.create_all(connection)
-            command.stamp(alembic_config(connection), "head")
-            log.debug("created schema at %s (revision %s)", engine.url, head_revision())
-            return
-        if current_revision(connection) != head_revision():
-            log.info("upgrading %s to schema revision %s", engine.url, head_revision())
-            command.upgrade(alembic_config(connection), "head")
+    url = str(connection.engine.url)
+    if _sqlite_file(url) is not None:
+        connection.exec_driver_sql("PRAGMA journal_mode=WAL")
+    tables = set(inspect(connection).get_table_names())
+    if "leads" in tables and "alembic_version" not in tables:
+        raise LegacyDatabaseError(
+            f"{url} is an original lead store; import it with "
+            "`python -m leadscraper migrate-legacy` instead of opening it")
+    if not (tables - {"alembic_version"}):
+        # Fresh database: the models are the schema; record it as current.
+        Base.metadata.create_all(connection)
+        command.stamp(alembic_config(connection), "head")
+        log.debug("created schema at %s (revision %s)", url, head_revision())
+        return
+    if current_revision(connection) != head_revision():
+        log.info("upgrading %s to schema revision %s", url, head_revision())
+        command.upgrade(alembic_config(connection), "head")
 
 
 def open_database(target: str | Path) -> Engine:

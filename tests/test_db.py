@@ -50,6 +50,46 @@ def test_alembic_migrations_build_exactly_the_models(tmp_path):
     engine.dispose()
 
 
+def test_upgrading_an_old_database_keeps_every_child_row(tmp_path):
+    """SQLite batch migrations rebuild tables; the DROP must not cascade.
+
+    With foreign keys enforced, rebuilding ``runs`` (0002) or ``workspaces``
+    (0003) deleted every project, run, unit and failure under them. The
+    upgrade now runs with foreign keys off, and they are back on after.
+    """
+    from alembic import command
+
+    from leadscraper.db.engine import init_schema
+
+    engine = make_engine(f"sqlite:///{tmp_path / 'old.sqlite3'}")
+    with engine.begin() as conn:
+        command.upgrade(alembic_config(conn), "0001")
+        for sql in (
+            "INSERT INTO workspaces (id, name, created_at) VALUES (1, 'default', '2026-10-01')",
+            "INSERT INTO projects (id, workspace_id, name, slug, description, created_at, "
+            "updated_at) VALUES (1, 1, 'p', 'p', '', '2026-10-01', '2026-10-01')",
+            "INSERT INTO runs (id, workspace_id, project_id, status, config_snapshot, kind, "
+            "stats, error, created_at) VALUES (1, 1, 1, 'completed', '{}', 'run', '{}', '', "
+            "'2026-10-01')",
+            "INSERT INTO work_units (workspace_id, run_id, lead_type, source, scope, status, "
+            "found, error) VALUES (1, 1, 'local_business', 'google_maps', 'combo', 'done', 3, '')",
+            "INSERT INTO failures (workspace_id, run_id, source, reason, detail, created_at) "
+            "VALUES (1, 1, 'justdial', 'blocked', '', '2026-10-01')",
+        ):
+            conn.execute(text(sql))
+    init_schema(engine)
+    with engine.connect() as conn:
+        counts = [conn.execute(text(f"SELECT count(*) FROM {t}")).scalar()
+                  for t in ("workspaces", "projects", "runs", "work_units", "failures")]
+        assert counts == [1, 1, 1, 1, 1]
+        assert conn.execute(text("SELECT version_num FROM alembic_version")).scalar() \
+            == head_revision()
+        assert conn.exec_driver_sql("PRAGMA foreign_keys").scalar() == 1
+        assert conn.execute(text("SELECT settings FROM workspaces")).scalar() == "{}"
+        assert conn.execute(text("SELECT files FROM runs")).scalar() == "[]"
+    engine.dispose()
+
+
 def test_every_owned_table_carries_workspace_id():
     """A.2.2: auth can arrive later without remodelling the data."""
     # Worker processes serve every workspace; they hold no user data.

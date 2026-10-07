@@ -896,7 +896,7 @@ def test_migration_0002_upgrades_a_database_with_runs_in_it(tmp_path):
     from alembic import command
     from sqlalchemy import text
 
-    from leadscraper.db.engine import alembic_config, make_engine
+    from leadscraper.db.engine import alembic_config, init_schema, make_engine
 
     engine = make_engine(f"sqlite:///{tmp_path / 'old.sqlite3'}")
     with engine.begin() as conn:
@@ -912,8 +912,7 @@ def test_migration_0002_upgrades_a_database_with_runs_in_it(tmp_path):
         conn.execute(text("INSERT INTO unit_stats (workspace_id, source, area, category, runs, "
                           "total_seconds, total_new_leads, last_run) VALUES "
                           "(1, 'google_maps', 'A', 'C', 2, 100.0, 10, 0)"))
-    with engine.begin() as conn:
-        command.upgrade(alembic_config(conn), "head")
+    init_schema(engine)                     # how the application upgrades a database
     run = get_run(engine, 1)
     assert run["request"] == {} and run["attempts"] == 0 and run["active_seconds"] == 0
     assert UnitStatsReader(engine, 1).unit("google_maps", "A", "C").runs == 2
