@@ -174,6 +174,17 @@ queued ──► running ──► completed | failed
   `failed` with the error, and it stays resumable. Bookkeeping that fails for
   a single unit is logged and costs that unit's checkpoint, not the run.
 
+## AI in a run (Phase 5; `docs/ai.md`)
+
+When the config enables AI, the runner builds **one** `AIClient` for the run
+(config + workspace settings) and hands it to every lead type
+(`LeadTypeContext.ai`): one budget, one cache, one ledger. After each lead
+type's post-discovery passes the runner publishes `ai_spend` and writes the
+ledger's new rows to `ai_usage` (again when the run ends: rows are deltas, so
+nothing counts twice). The estimator's `ai` block sums the lead types'
+`ai_estimate` and caps it at the shared budget. A client that can't start (no
+usable provider) leaves AI off; it never fails a run.
+
 ## Events (`events.py`)
 
 Every event is a pydantic model with a `type` discriminator (JSON Schema:

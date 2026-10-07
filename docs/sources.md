@@ -25,6 +25,25 @@ requests to that host, random in the range); a config can change them.
 | `maps_lookup` (enricher) | Google Maps search by venue name | Playwright | none | 2.5–6 s | As `google_maps` | Not re-verified in Phase 1 |
 | Geocoder (`core/geo.py`) | `https://nominatim.openstreetmap.org/search?q=…&format=jsonv2&limit=1&addressdetails=1&countrycodes={cc}` | requests | none; identifying User-Agent required | at most 1 req/s; every answer, misses included, cached in `<data_dir>/cache/geocode.json` | [Nominatim usage policy](https://operations.osmfoundation.org/policies/nominatim/): ≤ 1 req/s, identify the app, cache results, no bulk geocoding. Used only for the few place names in a config | **2026-10-06**: 200 OK, `[{lat, lon, display_name, boundingbox, address{state, country_code}}]` for "Austin", US |
 
+### AI sources (Phase 5; built only with their AI feature)
+
+| Source | Endpoint | Method | Auth | Default delays | Terms note | Last verified |
+|---|---|---|---|---|---|---|
+| `ai_web_search` | the configured AI provider's web search, then each result page | provider API, then requests (robots.txt honoured) | the provider's key | provider calls unpaced; pages at the `website` pacing per host | A lead needs a source URL the search returned, a page we fetched, and its name and contacts on that page. Feature `web_search_discovery` | 2026-10-07: provider API docs (below); no live call |
+| `ai_directory` | approved candidate sources (`/ai/candidate-sources`) | requests; self-healing CSS selectors, AI only for a new or changed layout | none | at least 3–8 s per directory host | Each candidate's terms are the approver's call (its `terms_note`); robots.txt honoured; never login walls; Upwork, Indeed, Glassdoor and LinkedIn are never proposed. Feature `source_discovery`. **Each approval is an A.2.4 decision** | n/a (per candidate) |
+
+## AI providers (Phase 5; `docs/ai.md`)
+
+Re-verified against the providers' own documentation on **2026-10-07** (A.9.2). No live call was made: no key was configured on this machine. `tests/test_ai_live.py` (`pytest -m live`) makes one tiny call per configured provider, under $0.10 in total.
+
+| Provider | Endpoint | Auth | Structured output / web search | Rate limits | Terms note |
+|---|---|---|---|---|---|
+| Anthropic | `POST https://api.anthropic.com/v1/messages` via the official `anthropic` SDK 1.x (`anthropic-version: 2023-06-01`) | `x-api-key` | `output_config.format` (json_schema); server tool `web_search_20260209` / `web_search_20250305`; refusal fallback beta `server-side-fallback-2026-07-01` | per account tier; 429 `rate_limit_error`, 529 `overloaded_error` | Pay-as-you-go API billing, separate from a Claude subscription |
+| OpenAI | `POST https://api.openai.com/v1/responses` | `Authorization: Bearer` | `text.format` json_schema (strict); tool `web_search`, sources via `include: ["web_search_call.action.sources"]` | per tier; 429 `rate_limit_exceeded` vs `insufficient_quota` | Pay-as-you-go; web search $10 / 1k calls |
+| Google Gemini | `POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent` | `x-goog-api-key` | `generationConfig.responseMimeType` + `responseSchema`; tool `googleSearch` (grounding chunks are redirect links; their titles are the source domains) | per project; 429 `RESOURCE_EXHAUSTED` | Grounding with Google Search $14 / 1k requests (Gemini 3) after a free allowance |
+| OpenAI-compatible | `POST {base_url}/chat/completions` (OpenRouter, Groq, Ollama, LM Studio) | `Authorization: Bearer`, or none locally | `response_format` json_schema when the entry declares it | the endpoint's | The endpoint's own terms |
+| Claude Code CLI | `claude -p --output-format json` (CLI 2.1.x; flags checked with `claude --help`) | your Claude Code login | JSON + validation (`--json-schema` exists; off by default) | your plan's usage limits | Draws on the subscription allowance; no separate bill |
+
 ## `in` pack (India)
 
 | Source | Endpoint | Method | Default delays | Terms note | Last verified |

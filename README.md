@@ -61,7 +61,7 @@ search engine has already indexed are recorded.
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e ".[dev]"      # deps live in pyproject.toml; add ,ai for the Anthropic SDK backend
+pip install -e ".[dev]"      # deps live in pyproject.toml; add ,ai for the Anthropic provider (SDK)
 playwright install chromium
 ```
 
@@ -360,47 +360,51 @@ unchanged.
 
 ## Optional AI layer
 
-Off by default. When on, AI only ever **adds** information — it never deletes a
-lead, and everything it returns is re-validated by the same normalisers that
-scraped data goes through, so a malformed or invented phone number is rejected
-before it reaches the sheet.
+Off by default, opt-in feature by feature, and capped in dollars per run. AI
+only ever **adds** information, and never a contact detail the fetched page
+doesn't carry: every AI-supplied phone, email or address must appear in the
+page text, or it is dropped. A run whose AI fails ends exactly where the same
+run without AI ends. The full reference is **[docs/ai.md](docs/ai.md)**.
 
-### Auth and billing: subscription only, by default
+### Providers
 
-| Backend | Auth | Billing |
-|---|---|---|
-| `claude_cli` **(default)** | Your Claude Code subscription, via `claude --print` | **Draws on your existing subscription allowance. No separate bill.** |
-| `anthropic_api` | `ANTHROPIC_API_KEY` | Pay-as-you-go API billing, **separate** from the subscription |
+Anthropic (official SDK), OpenAI, Google Gemini, any OpenAI-compatible endpoint
+(OpenRouter, Groq, a local Ollama or LM Studio), and the `claude` CLI on your
+Claude Code subscription. Each has a cheap **worker** model and a stronger
+**judge** model; model ids and prices are data (`leadscraper/ai/defaults.yaml`),
+overridable per workspace or per run. List several and they form a **fallback
+chain**: one that is out of credit is dropped for the run, and when none is
+left the run carries on without AI.
 
-The default is pinned to `claude_cli`, and `ai.allow_billed_api` is `false`.
-While that flag is off, a backend that bills separately is **never selected** —
-not by `auto`, not even if you name it explicitly, and not if an
-`ANTHROPIC_API_KEY` happens to be sitting in your environment. Spending money
-has to be a deliberate choice, so an accidental key can't quietly start
-charging you. There are tests for exactly this.
+```bash
+python -m leadscraper secrets set anthropic-api-key     # keys live in the OS keychain (or env / secret files)
+python -m leadscraper ai providers                      # which are usable; keys shown only as yes/no
+python -m leadscraper ai test anthropic                 # one tiny connectivity call
+```
 
-To opt in to per-call API billing, set both `backend: "anthropic_api"` and
-`allow_billed_api: true`.
-
-**About the dollar figures.** On the subscription backend the `$` amounts in
-the run report are list-price *equivalents* that the CLI reports for the tokens
-used — they are an accounting figure, not an invoice. What you actually consume
-is your subscription allowance, the same bucket your interactive Claude Code
-sessions draw from. The practical limit is therefore your plan's usage limits,
-not a credit-card charge: a very large run can use up enough of your allowance
-to slow your own interactive sessions. `max_cost_usd` doubles as the throttle
-for that — it caps token spend regardless of which backend is in use.
-
-Each CLI invocation spawns a process, which is why records are sent in batches
-of 12 rather than one at a time; that's what makes it economic.
+**Spending money is an explicit choice.** A provider that bills separately is
+used only when your config or workspace names it, and never while
+`ai.allow_billed_api` is `false` (the Mumbai and Nashik presets keep the
+`claude` CLI on your subscription, as before). A stray `ANTHROPIC_API_KEY` in
+the environment changes nothing. On the subscription the `$` figures are
+list-price equivalents that count against the cap, not an invoice.
 
 ### What it does
 
-| Feature | When it runs | What it fixes |
-|---|---|---|
-| `extract` | A page fetched fine but the selectors/regexes found nothing | Reads the contacts straight out of the page text. This is the answer to scraper brittleness — a site redesign stops costing you that lead. Failure-triggered, so volume is naturally low. |
-| `names` | After discovery, on leads whose names came from search-result titles | Turns `"Studio Fine Arts \| Best Wedding Photographer in Powai Mumbai"` into `"Studio Fine Arts"`, and flags titles like `"Event Photographer in Mumbai"` as category pages rather than businesses. |
-| `dedup` | Ambiguous duplicate pairs (opt-in, not on by default) | Adjudicates cases the phone/fuzzy-name rules can't settle. |
+| Feature | |
+|---|---|
+| `icp_builder` | "We sell ERP to manufacturers in Pune" → a draft run config, from Skillminds' offerings; returned for you to review, never run (`leadscraper ai icp "..." -o draft.yaml`) |
+| `planner` | Areas, search synonyms and title variants for a config; suggestions only |
+| `source_discovery` | Proposes extra directories as candidate sources; the ones you approve are read by a generic extractor with self-healing selectors (AI only when a layout is new or changed) |
+| `web_search_discovery` | The provider's web search as a discovery source; each business is kept only with a page we fetched ourselves |
+| `extraction_fallback` (`extract`) | Reads contacts off pages whose selectors found nothing |
+| `normalisation` (`names` ...) | Clean names, industry tags, a company-size estimate (labelled), duplicate adjudication |
+| `venue_classification` (`venues`) | Venue types the rules could not settle |
+| `lead_summary` | One factual line per organisation; never outreach copy |
+
+An empty `ai.features` means `extract`, `names`, `venues`: what the original
+runs used. AI attributes show in the workbook as **Summary (AI)**, **Industry
+(AI)** and **Company Size (AI estimate)**.
 
 ### Usage
 
@@ -409,47 +413,25 @@ python run.py --ai                          # enable for this run
 python run.py --ai --ai-budget 2.00         # hard USD cap
 python run.py --ai --ai-feature extract     # just one feature
 python run.py --no-ai                       # force off
+python run.py --ai-unlimited                # no cap: until the provider's own quota stops it
 ```
 
-Or set `ai.enabled: true` in `config.yaml` to make it the default.
-
-### Running until the allowance runs out
-
-```bash
-python run.py --ai-unlimited
-```
-
-No usage cap. AI runs until your Claude Code subscription allowance is
-exhausted, at which point the scraper **detects it, switches itself to non-AI
-mode, and finishes the run normally**. You get a line in the summary saying
-when and why AI stopped, and the leads gathered before and after are all in the
-same output. Losing AI degrades the run; it never ends it.
-
-A circuit breaker does the same after `failure_limit` consecutive AI failures
-(default 4), so a broken backend can't spend hours spawning dead processes.
-
-### Model families that are blocked
-
-Fable and Mythos models bill as **external credits** rather than drawing on a
-subscription allowance, so they are refused in code — `safe_model()` swaps any
-`claude-fable-*` / `claude-mythos-*` id for the default worker model and logs
-it, no matter what `config.yaml` says. Bulk work uses `claude-haiku-4-5`;
-duplicate adjudication uses `claude-opus-5`.
+Or set `ai:` in a run config (`enabled`, `providers`, `features`, `budget_usd`).
 
 ### Safeguards
 
-- **Hard budget.** `max_cost_usd` (default $5) disables the layer once hit —
-  mid-run, not at the end. `--ai-budget 0` really does mean zero.
-- **Cached.** Responses are content-addressed in `data/ai_cache.sqlite3`, so a
-  re-run never pays for the same call twice.
-- **Never fatal.** A backend that times out, errors, or returns non-JSON is
-  logged to `logs/failures.jsonl` under source `ai` and the run continues.
-- **Model choice.** Bulk extraction and classification use `claude-haiku-4-5`;
-  only duplicate adjudication uses `claude-opus-5`. Both configurable.
-
-Rough usage: about **$0.003 per record** in list-price terms, so a run touching
-1,000 leads consumes ~$1.60-equivalent of subscription allowance and ~15 minutes
-of AI time on the CLI backend.
+- **Hard budget.** A call that would cross `budget_usd` is not made: AI stops
+  mid-run and the run continues. `--ai-budget 0` really means zero. The
+  estimate (`--dry-run`, `POST /estimate`) shows the expected AI cost per feature.
+- **Cached and ledgered.** Answers are cached (`<data dir>/cache/ai_cache.sqlite3`),
+  so a re-run never pays twice; spend is recorded per run, provider and feature
+  (`GET /api/v1/ai/usage`).
+- **Validated.** Every answer must match a schema; invalid output is retried
+  once, then skipped.
+- **Never fatal.** Errors, refusals and exhausted quotas are failure records
+  under source `ai`; a circuit breaker stops after 4 consecutive failures.
+- **Blocked models.** Fable and Mythos families (billed as extra credits) are
+  never selected, whatever a config says.
 
 ---
 

@@ -51,7 +51,12 @@ it 1 GB per concurrent browser unit (`runtime.discovery_workers`, default 3).
    POSTGRES_PASSWORD=<a long random password>
    LEADSCRAPER_DB_URL=postgresql+psycopg://leads:<same password>@postgres:5432/leads
    # Optional:
-   ANTHROPIC_API_KEY=...                  # the AI layer's API backend
+   # AI provider keys (optional; docs/ai.md). Named secrets, never in the database:
+   LEADSCRAPER_SECRET_ANTHROPIC_API_KEY=...
+   LEADSCRAPER_SECRET_OPENAI_API_KEY=...
+   LEADSCRAPER_SECRET_GEMINI_API_KEY=...
+   # (or mount files /run/secrets/anthropic-api-key ...; then pick the chain with
+   #  PATCH /api/v1/settings {"ai": {"providers": ["anthropic", "openai"]}})
    GOOGLE_SERVICE_ACCOUNT_JSON=/run/secrets/google.json
    LEADSCRAPER_CORS_ORIGINS=https://leads.example.com   # once a UI exists
    LEADSCRAPER_ALLOWED_HOSTS=localhost,127.0.0.1,leads.example.com   # names the API answers to

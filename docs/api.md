@@ -130,10 +130,29 @@ The worker fires due schedules on every poll. A schedule's run uses the saved co
 
 | | | |
 |---|---|---|
-| `GET` / `PATCH` | `/settings` | `retention` (`logs_days`, `events_days`, `seen_urls_days`), `keep_awake`, `robots_txt`. Also shows `data_dir`, the database (password masked) and `mode`, all read-only: they are process settings (`LEADSCRAPER_DATA_DIR`, `LEADSCRAPER_DB_URL`, `LEADSCRAPER_MODE`). Each project has its own `retention_days`. |
+| `GET` / `PATCH` | `/settings` | `retention` (`logs_days`, `events_days`, `seen_urls_days`), `keep_awake`, `robots_txt`, `ai` (providers chain, prices, assist budget -- Phase 5). Also shows `data_dir`, the database (password masked) and `mode`, all read-only: they are process settings (`LEADSCRAPER_DATA_DIR`, `LEADSCRAPER_DB_URL`, `LEADSCRAPER_MODE`). Each project has its own `retention_days`. |
 | `POST` | `/settings/purge?dry_run=` | Apply retention now. The worker does it hourly. |
 | `GET` | `/bundle/export?include_leads=&include_history=&project_id=` | A zip of saved configs (every version), presets, suppression lists, projects, schedules and settings, optionally with leads and history. **No secrets**, and no notification targets. |
 | `POST` | `/bundle/import` | Upload a bundle. Version-checked: an unknown format version, or a schema revision from a newer installation, is refused before anything is written. Additive and idempotent. Organisations go verbatim into an empty project and are merged through the identity rules into a non-empty one. Schedules arrive disabled. |
+
+### AI (Phase 5; `docs/ai.md`)
+
+Config assist calls an AI provider synchronously and returns a draft or suggestions; nothing is saved or run. It uses the workspace's providers (`/settings` → `ai.providers`) under `ai.assist_budget_usd` per request, and its usage is recorded with no run.
+
+| | | |
+|---|---|---|
+| `GET` | `/ai/providers` | Every provider kind and the workspace's own entries: capabilities, worker/judge models, `key_configured` (a boolean -- **never the key**), `key_source` (env / file / keyring), `usable` or the `problem`, `bills_separately`, the chain. |
+| `POST` | `/ai/providers/{name}/test` | Connectivity test: one tiny call (`{ok, model, latency_ms, cost_usd, error}`). |
+| `GET` | `/ai/offerings` | The Skillminds offerings the ICP builder starts from. |
+| `POST` | `/ai/icp` | ICP builder: `{brief, offering?, country?, places?}` → `{config, valid, errors, notes, source: ai\|preset, ai: spend}`. A draft to review and save (`POST /configs`); never run. |
+| `POST` | `/ai/plan` | Planner: `{config, roles?}` → suggestions (areas, query synonyms, title variants, lead types) and a revised valid `config`; nothing applied. |
+| `POST` | `/ai/source-discovery` | `{country, categories, places?, industry?}` → candidate sources stored as `proposed`, plus what was rejected and why (excluded by policy, a dedicated source exists, not returned by the web search). |
+| `GET` / `POST` | `/ai/candidate-sources` | List (`status`, `country`) / add one yourself (still needs approving). |
+| `POST` | `/ai/candidate-sources/{id}/decision` | `{status: approved\|rejected\|proposed}`. Approved candidates are read by the `ai_directory` source in runs whose country (and place / category) match. |
+| `DELETE` | `/ai/candidate-sources/{id}` | Delete one. |
+| `GET` | `/ai/usage?run_id=` | AI spend from the ledger: totals, by provider, by feature, rows (provider, model, feature, calls, cache hits, failures, tokens, searches, cost). |
+
+`PATCH /settings` takes `ai: {providers, prices, assist_budget_usd, assist_features}` (keys are referred to by secret name; an entry holding a key is refused). `GET /organizations/{id}` lists AI `attributes` (industry, company-size estimate, summary) with their producer. `POST /estimate` includes `ai`: calls and cost per feature, capped by the budget. `GET /health` → `keys.configured` reports `ai_anthropic_key` / `ai_openai_key` / `ai_gemini_key` as booleans.
 
 ## Live progress (SSE)
 

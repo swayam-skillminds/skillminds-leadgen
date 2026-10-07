@@ -190,6 +190,19 @@ Signals in an export: the strongest unexpired one leads ("Top Signal"); a
 signal's strength halves every `half_life_days` of age. `ScoreParts` from a
 lead type's `score()` get only that lead type's signals.
 
+## AI for lead types (Phase 5)
+
+A session gets the run's AI client as `context.ai` (None when AI is off). A
+lead type that reads news items or job posts can have them classified with
+`leadscraper.ai.features.signals.interpret(context.ai, items, self.signal_specs())`:
+only its own signal types come back, each with a strength and a verbatim
+evidence quote (an answer whose quote isn't in the item is dropped). Items
+without a verdict fall back to the lead type's own rules. Any contact detail
+AI reads must go through `ai.grounding.ground_contacts` against the fetched
+page. AI attributes go to `LeadStore.set_attribute` (never into published
+contacts) and show in the workbook's AI columns. Its usage is in the run's
+ledger under the feature it used.
+
 ## Adding a lead type
 
 1. Create `leadscraper/leadtypes/<key>/` with a `config.py` (pydantic model

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A failure-tolerant Python lead generator. It discovers businesses from free public sources (Playwright + `requests`, no paid APIs), merges them into one deduplicated **organisation** per business inside a **project**, scores and ranks them, and exports to XLSX / CSV / JSON / Google Sheets. It is a backend application with an HTTP API, a CLI and a worker over one services layer (`APP-BUILD-PROMPT.md`; Phases 0–4 are done, see `docs/phase-*-report.md`; the API is documented in `docs/api.md`, deployment in `docs/deploy.md`). Despite the directory name it does **not** use LangGraph; orchestration is plain Python (`engine/runner.py` drives each lead type's session unit by unit; `docs/engine.md`).
+A failure-tolerant Python lead generator. It discovers businesses from free public sources (Playwright + `requests`, no paid APIs), merges them into one deduplicated **organisation** per business inside a **project**, scores and ranks them, and exports to XLSX / CSV / JSON / Google Sheets. It is a backend application with an HTTP API, a CLI and a worker over one services layer (`APP-BUILD-PROMPT.md`; Phases 0–5 are done, see `docs/phase-*-report.md`; the API is documented in `docs/api.md`, deployment in `docs/deploy.md`, the AI layer in `docs/ai.md`). Despite the directory name it does **not** use LangGraph; orchestration is plain Python (`engine/runner.py` drives each lead type's session unit by unit; `docs/engine.md`).
 
 Runs are described by **run configs** (`config/schema.py`, `schema_version: 1`). Two presets reproduce the original runs:
 - `presets/mumbai-event-vendors.yaml` (Mumbai event vendors), imported from `config.yaml`.
@@ -72,6 +72,14 @@ python -m leadscraper export --run ID --format xlsx           # one run's Overvi
 WORKBOOK_UPDATE=1 python -m pytest tests/test_workbook.py -q  # accept an INTENDED workbook change (then rebuild samples)
 # Superseded 4-tab books from the local CSVs (kept as the style reference)
 .venv/bin/python tools/build_leads_workbook.py | tools/build_nashik_workbook.py
+
+# AI (Phase 5; docs/ai.md). Tests never reach a provider (mocked HTTP; tests/ai_fakes.py)
+python -m leadscraper secrets set anthropic-api-key           # keys: keychain / LEADSCRAPER_SECRET_* / secret files
+python -m leadscraper ai providers | test NAME | offerings | usage [--run ID]
+python -m leadscraper ai icp "brief" [--offering erp] [--place Pune] [-o draft.yaml]   # a draft, never run
+python -m leadscraper ai plan FILE | discover-sources --country IN --category X | candidates list|approve|reject ID
+python -m pytest -m live tests/test_ai_live.py -q             # one tiny call per CONFIGURED provider (< $0.10)
+.venv/bin/python -I tools/make_ai_fixture_pages.py tests/fixtures/pages   # the fictional AI fixture pages
 ```
 
 Full runs take many hours at the default polite delays (`--dry-run` estimates them). Don't run several copies in parallel, and don't lower delays casually (Justdial, Instagram and Google SERP block quickly). Tests isolate app state via `LEADSCRAPER_DATA_DIR` (`tests/conftest.py`); when you smoke-test by hand, point it at a scratch directory so you never touch the real per-user database.
@@ -94,26 +102,32 @@ engine/      runner.py (one project, one Run row; plan -> discover -> post -> fi
 leadtypes/   base.py (the A.7 contract), registry.py, local_business/ (config, plugin, planning, pipeline, session, estimates, scoring)
 packs/       in/ (justdial, sulekha, indiamart), events/ (wedmegood, weddingwire),
              hospitality/ (stay platforms + venues.py), social/ (facebook, instagram, linkedin_serp)
-sources/     base.py (Source/Enricher contract), registry.py, core sources: google_maps, google_search, website, maps_lookup
+sources/     base.py (Source/Enricher contract), registry.py, core sources: google_maps, google_search, website, maps_lookup,
+             ai_web_search + ai_directory (built only with their AI feature)
 net/         http.py (+ get_once), browser.py, ratelimit.py, robots.py (robots.txt, RFC 9309)
 export/      excel.py (Overview + Records), table.py (ExportTable, CSV, JSON), columns.py (column model),
              records.py (score/place/sort), summary.py (Overview numbers), outputs.py (run files),
              csv_writer.py + sheets.py (the run's legacy-layout CSV and Sheet)
-ai/          assistant.py (Phase 5 splits it)
+ai/          providers/ (anthropic SDK, openai, gemini, openai_compatible, claude_code_cli; registry),
+             defaults.yaml (models, capabilities, prices), settings.py (chain), client.py (per-run: chain,
+             cap, cache, ledger, validation), catalog.py (features -> tasks), grounding.py, pageprep.py,
+             selectors.py (self-healing), features/ (icp_builder, planner, source_discovery,
+             normalisation, signals, summary), assistant.py (local_business tasks; prompts unchanged)
 services/    the one core under API, CLI and worker (Phase 3): projects, configs (versioned), runs
              (queue/control/rerun/diff/events), organizations (filter/provenance/erase), exports, suppression,
              schedules, notifications, settings, retention, health, catalog (+ source health), schema_hints,
-             estimates (estimate/preview), bundle; errors.py (NotFound/Conflict/Invalid), workspace.py, query.py
+             estimates (estimate/preview), bundle, ai (providers, config assist, candidates, usage);
+             errors.py (NotFound/Conflict/Invalid), workspace.py, query.py
 api/         app.py (create_app, /api/v1), deps.py (current_workspace), schemas.py (models + examples),
-             routers/ (system, projects, configs, runs, operations)
+             routers/ (system, projects, configs, runs, operations, ai)
 cli/         python -m leadscraper …; run.py is a shim over cli/run_cmd.py; app_cmds.py = Phase 3 commands
 ```
 
 **Flow:** `cli/run_cmd.py` (or `engine/worker.py`) → `engine/runner.execute` → each lead type's session (`LOCAL_BUSINESS.open()` → `LocalBusinessSession` over `Pipeline`):
 - discovery: the engine schedules the session's units (`planning.plan_discovery` order; by priority under a time budget), in parallel across hosts, checkpointing each in `work_units`;
 - for venue runs, AI venue classification and the brand roll-up;
-- name polish (AI, or the rule fallback when AI is off);
-- enrichment, then AI fallback extraction;
+- name polish (AI, then the rule fallback for every name AI did not answer);
+- enrichment, then AI fallback extraction (grounded), AI normalisation and lead summaries (Phase 5, opt-in);
 - finalise: rescore, write the legacy CSV (`output.csv`), sync Sheets, report;
 - then `runner.execute` writes the workbook / JSON from the database (`output.excel`, on by default; `output.json`) and records them in `runs.files`.
 
@@ -199,12 +213,14 @@ Keep this property when you add or modify sources.
 - In exports, every lead type an organisation belongs to scores it (`export/records.score_records`). Weights renormalise per run (a component some lead type scores counts 0 where missing), and reach is core (`core.scoring.contact_reach`) for organisations no reach-scoring lead type found. With `local_business` alone this equals the legacy score.
 - Weights and `venue_tiers` changes only need `--export-only`.
 
-**AI layer** (`ai/assistant.py`):
-- Optional: off unless the config enables it or `--ai` is passed; `--no-ai` forces it off.
-- Name polish sends title-derived names and keyword-stuffed names. Without AI, keyword-stuffed names are cut back by rule (`core.normalize.seo_title_head`).
-- Backends: the `claude` CLI in `--print` mode, or the Anthropic SDK when `ANTHROPIC_API_KEY` is set.
-- Cached in `data/ai_cache.sqlite3`, with a USD budget cap; quota errors fall back silently, and every call degrades to `None` on failure.
-- `BLOCKED_MODEL_FAMILIES` is never selected.
+**AI layer** (Phase 5, `docs/ai.md`):
+- Optional and opt-in: off unless the config enables it or `--ai` is passed (`--no-ai` forces it off). Each feature is named in `ai.features`; empty = the legacy `extract`, `names`, `venues` (what the presets use). Features map to tasks in `ai/catalog.py`.
+- One `AIClient` per run (`runner._ai_client`, `LeadTypeContext.ai`, `SourceContext.ai`): fallback chain, one hard USD cap (a call that would cross it is never made), cache keyed by provider kind + model + schema + prompt (the pre-Phase-5 key still read for Claude providers), a ledger flushed to `ai_usage` (deltas) per provider/model/feature. Nothing raises to callers; AI off is always a valid outcome.
+- Chain: config `ai.providers` → legacy `ai.provider` → workspace `settings.ai.providers` → `claude_code_cli`. A billed provider only when named, never with `allow_billed_api: false`; `BLOCKED_MODEL_FAMILIES` (Fable, Mythos) never selected. Model ids and prices are data (`ai/defaults.yaml`, overridable).
+- Keys are secrets referred to by name (`key_secret_name`); never in the DB, logs, bundles or exports; the API shows booleans only. `providers/registry._guard_key`: a built-in provider's secret only goes to its own default endpoint; `key_env` only from defaults; `notify-*` refused.
+- **Grounding:** every AI-supplied contact detail must be on the fetched page (`ai/grounding.py`), or it is dropped (`ai_ungrounded_dropped`). AI attributes (industry, size estimate, summary) live in `org_attributes` (`LeadStore.set_attribute`), labelled "(AI)" / "(AI estimate)" in the workbook. Every call is validated against a pydantic model; invalid → retried once, then skipped.
+- Name polish: AI first; names it didn't answer are cleaned by rule, so a failing provider ends where AI off ends (`tests/test_ai_runs.py`). The `assistant.py` prompts must stay byte-identical (cache validity).
+- The `claude` CLI is a real provider: tests disable it (`tests/conftest.py::_no_real_ai`) and never call any provider; use `tests/ai_fakes.py` (mocked HTTP for requests and the Anthropic SDK's httpx2).
 
 **Config:**
 - `Config` (`config/legacy.py`) is the compiled runtime view: dotted `get`/`set` (CLI flags mutate it and are recorded in the run's snapshot).
@@ -230,6 +246,6 @@ The Google service-account key is looked up as: `GOOGLE_SERVICE_ACCOUNT_JSON` (i
 
 ## Scope notes
 
-`APP-BUILD-PROMPT.md` is the build plan (Section A context + Phases 0–8, one phase per session; Phases 0–4 are done). It supersedes `REBUILD-PROMPT.md`, of which only Parts 0, 2 and 3 still apply. Follow them only when asked to do that work.
+`APP-BUILD-PROMPT.md` is the build plan (Section A context + Phases 0–8, one phase per session; Phases 0–5 are done). It supersedes `REBUILD-PROMPT.md`, of which only Parts 0, 2 and 3 still apply. Follow them only when asked to do that work.
 
 The hard boundary applies to the project generally: this tool **generates** leads and must not grow outreach/CRM features (contact status, email sending, sequences, and so on). LinkedIn is never logged into or crawled; only search-indexed public profile URLs are recorded. `docs/sources.md` lists every external endpoint with its terms note and last live check; several inherited sources are flagged for review against A.2.4.
