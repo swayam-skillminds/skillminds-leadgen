@@ -1,0 +1,3523 @@
+{
+ "Overview": {
+  "autofilter": null,
+  "cells": {
+   "A1": {
+    "align": "center",
+    "font": "Arial 16 b #1F3864",
+    "t": "s",
+    "v": "Sample Pune news and decision-makers — Lead Book"
+   },
+   "A100": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "People Found"
+   },
+   "A101": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Inferred Email (unverified)"
+   },
+   "A102": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Decision Makers"
+   },
+   "A103": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Decision Maker Profile"
+   },
+   "A104": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Decision Maker Email"
+   },
+   "A105": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Fit"
+   },
+   "A106": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Intent"
+   },
+   "A107": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Reach"
+   },
+   "A108": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Score Reasons"
+   },
+   "A109": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Top Signal"
+   },
+   "A11": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "RUN SUMMARY"
+   },
+   "A110": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Signal Date"
+   },
+   "A111": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "News Events"
+   },
+   "A112": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "News Sources"
+   },
+   "A113": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "People Sources"
+   },
+   "A114": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Email Pattern"
+   },
+   "A115": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Sources"
+   },
+   "A116": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Change"
+   },
+   "A117": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Last Seen"
+   },
+   "A118": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Org ID"
+   },
+   "A12": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Project"
+   },
+   "A120": {
+    "align": "top wrap",
+    "font": "Arial 8 i #7F7F7F",
+    "t": "s",
+    "v": "Every figure is computed from the project database when the workbook is generated; Records holds the rows behind each. Contact details appear only where they were published. Re-export at any time from the API or CLI, without re-scraping."
+   },
+   "A13": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Config"
+   },
+   "A14": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Run"
+   },
+   "A15": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Date"
+   },
+   "A16": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Duration"
+   },
+   "A17": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Places"
+   },
+   "A18": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Country"
+   },
+   "A19": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Lead types"
+   },
+   "A2": {
+    "align": "center",
+    "font": "Arial 9 i #7F7F7F",
+    "t": "s",
+    "v": "5 records · sorted by score (highest first) · generated 01 Oct 2026, 15:00 (Asia/Kolkata)"
+   },
+   "A20": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Sources used"
+   },
+   "A21": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Work units"
+   },
+   "A22": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Depth"
+   },
+   "A23": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "AI"
+   },
+   "A24": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Score weights"
+   },
+   "A25": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "This workbook"
+   },
+   "A26": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Sorted by"
+   },
+   "A27": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Generated"
+   },
+   "A29": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "RESULTS"
+   },
+   "A30": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Records"
+   },
+   "A31": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Change in this run"
+   },
+   "A33": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "TOP 5 LEADS"
+   },
+   "A34": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Name"
+   },
+   "A35": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Marigold Textiles"
+   },
+   "A36": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Kestrel Robotics"
+   },
+   "A37": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Lotus Logistics"
+   },
+   "A38": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Ledgerly"
+   },
+   "A39": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Quiet Traders"
+   },
+   "A4": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "RECORDS"
+   },
+   "A41": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "BY LEAD TYPE"
+   },
+   "A42": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Lead type"
+   },
+   "A43": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Local businesses"
+   },
+   "A44": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Decision-makers"
+   },
+   "A45": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Funding & news"
+   },
+   "A47": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "BY CATEGORY"
+   },
+   "A48": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Category"
+   },
+   "A49": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Software companies"
+   },
+   "A5": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 18 b #1F3864",
+    "t": "n",
+    "v": 5
+   },
+   "A50": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "(none)"
+   },
+   "A52": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "BY NEWS EVENT"
+   },
+   "A53": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "News event"
+   },
+   "A54": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Digital transformation"
+   },
+   "A55": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Expansion"
+   },
+   "A56": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Funding round"
+   },
+   "A57": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "(none)"
+   },
+   "A59": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "BY LOCALITY"
+   },
+   "A60": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Locality"
+   },
+   "A61": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Pune"
+   },
+   "A63": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "BY SIGNAL TYPE"
+   },
+   "A64": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Signal type"
+   },
+   "A65": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "(no signal)"
+   },
+   "A66": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Digital transformation"
+   },
+   "A67": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Expansion"
+   },
+   "A68": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Funding round"
+   },
+   "A69": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Leadership change"
+   },
+   "A7": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "FILTERED VIEW"
+   },
+   "A71": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "BY SCORE BAND"
+   },
+   "A72": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Score band"
+   },
+   "A73": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "60–79"
+   },
+   "A74": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "20–39"
+   },
+   "A76": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "DATA QUALITY"
+   },
+   "A77": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Field"
+   },
+   "A78": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Any contact"
+   },
+   "A79": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Phone"
+   },
+   "A8": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "SHOWING (OF 5)"
+   },
+   "A80": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Email"
+   },
+   "A81": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Website"
+   },
+   "A82": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Address"
+   },
+   "A83": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Social profile"
+   },
+   "A84": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Google Maps listing"
+   },
+   "A85": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Decision-maker"
+   },
+   "A86": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Inferred email"
+   },
+   "A87": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Rating"
+   },
+   "A88": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Signal"
+   },
+   "A9": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 14 b #44546A",
+    "t": "f",
+    "v": "=SUBTOTAL(103,Records!$B$2:$B$6)"
+   },
+   "A90": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "COLUMN LEGEND"
+   },
+   "A91": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Column"
+   },
+   "A92": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Score"
+   },
+   "A93": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "News Event"
+   },
+   "A94": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Lead Types"
+   },
+   "A95": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Latest News"
+   },
+   "A96": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "News Date"
+   },
+   "A97": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Amount Raised"
+   },
+   "A98": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "News Link"
+   },
+   "A99": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "DM Roles"
+   },
+   "B100": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Named decision-makers found for it."
+   },
+   "B101": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Guessed from the email pattern of published addresses at the same domain (MX-checked only). Never published, never verified, never used for matching."
+   },
+   "B102": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "People found on public pages: name (title)."
+   },
+   "B103": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The first decision-maker's public profile (search-indexed only)."
+   },
+   "B104": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Addresses published for a named decision-maker on the page they were found on (never inferred)."
+   },
+   "B105": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Is it the kind of organisation we sell to? 0–100."
+   },
+   "B106": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Is there a reason to buy now (hiring, funding, tenders…)? 0–100: 0 when nothing was found, blank when no lead type in the run looks for one."
+   },
+   "B107": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Can we get hold of someone? 0–100, from the published contact channels."
+   },
+   "B108": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Why it ranks where it does: each lead type's reasons, strongest first."
+   },
+   "B109": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The strongest unexpired signal (strength fades with age)."
+   },
+   "B110": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "When the top signal happened. Green: within 30 days; amber: within 90."
+   },
+   "B111": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Every recent event found for it."
+   },
+   "B112": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Outlets that covered it (from GDELT, feeds or press releases)."
+   },
+   "B113": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Where they were read: its own team pages, a company registry, LinkedIn search results, GitHub."
+   },
+   "B114": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The address pattern its published addresses reveal (the basis of Inferred Email); MX-checked only, never verified."
+   },
+   "B115": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Which sources found or enriched it."
+   },
+   "B116": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "What this run did: New (first found), Updated (added something), Unchanged (found again, nothing to add)."
+   },
+   "B117": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The last run that found it (or changed it)."
+   },
+   "B118": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The organisation's id in the API (/organizations/{id})."
+   },
+   "B12": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Sample Pune news and decision-makers"
+   },
+   "B13": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Sample Pune news and decision-makers"
+   },
+   "B14": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "#1 · completed"
+   },
+   "B15": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "30 Sep 2026, 15:00 (Asia/Kolkata)"
+   },
+   "B16": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "12 min"
+   },
+   "B17": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune"
+   },
+   "B18": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "India (IN)"
+   },
+   "B19": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses, Funding & news, Decision-makers"
+   },
+   "B20": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "google_maps (4 found), gdelt (9 found)"
+   },
+   "B21": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "2 of 2 done"
+   },
+   "B22": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "balanced"
+   },
+   "B23": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "off"
+   },
+   "B24": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Fit 40% · Intent 40% · Reach 20%"
+   },
+   "B25": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "organisations this run found"
+   },
+   "B26": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "score (highest first)"
+   },
+   "B27": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "01 Oct 2026, 15:00 (Asia/Kolkata), from the project database"
+   },
+   "B30": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "5"
+   },
+   "B31": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "5 new · 0 updated · 0 found again unchanged"
+   },
+   "B34": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Score"
+   },
+   "B35": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 68.64
+   },
+   "B36": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 63.41
+   },
+   "B37": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 37.69
+   },
+   "B38": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 33.22
+   },
+   "B39": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 21
+   },
+   "B4": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "NEW"
+   },
+   "B42": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Records"
+   },
+   "B43": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
+   },
+   "B44": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "B45": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "B48": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Records"
+   },
+   "B49": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
+   },
+   "B5": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 18 b #1F3864",
+    "t": "n",
+    "v": 5
+   },
+   "B50": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B53": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Records"
+   },
+   "B54": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B55": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B56": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B57": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "B60": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Records"
+   },
+   "B61": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 5
+   },
+   "B64": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Records"
+   },
+   "B65": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "B66": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B67": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B68": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B69": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B7": {
+    "font": "Arial 8 i #7F7F7F",
+    "t": "s",
+    "v": "follows the filter on Records (recalculated when the workbook opens)"
+   },
+   "B72": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Records"
+   },
+   "B73": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "B74": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "B77": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Filled"
+   },
+   "B78": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
+   },
+   "B79": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
+   },
+   "B8": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "AVG SCORE"
+   },
+   "B80": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "B81": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "B82": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
+   },
+   "B83": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "B84": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
+   },
+   "B85": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "B86": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B87": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
+   },
+   "B88": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "B9": {
+    "align": "left center",
+    "fmt": "0.0",
+    "font": "Arial 14 b #44546A",
+    "t": "f",
+    "v": "=IFERROR(SUBTOTAL(101,Records!$A$2:$A$6),\"–\")"
+   },
+   "B91": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Meaning"
+   },
+   "B92": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Overall rank, 0–100: the run's weights over Fit, Intent and Reach. A component no lead type in the run scores is left out and the other weights are scaled up; one that some lead type scores counts 0 for an organisation without it."
+   },
+   "B93": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The strongest recent news: funding round, launch, expansion, acquisition, digital transformation or leadership change."
+   },
+   "B94": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The lead types that found or enriched the organisation."
+   },
+   "B95": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "That story's headline (or what it says: the amount raised, who was appointed)."
+   },
+   "B96": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "When the story was published."
+   },
+   "B97": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "As the story states it (\"Rs 22 crore\", \"$10M\"); blank when it names none."
+   },
+   "B98": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The story itself."
+   },
+   "B99": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The decision-makers' roles: founder, CEO, CTO, IT head…"
+   },
+   "C34": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Where"
+   },
+   "C35": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune"
+   },
+   "C36": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune"
+   },
+   "C37": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune"
+   },
+   "C38": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune"
+   },
+   "C39": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune"
+   },
+   "C4": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "UPDATED"
+   },
+   "C42": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Share"
+   },
+   "C43": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.8
+   },
+   "C44": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.6
+   },
+   "C45": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.6
+   },
+   "C48": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Share"
+   },
+   "C49": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.8
+   },
+   "C5": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 18 b #1F3864",
+    "t": "n",
+    "v": 0
+   },
+   "C50": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.2
+   },
+   "C53": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Share"
+   },
+   "C54": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.2
+   },
+   "C55": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.2
+   },
+   "C56": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.2
+   },
+   "C57": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.4
+   },
+   "C60": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Share"
+   },
+   "C61": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "C64": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Share"
+   },
+   "C65": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.4
+   },
+   "C66": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.2
+   },
+   "C67": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.2
+   },
+   "C68": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.2
+   },
+   "C69": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.2
+   },
+   "C72": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Share"
+   },
+   "C73": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.4
+   },
+   "C74": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.6
+   },
+   "C77": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Coverage"
+   },
+   "C78": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.8
+   },
+   "C79": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.8
+   },
+   "C8": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "WITH PHONE"
+   },
+   "C80": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.6
+   },
+   "C81": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.6
+   },
+   "C82": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.8
+   },
+   "C83": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "C84": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.8
+   },
+   "C85": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.6
+   },
+   "C86": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.2
+   },
+   "C87": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.8
+   },
+   "C88": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.6
+   },
+   "C9": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 14 b #44546A",
+    "t": "f",
+    "v": "=SUMPRODUCT(SUBTOTAL(103,OFFSET(Records!$O$2,ROW(Records!$O$2:$O$6)-ROW(Records!$O$2),0)))"
+   },
+   "D4": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "WITH PHONE"
+   },
+   "D42": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Avg score"
+   },
+   "D43": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 47.7
+   },
+   "D44": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 56.6
+   },
+   "D45": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 55.1
+   },
+   "D48": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Avg score"
+   },
+   "D49": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 47.7
+   },
+   "D5": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 18 b #1F3864",
+    "t": "n",
+    "v": 4
+   },
+   "D50": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 33.2
+   },
+   "D53": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Avg score"
+   },
+   "D54": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 68.6
+   },
+   "D55": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 63.4
+   },
+   "D56": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 33.2
+   },
+   "D57": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 29.3
+   },
+   "D60": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Avg score"
+   },
+   "D61": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 44.8
+   },
+   "D64": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Avg score"
+   },
+   "D65": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 29.3
+   },
+   "D66": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 68.6
+   },
+   "D67": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 63.4
+   },
+   "D68": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 33.2
+   },
+   "D69": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 68.6
+   },
+   "D72": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Avg score"
+   },
+   "D73": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 66
+   },
+   "D74": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 30.6
+   },
+   "D77": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Reading"
+   },
+   "D78": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "A phone, email, website, social profile or booking line."
+   },
+   "D79": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Published numbers only."
+   },
+   "D8": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "WITH EMAIL"
+   },
+   "D80": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Published addresses only; inferred ones are counted separately."
+   },
+   "D81": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The organisation's own site (directory and platform pages excluded)."
+   },
+   "D83": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Instagram, Facebook, LinkedIn or WhatsApp."
+   },
+   "D85": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "A named person (and title) from a public page."
+   },
+   "D86": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Unverified pattern guesses, never mixed with published emails."
+   },
+   "D88": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "At least one unexpired buying signal."
+   },
+   "D9": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 14 b #44546A",
+    "t": "f",
+    "v": "=SUMPRODUCT(SUBTOTAL(103,OFFSET(Records!$P$2,ROW(Records!$P$2:$P$6)-ROW(Records!$P$2),0)))"
+   },
+   "E34": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Category"
+   },
+   "E35": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Software companies"
+   },
+   "E36": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Software companies"
+   },
+   "E37": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Software companies"
+   },
+   "E39": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Software companies"
+   },
+   "E4": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "WITH EMAIL"
+   },
+   "E42": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "With phone"
+   },
+   "E43": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
+   },
+   "E44": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "E45": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "E48": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "With phone"
+   },
+   "E49": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
+   },
+   "E5": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 18 b #1F3864",
+    "t": "n",
+    "v": 3
+   },
+   "E50": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "E53": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "With phone"
+   },
+   "E54": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E55": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E56": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "E57": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "E60": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "With phone"
+   },
+   "E61": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
+   },
+   "E64": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "With phone"
+   },
+   "E65": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "E66": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E67": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E68": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "E69": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E72": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "With phone"
+   },
+   "E73": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "E74": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "E8": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "WITH SIGNAL"
+   },
+   "E9": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 14 b #44546A",
+    "t": "f",
+    "v": "=SUMPRODUCT(SUBTOTAL(103,OFFSET(Records!$AB$2,ROW(Records!$AB$2:$AB$6)-ROW(Records!$AB$2),0)))"
+   },
+   "F34": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Phone"
+   },
+   "F35": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 20 0000 0302"
+   },
+   "F36": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 20 0000 0301"
+   },
+   "F37": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 20 0000 0303"
+   },
+   "F39": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 20 0000 0304"
+   },
+   "F4": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "WITH SIGNAL"
+   },
+   "F5": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 18 b #1F3864",
+    "t": "n",
+    "v": 3
+   },
+   "G34": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Website"
+   },
+   "G35": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://marigold-textiles.example/",
+    "t": "s",
+    "v": "marigold-textiles.example"
+   },
+   "G36": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://kestrel-robotics.example/",
+    "t": "s",
+    "v": "kestrel-robotics.example"
+   },
+   "G37": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://lotus-logistics.example/",
+    "t": "s",
+    "v": "lotus-logistics.example"
+   },
+   "G4": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "AVG SCORE"
+   },
+   "G5": {
+    "align": "left center",
+    "fmt": "0.0",
+    "font": "Arial 18 b #1F3864",
+    "t": "n",
+    "v": 44.8
+   },
+   "H34": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Top signal"
+   },
+   "H35": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Marigold Textiles selects SAP S/4HANA to modernise its Pune plant"
+   },
+   "H36": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Kestrel Robotics opens new R&D centre in Pune"
+   },
+   "H38": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Raised ₹22 Cr (Pre-Series A) led by Monsoon Ventures"
+   }
+  },
+  "conditional": [
+   "B35:B39 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "C78:C88 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D43:D45 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D49:D50 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D54:D57 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D61 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D65:D69 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D73:D74 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']"
+  ],
+  "dimensions": "A1:H120",
+  "freeze": null,
+  "gridlines": false,
+  "merged": [
+   "A120:H120",
+   "A1:H1",
+   "A2:H2",
+   "B100:H100",
+   "B101:H101",
+   "B102:H102",
+   "B103:H103",
+   "B104:H104",
+   "B105:H105",
+   "B106:H106",
+   "B107:H107",
+   "B108:H108",
+   "B109:H109",
+   "B110:H110",
+   "B111:H111",
+   "B112:H112",
+   "B113:H113",
+   "B114:H114",
+   "B115:H115",
+   "B116:H116",
+   "B117:H117",
+   "B118:H118",
+   "B12:H12",
+   "B13:H13",
+   "B14:H14",
+   "B15:H15",
+   "B16:H16",
+   "B17:H17",
+   "B18:H18",
+   "B19:H19",
+   "B20:H20",
+   "B21:H21",
+   "B22:H22",
+   "B23:H23",
+   "B24:H24",
+   "B25:H25",
+   "B26:H26",
+   "B27:H27",
+   "B30:H30",
+   "B31:H31",
+   "B91:H91",
+   "B92:H92",
+   "B93:H93",
+   "B94:H94",
+   "B95:H95",
+   "B96:H96",
+   "B97:H97",
+   "B98:H98",
+   "B99:H99",
+   "C34:D34",
+   "C35:D35",
+   "C36:D36",
+   "C37:D37",
+   "C38:D38",
+   "C39:D39",
+   "D77:H77",
+   "D78:H78",
+   "D79:H79",
+   "D80:H80",
+   "D81:H81",
+   "D82:H82",
+   "D83:H83",
+   "D84:H84",
+   "D85:H85",
+   "D86:H86",
+   "D87:H87",
+   "D88:H88"
+  ],
+  "tab": "C00000",
+  "widths": {
+   "A": 34.0,
+   "B": 12.0,
+   "C": 12.0,
+   "D": 12.0,
+   "E": 14.0,
+   "F": 18.0,
+   "G": 22.0,
+   "H": 30.0
+  }
+ },
+ "Records": {
+  "autofilter": "A1:AO6",
+  "cells": {
+   "A1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Score"
+   },
+   "A2": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 68.64
+   },
+   "A3": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 63.41
+   },
+   "A4": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 37.69
+   },
+   "A5": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 33.22
+   },
+   "A6": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 21
+   },
+   "AA1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Score Reasons"
+   },
+   "AA2": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Google rating 4.1 from 23 reviews; reachable by phone, email, website; found on google_maps only; digital transformation: Marigold Textiles selects SAP S/4HANA to modernise its Pune plant (2026-09-23, startupwire.example); leadership change: Appointed Priya Raman as CTO (2026-09-11, citybusiness.example); decision-maker named: Priya Raman (CTO)"
+   },
+   "AA3": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Google rating 4.7 from 64 reviews; reachable by phone, email, website; found on google_maps only; expansion: Kestrel Robotics opens new R&D centre in Pune (2026-09-26, citybusiness.example); decision-maker named: Anika Desai (Co-founder & CEO) and 1 more"
+   },
+   "AA4": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Google rating 4.4 from 31 reviews; reachable by phone, email, website; found on google_maps only; decision-maker named: Sunil Kapoor (Managing Director)"
+   },
+   "AA5": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "funding round: Raised ₹22 Cr (Pre-Series A) led by Monsoon Ventures (2026-09-28, startupwire.example); no published phone, email or website"
+   },
+   "AA6": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Google rating 3.9 from 7 reviews; found on google_maps only; reachable by phone"
+   },
+   "AB1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Top Signal"
+   },
+   "AB2": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Digital transformation: Marigold Textiles selects SAP S/4HANA to modernise its Pune plant"
+   },
+   "AB3": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Expansion: Kestrel Robotics opens new R&D centre in Pune"
+   },
+   "AB5": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Funding round: Raised ₹22 Cr (Pre-Series A) led by Monsoon Ventures"
+   },
+   "AC1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Signal Date"
+   },
+   "AC2": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-23T15:00:00"
+   },
+   "AC3": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-26T15:00:00"
+   },
+   "AC5": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-28T15:00:00"
+   },
+   "AD1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Signal Link"
+   },
+   "AD2": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://startupwire.example/2026/marigold-sap",
+    "t": "s",
+    "v": "Source"
+   },
+   "AD3": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://citybusiness.example/news/kestrel-rd-centre",
+    "t": "s",
+    "v": "Source"
+   },
+   "AD5": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://startupwire.example/2026/ledgerly-raises",
+    "t": "s",
+    "v": "Source"
+   },
+   "AE1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Other Signals"
+   },
+   "AE2": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Leadership change: Appointed Priya Raman as CTO (2026-09-11)"
+   },
+   "AF1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "News Events"
+   },
+   "AF2": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Digital transformation, Leadership change"
+   },
+   "AF3": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Expansion"
+   },
+   "AF5": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Funding round"
+   },
+   "AG1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "News Sources"
+   },
+   "AG2": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "startupwire.example, citybusiness.example"
+   },
+   "AG3": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "citybusiness.example"
+   },
+   "AG5": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "startupwire.example, citybusiness.example"
+   },
+   "AH1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "People Sources"
+   },
+   "AH2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Team page"
+   },
+   "AH3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Team page"
+   },
+   "AH4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Company registry"
+   },
+   "AI1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Email Pattern"
+   },
+   "AI3": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "first.last@kestrel-robotics.example (from 1 published address)"
+   },
+   "AJ1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Sources"
+   },
+   "AJ2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "google_maps"
+   },
+   "AJ3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "google_maps"
+   },
+   "AJ4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "google_maps"
+   },
+   "AJ5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "gdelt"
+   },
+   "AJ6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "google_maps"
+   },
+   "AK1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Src #"
+   },
+   "AK2": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "AK3": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "AK4": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "AK5": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "AK6": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "AL1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Change"
+   },
+   "AL2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "AL3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "AL4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "AL5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "AL6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "AM1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "First Seen"
+   },
+   "AM2": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-08-24T15:00:00"
+   },
+   "AM3": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-08-23T15:00:00"
+   },
+   "AM4": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-08-25T15:00:00"
+   },
+   "AM5": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-28T15:00:00"
+   },
+   "AM6": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-08-26T15:00:00"
+   },
+   "AN1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Last Seen"
+   },
+   "AN2": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T15:00:00"
+   },
+   "AN3": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T15:00:00"
+   },
+   "AN4": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T15:00:00"
+   },
+   "AN5": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T15:00:00"
+   },
+   "AN6": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T15:00:00"
+   },
+   "AO1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Org ID"
+   },
+   "AO2": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "AO3": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "AO4": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "AO5": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 5
+   },
+   "AO6": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
+   },
+   "B1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Name"
+   },
+   "B2": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Marigold Textiles"
+   },
+   "B3": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Kestrel Robotics"
+   },
+   "B4": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Lotus Logistics"
+   },
+   "B5": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Ledgerly"
+   },
+   "B6": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Quiet Traders"
+   },
+   "C1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Category"
+   },
+   "C2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Software companies"
+   },
+   "C3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Software companies"
+   },
+   "C4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Software companies"
+   },
+   "C6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Software companies"
+   },
+   "D1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "News Event"
+   },
+   "D2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Digital transformation"
+   },
+   "D3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Expansion"
+   },
+   "D5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Funding round"
+   },
+   "E1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Lead Types"
+   },
+   "E2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses, Funding & news, Decision-makers"
+   },
+   "E3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses, Funding & news, Decision-makers"
+   },
+   "E4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses, Decision-makers"
+   },
+   "E5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Funding & news"
+   },
+   "E6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses"
+   },
+   "F1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Locality"
+   },
+   "F2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune"
+   },
+   "F3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune"
+   },
+   "F4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune"
+   },
+   "F5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune"
+   },
+   "F6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Pune"
+   },
+   "G1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Maps Rating"
+   },
+   "G2": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4.1
+   },
+   "G3": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4.7
+   },
+   "G4": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4.4
+   },
+   "G6": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3.9
+   },
+   "H1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Maps Reviews"
+   },
+   "H2": {
+    "align": "center top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 23
+   },
+   "H3": {
+    "align": "center top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 64
+   },
+   "H4": {
+    "align": "center top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 31
+   },
+   "H6": {
+    "align": "center top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 7
+   },
+   "I1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Latest News"
+   },
+   "I2": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Marigold Textiles selects SAP S/4HANA to modernise its Pune plant"
+   },
+   "I3": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Kestrel Robotics opens new R&D centre in Pune"
+   },
+   "I5": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Raised ₹22 Cr (Pre-Series A) led by Monsoon Ventures"
+   },
+   "J1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "News Date"
+   },
+   "J2": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-23T15:00:00"
+   },
+   "J3": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-26T15:00:00"
+   },
+   "J5": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-28T15:00:00"
+   },
+   "K1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Amount Raised"
+   },
+   "K5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "₹22 Cr"
+   },
+   "L1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "News Link"
+   },
+   "L2": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://startupwire.example/2026/marigold-sap",
+    "t": "s",
+    "v": "Story"
+   },
+   "L3": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://citybusiness.example/news/kestrel-rd-centre",
+    "t": "s",
+    "v": "Story"
+   },
+   "L5": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://startupwire.example/2026/ledgerly-raises",
+    "t": "s",
+    "v": "Story"
+   },
+   "M1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "DM Roles"
+   },
+   "M2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "CTO"
+   },
+   "M3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Co-founder & CEO, Chief Technology Officer"
+   },
+   "M4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Managing Director"
+   },
+   "N1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "People Found"
+   },
+   "N2": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "N3": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "N4": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "O1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Primary Phone"
+   },
+   "O2": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 20 0000 0302"
+   },
+   "O3": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 20 0000 0301"
+   },
+   "O4": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 20 0000 0303"
+   },
+   "O6": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+91 20 0000 0304"
+   },
+   "P1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Primary Email"
+   },
+   "P2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "info@marigold-textiles.example"
+   },
+   "P3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "info@kestrel-robotics.example"
+   },
+   "P4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "info@lotus-logistics.example"
+   },
+   "Q1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Inferred Email (unverified)"
+   },
+   "Q3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "rohan.iyer@kestrel-robotics.example"
+   },
+   "R1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Website"
+   },
+   "R2": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://marigold-textiles.example/",
+    "t": "s",
+    "v": "marigold-textiles.example"
+   },
+   "R3": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://kestrel-robotics.example/",
+    "t": "s",
+    "v": "kestrel-robotics.example"
+   },
+   "R4": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://lotus-logistics.example/",
+    "t": "s",
+    "v": "lotus-logistics.example"
+   },
+   "S1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Google Maps"
+   },
+   "S2": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://maps.google.com/?cid=1000000000000000302",
+    "t": "s",
+    "v": "View map"
+   },
+   "S3": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://maps.google.com/?cid=1000000000000000301",
+    "t": "s",
+    "v": "View map"
+   },
+   "S4": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://maps.google.com/?cid=1000000000000000303",
+    "t": "s",
+    "v": "View map"
+   },
+   "S6": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://maps.google.com/?cid=1000000000000000304",
+    "t": "s",
+    "v": "View map"
+   },
+   "T1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Address"
+   },
+   "T2": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "2 Sample Road, Pune"
+   },
+   "T3": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "1 Sample Road, Pune"
+   },
+   "T4": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "3 Sample Road, Pune"
+   },
+   "T6": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "4 Sample Road, Pune"
+   },
+   "U1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Decision Makers"
+   },
+   "U2": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Priya Raman (CTO)"
+   },
+   "U3": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Anika Desai (Co-founder & CEO); Rohan Iyer (Chief Technology Officer)"
+   },
+   "U4": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Sunil Kapoor (Managing Director)"
+   },
+   "V1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Decision Maker Profile"
+   },
+   "V3": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://www.linkedin.com/in/example-person-0101",
+    "t": "s",
+    "v": "example-person-0101"
+   },
+   "W1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Decision Maker Email"
+   },
+   "W3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "anika.desai@kestrel-robotics.example"
+   },
+   "X1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Fit"
+   },
+   "X2": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 43.6
+   },
+   "X3": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 51.9
+   },
+   "X4": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 46.7
+   },
+   "X5": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "X6": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 32.5
+   },
+   "Y1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Intent"
+   },
+   "Y2": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 80.5
+   },
+   "Y3": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 56.6
+   },
+   "Y4": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "Y5": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 83.1
+   },
+   "Y6": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "Z1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Reach"
+   },
+   "Z2": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 95
+   },
+   "Z3": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 100
+   },
+   "Z4": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 95
+   },
+   "Z5": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "Z6": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 40
+   }
+  },
+  "conditional": [
+   "A2:A6 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "A2:AO6 expression ['MOD(ROW(),2)=0']",
+   "AC2:AC6 expression ['AND(ISNUMBER(AC2),TODAY()-AC2<=30)']",
+   "AC2:AC6 expression ['AND(ISNUMBER(AC2),TODAY()-AC2<=90)']",
+   "X2:X6 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "Y2:Y6 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "Z2:Z6 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']"
+  ],
+  "dimensions": "A1:AO6",
+  "freeze": "C2",
+  "gridlines": null,
+  "merged": [],
+  "tab": "1F3864",
+  "widths": {
+   "A": 8.0,
+   "AA": 50.0,
+   "AB": 40.0,
+   "AC": 11.0,
+   "AD": 14.0,
+   "AE": 44.0,
+   "AF": 30.0,
+   "AG": 30.0,
+   "AH": 24.0,
+   "AI": 30.0,
+   "AJ": 22.0,
+   "AK": 6.0,
+   "AL": 11.0,
+   "AM": 15.0,
+   "AN": 15.0,
+   "AO": 8.0,
+   "B": 38.0,
+   "C": 20.0,
+   "D": 20.0,
+   "E": 18.0,
+   "F": 20.0,
+   "G": 9.0,
+   "H": 9.0,
+   "I": 50.0,
+   "J": 12.0,
+   "K": 16.0,
+   "L": 12.0,
+   "M": 22.0,
+   "N": 8.0,
+   "O": 18.0,
+   "P": 28.0,
+   "Q": 30.0,
+   "R": 26.0,
+   "S": 12.0,
+   "T": 44.0,
+   "U": 36.0,
+   "V": 24.0,
+   "W": 30.0,
+   "X": 7.0,
+   "Y": 7.0,
+   "Z": 7.0
+  }
+ },
+ "active": "Overview",
+ "sheets": [
+  "Overview",
+  "Records"
+ ]
+}

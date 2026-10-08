@@ -10,7 +10,10 @@ Four scenarios, each a finished run in a fresh application database:
 * ``empty`` -- a run that found nothing, with failures to explain why;
 * ``audit_hiring`` -- Phase 6's real lead types in Pune: ``local_business``
   shops and clinics, their ``digital_audit`` findings, and ``hiring`` signals
-  (ATS postings, a careers page, an HN ad).
+  (ATS postings, a careers page, an HN ad);
+* ``news_people`` -- Phase 6b in Pune: ``local_business`` firms, ``funding_news``
+  events (one company only in the news) and ``decision_makers`` (team pages, a
+  registry) with one labelled inferred email.
 
 Names are invented, websites use the reserved ``.example`` domain, phone
 numbers sit in unallocated (India: 0000 exchanges) or fictional (US 555-01xx)
@@ -39,7 +42,7 @@ from leadscraper.leadtypes.base import ColumnSpec, LeadType, LeadTypeResult, Sig
 
 UTC = timezone.utc
 FIXED_NOW = datetime(2026, 10, 1, 9, 30, tzinfo=UTC)
-SCENARIOS = ("local_business", "mix", "venues", "empty", "audit_hiring")
+SCENARIOS = ("local_business", "mix", "venues", "empty", "audit_hiring", "news_people")
 ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -560,8 +563,92 @@ def audit_hiring(engine) -> int:
     return run.finish(minutes=31)
 
 
+def news_people(engine) -> int:
+    document = _doc("Sample Pune news and decision-makers", "IN", ["Pune"],
+                    {"local_business": {"categories": [{"name": "Software companies"}]},
+                     "funding_news": {}, "decision_makers": {"email_pattern": {"enabled": True}}},
+                    center=[18.52, 73.85], admin_area="Maharashtra",
+                    scoring={"weights": {"fit": 0.4, "intent": 0.4, "reach": 0.2}})
+    run = _Run(engine, document, "IN")
+    firms = [
+        ("Kestrel Robotics", ["+912000000301"], "https://kestrel-robotics.example/", 4.7, 64, 1),
+        ("Marigold Textiles", ["+912000000302"], "https://marigold-textiles.example/", 4.1, 23,
+         2),
+        ("Lotus Logistics", ["+912000000303"], "https://lotus-logistics.example/", 4.4, 31, 3),
+        ("Quiet Traders", ["+912000000304"], None, 3.9, 7, 4),
+    ]
+    for name, phones, site, rating, reviews, n in firms:
+        run.add(Lead(business_name=name, category="Software companies", locality="Pune",
+                     phones=phones, website=site, gmaps_url=_maps(300 + n), gmaps_rating=rating,
+                     gmaps_reviews=reviews,
+                     emails=[f"info@{site.split('//')[1].rstrip('/')}"] if site else [],
+                     address=f"{n} Sample Road, Pune", sources=["google_maps"]), days=40 - n)
+    # Only in the news.
+    run.add(Lead(business_name="Ledgerly", locality="Pune", sources=["gdelt"],
+                 source_urls=["https://startupwire.example/2026/ledgerly-raises"]),
+            lead_type="funding_news", days=3)
+    for org in ("Kestrel Robotics", "Marigold Textiles"):
+        run.tag(org, "funding_news")
+    news = [
+        ("Ledgerly", "funding_round", "Raised ₹22 Cr (Pre-Series A) led by Monsoon Ventures", 3,
+         "https://startupwire.example/2026/ledgerly-raises", 0.85,
+         {"event": "funding", "amount": {"text": "₹22 Cr", "value": 2.2e8, "currency": "INR"},
+          "round": "Pre-Series A", "investors": "Monsoon Ventures",
+          "publisher": "startupwire.example",
+          "coverage": [{"publisher": "startupwire.example"},
+                       {"publisher": "citybusiness.example"}]}),
+        ("Kestrel Robotics", "expansion", "Kestrel Robotics opens new R&D centre in Pune", 5,
+         "https://citybusiness.example/news/kestrel-rd-centre", 0.6,
+         {"event": "expansion", "publisher": "citybusiness.example",
+          "coverage": [{"publisher": "citybusiness.example"}]}),
+        ("Marigold Textiles", "digital_transformation",
+         "Marigold Textiles selects SAP S/4HANA to modernise its Pune plant", 8,
+         "https://startupwire.example/2026/marigold-sap", 0.75,
+         {"event": "digital_transformation", "other": "SAP S/4HANA",
+          "publisher": "startupwire.example",
+          "coverage": [{"publisher": "startupwire.example"}]}),
+        ("Marigold Textiles", "leadership_change", "Appointed Priya Raman as CTO", 20,
+         "https://citybusiness.example/news/marigold-cto", 0.75,
+         {"event": "leadership_change", "person": "Priya Raman", "role": "CTO",
+          "publisher": "citybusiness.example",
+          "coverage": [{"publisher": "citybusiness.example"}]}),
+    ]
+    for org, type_, title, days, url, strength, payload in news:
+        run.signal(org, "funding_news", type_, title, days, url, strength,
+                   key=f"{payload['event']}:{days}", **payload)
+
+    for org in ("Kestrel Robotics", "Marigold Textiles", "Lotus Logistics"):
+        run.tag(org, "decision_makers")
+    people = [
+        ("Kestrel Robotics", "Anika Desai", "Co-founder & CEO", "team_pages",
+         "https://www.linkedin.com/in/example-person-0101", "anika.desai@kestrel-robotics.example"),
+        ("Kestrel Robotics", "Rohan Iyer", "Chief Technology Officer", "team_pages", None, None),
+        ("Marigold Textiles", "Priya Raman", "CTO", "team_pages", None, None),
+        ("Lotus Logistics", "Sunil Kapoor", "Managing Director", "registry", None, None),
+    ]
+    for org, name, title, source, profile, email in people:
+        run.insert(Person, organization_id=run.ids[org], name=name, title=title,
+                   profile_url=profile, source=source, lead_type="decision_makers",
+                   source_url=f"https://{org.split()[0].lower()}.example/team", email=email,
+                   created_at=FIXED_NOW)
+    run.insert(Contact, organization_id=run.ids["Kestrel Robotics"], channel="email",
+               value="rohan.iyer@kestrel-robotics.example", kind="inferred",
+               source="email_pattern", confidence=0.6, person="Rohan Iyer", created_at=FIXED_NOW)
+    run.attribute("Kestrel Robotics", "email_pattern", {
+        "pattern": "first.last", "domain": "kestrel-robotics.example",
+        "examples": ["anika.desai@kestrel-robotics.example"],
+        "mx": ["mx1.kestrel-robotics.example"], "reason": "",
+        "checked_at": (FIXED_NOW - timedelta(days=1)).isoformat()},
+        origin="rule", lead_type="decision_makers")
+    run.unit("local_business", "google_maps", "Pune", "Software companies", found=4, new=4)
+    run.unit("funding_news", "gdelt", "Pune", None, found=9, new=1)
+    run.failure("gdelt", "rate_limited")
+    run.failure("team_pages", "robots_disallowed")
+    return run.finish(minutes=12)
+
+
 BUILDERS = {"local_business": local_business, "mix": mix, "venues": venues, "empty": empty,
-            "audit_hiring": audit_hiring}
+            "audit_hiring": audit_hiring, "news_people": news_people}
 
 
 def build(engine, scenario: str) -> int:

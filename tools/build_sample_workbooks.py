@@ -2,8 +2,8 @@
 """Write the sample workbooks in docs/samples/ from fixture data (never real leads).
 
 Each scenario of ``tests/workbook_fixtures.py`` -- local_business only, a
-three-lead-type mix, venues (the hospitality vertical), an empty run, and Phase 6's
-digital_audit + hiring -- is
+three-lead-type mix, venues (the hospitality vertical), an empty run, Phase 6's
+digital_audit + hiring, and its funding_news + decision_makers -- is
 built into a throwaway database and exported exactly as a run's workbook is.
 ``tests/test_workbook.py`` pins the same workbooks' structure, and
 ``test_samples_are_current`` fails when a sample here is out of date.
@@ -22,7 +22,8 @@ ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "docs" / "samples"
 NAMES = {"local_business": "sample-local-business.xlsx", "mix": "sample-three-lead-types.xlsx",
          "venues": "sample-venues.xlsx", "empty": "sample-empty-run.xlsx",
-         "audit_hiring": "sample-audit-and-hiring.xlsx"}
+         "audit_hiring": "sample-audit-and-hiring.xlsx",
+         "news_people": "sample-news-and-people.xlsx"}
 
 
 def main() -> int:
