@@ -219,12 +219,14 @@ def _facts(conn, ws: Workspace, ids: list[int]) -> dict[str, Any]:
     for row in by_id(PEOPLE):
         people[row["organization_id"]].append({
             "name": row["name"], "title": row["title"] or "",
-            "profile_url": row["profile_url"], "source": row["source"]})
+            "profile_url": row["profile_url"], "source": row["source"],
+            "lead_type": row["lead_type"] or "", "source_url": row["source_url"],
+            "email": row["email"]})
     inferred: dict[int, list[dict[str, Any]]] = defaultdict(list)
     for row in by_id(CONTACTS, CONTACTS.c.kind == "inferred"):
         inferred[row["organization_id"]].append({
             "channel": row["channel"], "value": row["value"], "source": row["source"],
-            "confidence": row["confidence"]})
+            "confidence": row["confidence"], "person": row["person"] or ""})
     attributes: dict[int, dict[str, dict[str, Any]]] = defaultdict(dict)
     for row in by_id(ATTRS):
         attributes[row["organization_id"]][row["key"]] = {

@@ -89,16 +89,38 @@ def _instagram(record: ExportRecord) -> str | None:
     return f"https://instagram.com/{handle}" if handle else None
 
 
+def people_of(record: ExportRecord) -> list[dict[str, Any]]:
+    """The record's people, one per name (case-folded), in first-seen order.
+
+    Several lead types (or sources) can name the same person; their rows fold into
+    one, each field taken from the first row that has it.
+    """
+    out: dict[str, dict[str, Any]] = {}
+    for person in record.people:
+        name = " ".join(str(person.get("name") or "").split())
+        if not name:
+            continue
+        held = out.setdefault(name.casefold(), {"name": name})
+        for key in ("title", "profile_url", "email", "source", "source_url"):
+            if person.get(key) and not held.get(key):
+                held[key] = person[key]
+    return list(out.values())
+
+
 def _people(record: ExportRecord) -> str | None:
     names = [f"{p['name']} ({p['title']})" if p.get("title") else p["name"]
-             for p in record.people if p.get("name")]
+             for p in people_of(record)]
     if not names and record.lead.contact_name:
         names = [record.lead.contact_name]
     return _joined(names, "; ")
 
 
 def _person_link(record: ExportRecord) -> str | None:
-    return next((p["profile_url"] for p in record.people if p.get("profile_url")), None)
+    return next((p["profile_url"] for p in people_of(record) if p.get("profile_url")), None)
+
+
+def _person_email(record: ExportRecord) -> str | None:
+    return _joined([p["email"] for p in people_of(record) if p.get("email")])
 
 
 def _attribute(record: ExportRecord, key: str) -> str | None:
@@ -222,6 +244,11 @@ def core_columns(*, places: int, titles: dict[str, str], has_run: bool) -> dict[
                    field="decision_makers", width=24, optional=True,
                    description="The first decision-maker's public profile (search-indexed only).",
                    get=_person_link),
+            Column("decision_maker_email", "Decision Maker Email", "email",
+                   field="decision_makers", width=30, optional=True,
+                   description="Addresses published for a named decision-maker on the page "
+                               "they were found on (never inferred).",
+                   get=_person_email),
         ],
         "scores": [
             Column("fit", "Fit", "score", width=7,
@@ -365,7 +392,7 @@ def assemble(records: list[ExportRecord], *, cfg: Any, lead_type_keys: list[str]
 #: Columns an empty export leaves out: they only exist to show data.
 DATA_ONLY = frozenset({"ai_summary", "ai_industry", "ai_company_size",
                        "other_phones", "other_emails", "inferred_email", "suppressed",
-                       "decision_maker_profile", "notes", "change", "signal_link",
+                       "decision_maker_profile", "decision_maker_email", "notes", "change", "signal_link",
                        "other_signals"})
 
 

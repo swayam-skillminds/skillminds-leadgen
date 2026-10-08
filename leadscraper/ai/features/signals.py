@@ -29,6 +29,9 @@ SYSTEM = (
     "quote copied verbatim from the item that supports the type). Return ONLY JSON: "
     "{\"items\": [...]}."
 )
+#: Appended for news (``with_company``): the item's company, as written in it.
+COMPANY = (" Also return `company`: the name of the organisation the item is about, copied "
+           "exactly as the item writes it, or an empty string when it names none.")
 
 Id = Union[str, int]
 
@@ -39,6 +42,7 @@ class SignalVerdict(BaseModel):
     strength: float = Field(0.5, description="0-1")
     summary: str = ""
     evidence: str = ""
+    company: str = ""
 
 
 class SignalBatch(BaseModel):
@@ -46,8 +50,12 @@ class SignalBatch(BaseModel):
 
 
 def interpret(client, items: list[dict[str, Any]], specs: list, *, lead_type: str = "",
-              batch_size: int = 10) -> dict[str, dict[str, Any]]:
-    """``{item id: {type, strength, summary, evidence}}`` for the items that are signals."""
+              batch_size: int = 10, with_company: bool = False) -> dict[str, dict[str, Any]]:
+    """``{item id: {type, strength, summary, evidence}}`` for the items that are signals.
+
+    ``with_company`` also asks which organisation an item is about (news): the name
+    is kept only when it appears verbatim in the item, like the evidence quote.
+    """
     if client is None or not client.uses("signals") or not items or not specs:
         return {}
     allowed = {spec.type: spec for spec in specs}
@@ -59,7 +67,7 @@ def interpret(client, items: list[dict[str, Any]], specs: list, *, lead_type: st
         payload = [{"id": str(item["id"]), "title": item.get("title", ""),
                     "text": str(item.get("text", ""))[:2500],
                     "published_at": str(item.get("published_at") or "")} for item in chunk]
-        result = client.call("signals", system=SYSTEM,
+        result = client.call("signals", system=SYSTEM + (COMPANY if with_company else ""),
                              user=f"Signal types:\n{types}\n\nItems:\n"
                                   + json.dumps(payload, ensure_ascii=False),
                              output=SignalBatch)
@@ -73,8 +81,11 @@ def interpret(client, items: list[dict[str, Any]], specs: list, *, lead_type: st
             source = SourceText(f"{item.get('title', '')} {item.get('text', '')}")
             if not verdict.evidence or not source.has_text(verdict.evidence, min_chars=8):
                 continue                          # ungrounded: the quote isn't in the item
+            company = " ".join((verdict.company or "").split())
+            if company and not source.has_text(company, min_chars=2):
+                company = ""                      # ungrounded: not a name the item gives
             out[str(verdict.id)] = {
-                "type": verdict.signal_type, "lead_type": lead_type,
+                "type": verdict.signal_type, "lead_type": lead_type, "company": company[:200],
                 "strength": round(min(1.0, max(0.0, float(verdict.strength))), 3),
                 "summary": " ".join(verdict.summary.split())[:300],
                 "evidence": verdict.evidence[:300], "source_url": item.get("url"),

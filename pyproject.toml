@@ -48,6 +48,8 @@ dependencies = [
     "keyring>=25",
     # IANA timezones for schedules; Windows ships no tz database of its own
     "tzdata; sys_platform == 'win32'",
+    # MX lookups for the optional email pattern (decision_makers); the system resolver
+    "dnspython>=2.6",
 ]
 
 [project.optional-dependencies]

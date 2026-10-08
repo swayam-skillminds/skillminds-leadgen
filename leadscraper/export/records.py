@@ -104,12 +104,20 @@ def signal_date(signal: dict[str, Any]) -> datetime | None:
 
 # --- scoring ---------------------------------------------------------------------------------
 
-def _takes_now(score: Any) -> bool:
-    """Does a lead type's ``score`` take ``now`` (signals that fade with age)?"""
+def _takes(score: Any, name: str) -> bool:
+    """Does a lead type's ``score`` take keyword ``name``?
+
+    ``now``: signals that fade with age. ``record``: the whole export record
+    (people, attributes), for a lead type whose facts are not signals.
+    """
     try:
-        return "now" in inspect.signature(score).parameters
+        return name in inspect.signature(score).parameters
     except (TypeError, ValueError):
         return False
+
+
+def _takes_now(score: Any) -> bool:
+    return _takes(score, "now")
 
 
 def score_records(records: Iterable[ExportRecord], config: Any, weights: dict[str, float],
@@ -139,6 +147,8 @@ def score_records(records: Iterable[ExportRecord], config: Any, weights: dict[st
                 continue
             signals = [s for s in record.signals if s.get("lead_type") == key]
             extra = {"now": now} if now is not None and _takes_now(lead_type.score) else {}
+            if _takes(lead_type.score, "record"):
+                extra["record"] = record
             try:
                 parts.append(lead_type.score(record.lead, signals, config, **extra))
             except Exception as exc:  # one lead type's bug never sinks the export

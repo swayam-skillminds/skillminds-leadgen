@@ -267,9 +267,13 @@ class Contact(Base):
     source: Mapped[str] = mapped_column(String(100), default="")
     confidence: Mapped[float] = mapped_column(Float, default=1.0)
     created_at: Mapped[datetime] = _created()
+    #: Phase 6: whose address an inferred contact is (the person's name), "" otherwise.
+    person: Mapped[str] = mapped_column(String(300), default="")
 
 
 class Person(Base):
+    """A decision-maker: a named person, their title and public profile, and where seen."""
+
     __tablename__ = "people"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
@@ -281,6 +285,13 @@ class Person(Base):
     profile_url: Mapped[str | None] = mapped_column(String(1000), nullable=True)
     source: Mapped[str] = mapped_column(String(100), default="")
     created_at: Mapped[datetime] = _created()
+    #: Phase 6: the lead type that recorded the person ("" before Phase 6).
+    lead_type: Mapped[str] = mapped_column(String(50), default="")
+    #: Phase 6: the page the person was read from (a team page, a registry record).
+    source_url: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    #: Phase 6: an address published for this person on that page (never inferred).
+    email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class Signal(Base):

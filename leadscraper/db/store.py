@@ -591,17 +591,28 @@ class LeadStore:
             for item in (value if isinstance(value, list) else [value]):
                 if item:
                     wanted.append((channel, str(item)[:1000]))
-        existing = {(r.channel, r.value) for r in self._conn.execute(
-            select(CONTACTS.c.channel, CONTACTS.c.value).where(
-                CONTACTS.c.organization_id == lead_id)).all()}
+        rows = self._conn.execute(select(CONTACTS.c.channel, CONTACTS.c.value, CONTACTS.c.kind)
+                                  .where(CONTACTS.c.organization_id == lead_id)).all()
+        # The record's published contacts mirror the record. Inferred ones (Phase 6's
+        # email pattern) are not on the record and are kept -- unless the address has
+        # now been published, which makes it a published contact.
+        existing = {(r.channel, r.value) for r in rows if r.kind == "published"}
+        inferred = {(r.channel, r.value) for r in rows if r.kind != "published"}
         for channel, value in existing - set(wanted):
             self._conn.execute(delete(CONTACTS).where(
                 CONTACTS.c.organization_id == lead_id, CONTACTS.c.channel == channel,
                 CONTACTS.c.value == value))
+        confidence = 0.8 if source in _AI_SOURCES else 1.0
+        for channel, value in inferred & set(wanted):
+            self._conn.execute(update(CONTACTS).where(
+                CONTACTS.c.organization_id == lead_id, CONTACTS.c.channel == channel,
+                CONTACTS.c.value == value).values(kind="published", source=source[:100],
+                                                  confidence=confidence, person=""))
         fresh = [{"workspace_id": self.workspace_id, "organization_id": lead_id,
                   "channel": channel, "value": value, "kind": "published", "source": source,
-                  "confidence": 0.8 if source in _AI_SOURCES else 1.0, "created_at": utcnow()}
-                 for channel, value in dict.fromkeys(wanted) if (channel, value) not in existing]
+                  "confidence": confidence, "created_at": utcnow()}
+                 for channel, value in dict.fromkeys(wanted)
+                 if (channel, value) not in existing | inferred]
         self._insert_ignore(CONTACTS, fresh)
         if lead.contact_name:
             known = self._conn.execute(select(PEOPLE.c.id).where(
@@ -609,7 +620,8 @@ class LeadStore:
             if not known:
                 self._conn.execute(PEOPLE.insert().values(
                     workspace_id=self.workspace_id, organization_id=lead_id,
-                    name=lead.contact_name[:300], source=source, created_at=utcnow()))
+                    name=lead.contact_name[:300], source=source, lead_type=self.lead_type,
+                    created_at=utcnow()))
 
     def _evidence(self, lead_id: int, source: str, url: str | None, fields: list[str]) -> None:
         self._conn.execute(EVIDENCE.insert().values(
@@ -764,6 +776,111 @@ class LeadStore:
                 self._conn.execute(delete(SIGNALS).where(SIGNALS.c.id.in_(gone)))
             self._conn.commit()
         return len(gone)
+
+    # --- people and inferred contacts (Phase 6: decision_makers) ----------------------
+
+    def add_person(self, lead_id: int, name: str, *, title: str = "",
+                   profile_url: str | None = None, source: str = "",
+                   source_url: str | None = None, email: str | None = None) -> int | None:
+        """Record a person at an organisation for this thread's lead type; their row id.
+
+        A person is identified by (organisation, lead type, name, case-folded): seen
+        again, the row is refreshed -- a title, profile or published email fills in or
+        changes, a blank never overwrites a value. The organisation is stamped with
+        the lead type (``stamp``); its record is not touched. None if there is no
+        such organisation.
+        """
+        name = " ".join((name or "").split())[:300]
+        if not name:
+            return None
+        now = utcnow()
+        with self._lock:
+            if not self.stamp(lead_id, source=source or self.lead_type, url=source_url,
+                              fields=["person"]):
+                return None
+            rows = self._conn.execute(select(PEOPLE).where(
+                PEOPLE.c.organization_id == lead_id, PEOPLE.c.lead_type == self.lead_type)
+                .order_by(PEOPLE.c.id)).mappings().all()
+            row = next((r for r in rows if r["name"].casefold() == name.casefold()), None)
+            values = {"title": (title or "")[:300], "profile_url": (profile_url or None),
+                      "source": (source or "")[:100], "email": (email or None),
+                      "source_url": source_url[:2000] if source_url else None}
+            if row is None:
+                person_id = int(self._conn.execute(PEOPLE.insert().values(
+                    workspace_id=self.workspace_id, organization_id=lead_id, name=name,
+                    lead_type=self.lead_type, created_at=now, updated_at=now,
+                    **{k: v for k, v in values.items() if v is not None}))
+                    .inserted_primary_key[0])
+            else:
+                person_id = int(row["id"])
+                changed = {k: v for k, v in values.items() if v and v != row[k]}
+                if changed:
+                    self._conn.execute(update(PEOPLE).where(PEOPLE.c.id == person_id)
+                                       .values(updated_at=now, **changed))
+            self._conn.commit()
+            return person_id
+
+    def people(self, lead_id: int, lead_type: str | None = None) -> list[dict[str, Any]]:
+        """An organisation's people (every lead type's, or ``lead_type``'s), oldest first."""
+        query = select(PEOPLE).where(PEOPLE.c.organization_id == lead_id)
+        if lead_type is not None:
+            query = query.where(PEOPLE.c.lead_type == lead_type)
+        with self._lock:
+            rows = self._conn.execute(query.order_by(PEOPLE.c.id)).mappings().all()
+            self._conn.commit()
+        return [dict(r) for r in rows]
+
+    def prune_people(self, lead_id: int, source: str, keep: Iterable[str]) -> int:
+        """Delete this lead type's people from ``source`` whose names are not in ``keep``.
+
+        For sources that are a snapshot (a team page read in full): someone no longer
+        listed goes. Their inferred addresses go with them.
+        """
+        keep = {" ".join(n.split()).casefold() for n in keep}
+        with self._lock:
+            rows = self._conn.execute(select(PEOPLE.c.id, PEOPLE.c.name).where(
+                PEOPLE.c.organization_id == lead_id, PEOPLE.c.lead_type == self.lead_type,
+                PEOPLE.c.source == source)).all()
+            gone = [r for r in rows if r.name.casefold() not in keep]
+            if gone:
+                self._conn.execute(delete(PEOPLE).where(PEOPLE.c.id.in_([r.id for r in gone])))
+                self._conn.execute(delete(CONTACTS).where(
+                    CONTACTS.c.organization_id == lead_id, CONTACTS.c.kind == "inferred",
+                    CONTACTS.c.person.in_([r.name for r in gone])))
+            self._conn.commit()
+        return len(gone)
+
+    def set_inferred_contacts(self, lead_id: int, source: str,
+                              items: Iterable[tuple[str, str, str, float]]) -> int:
+        """Replace ``source``'s inferred contacts on an organisation; how many it now has.
+
+        ``items`` are (channel, value, person, confidence). An address already held as a
+        published contact is never stored again as an inferred one. Inferred contacts
+        live only here: never on the record, never identity keys, never published.
+        """
+        with self._lock:
+            held = {(r.channel, r.value) for r in self._conn.execute(
+                select(CONTACTS.c.channel, CONTACTS.c.value).where(
+                    CONTACTS.c.organization_id == lead_id, CONTACTS.c.kind == "published"))}
+            self._conn.execute(delete(CONTACTS).where(
+                CONTACTS.c.organization_id == lead_id, CONTACTS.c.kind == "inferred",
+                CONTACTS.c.source == source))
+            fresh, seen = [], set()
+            for channel, value, person, confidence in items:
+                value = (value or "").strip()[:1000]
+                if not value or (channel, value) in held or (channel, value) in seen:
+                    continue
+                seen.add((channel, value))
+                fresh.append({"workspace_id": self.workspace_id, "organization_id": lead_id,
+                              "channel": channel[:20], "value": value, "kind": "inferred",
+                              "source": source[:100], "person": (person or "")[:300],
+                              "confidence": max(0.0, min(1.0, float(confidence))),
+                              "created_at": utcnow()})
+            self._insert_ignore(CONTACTS, fresh)
+            if fresh:
+                self._evidence(lead_id, source, None, [f"inferred:{c['channel']}" for c in fresh])
+            self._conn.commit()
+        return len(fresh)
 
     def signals(self, lead_id: int, lead_type: str | None = None) -> list[dict[str, Any]]:
         """An organisation's signals (this lead type's, or ``lead_type``'s), oldest first."""

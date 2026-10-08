@@ -97,6 +97,11 @@ def _is_shared(host: str) -> bool:
     return any(host == shared or host.endswith("." + shared) for shared in SHARED_HOSTS)
 
 
+def is_shared_host(host: str | None) -> bool:
+    """A host that identifies nobody: social networks, link-in-bio, free email…"""
+    return bool(host) and _is_shared(host.casefold().strip("."))
+
+
 @lru_cache(maxsize=4096)
 def identity_domain(url: str | None) -> str | None:
     """The registrable domain that identifies an organisation, or None.
