@@ -93,8 +93,8 @@ thread (all passed on 2026-10-07).
 | `greenhouse` | `https://boards-api.greenhouse.io/v1/boards/{token}/jobs` (+ `/{token}` for the name) | requests, JSON | none | 1–2.5 s per API host | Greenhouse's Job Board API docs: board data is public, GET needs no auth. Each job carries `company_name` | **2026-10-07**: 200, `jobs[]` {title, absolute_url, location.name, first_published, updated_at, company_name}, `meta.total` |
 | `lever` | `https://api.lever.co/v0/postings/{token}?mode=json` | requests, JSON | none | 1–2.5 s | Lever Postings API (github.com/lever/postings-api): published postings, public. No company name: the board token stands in | **2026-10-07**: 200, `[]` {text, hostedUrl, categories.location, workplaceType, createdAt (epoch ms)} |
 | `ashby` | `https://api.ashbyhq.com/posting-api/job-board/{token}` | requests, JSON | none | 1–2.5 s | Ashby's public job posting API, meant for career sites (its docs). Unlisted jobs (`isListed: false`) are skipped | **2026-10-07**: 200, `jobs[]` {title, jobUrl, location, isRemote, workplaceType, publishedAt, isListed} |
-| `workable` | `https://apply.workable.com/api/v1/widget/accounts/{token}` | requests, JSON | none | 1–2.5 s | The JSON behind Workable's documented embeddable jobs widget; not itself a documented API (the documented API needs the employer's token). **To review against A.2.4** | **2026-10-07**: 200 for a real account (`{name, jobs[]}` with title, url, city, country, telecommuting, published_on); 404 otherwise |
-| `smartrecruiters` | `https://api.smartrecruiters.com/v1/companies/{token}/postings?limit=100&offset=…` | requests, JSON | none observed | 1–2.5 s | Answers without a key for companies with a public feed (verified), but SmartRecruiters' docs now describe API-key/OAuth access for the Posting API. **To review against A.2.4** | **2026-10-07**: 200 without auth, `content[]` {id, name, releasedDate, location{fullLocation, remote}, company{name}} |
+| `workable` | `https://apply.workable.com/api/v1/widget/accounts/{token}` | requests, JSON | none | 1–2.5 s | The JSON behind Workable's documented embeddable jobs widget; not itself a documented API (the documented API needs the employer's token). **Off by default** (`lead_types.hiring.sources.ats.kinds`); opt in per config | **2026-10-07**: 200 for a real account (`{name, jobs[]}` with title, url, city, country, telecommuting, published_on); 404 otherwise |
+| `smartrecruiters` | `https://api.smartrecruiters.com/v1/companies/{token}/postings?limit=100&offset=…` | requests, JSON | none observed | 1–2.5 s | Answers without a key for companies with a public feed (verified), but SmartRecruiters' docs now describe API-key/OAuth access for the Posting API. **Off by default** (`sources.ats.kinds`); opt in per config | **2026-10-07**: 200 without auth, `content[]` {id, name, releasedDate, location{fullLocation, remote}, company{name}} |
 | `hn_whos_hiring` | `https://hn.algolia.com/api/v1/search_by_date?tags=story,author_whoishiring`, then `/api/v1/items/{thread id}` | requests, JSON; two requests per monthly thread | none | 1–2.5 s | The public HN Search API by Algolia; 10,000 requests/hour/IP is the commonly cited limit. Ads are posted by the hiring companies themselves | **2026-10-07**: 200; "Ask HN: Who is hiring? (October 2026)", 236 top-level ads |
 | `careers_pages` | the organisation's own site: home, then one careers page | requests | none | 1.5–4 s per site | The business's public pages; robots.txt honoured; internal addresses refused. ATS boards found there are read through the ATS's API above | n/a (any site) |
 | `board_search` (opt-in) | Google search (then DuckDuckGo) for `site:boards.greenhouse.io …` pages naming the place | via `google_search`'s SERP client, no browser | none | 12–28 s | As `google_search`: Google's terms restrict automated queries. **Off by default; to review against A.2.4** | not re-verified (same client as `google_search`) |
@@ -128,9 +128,11 @@ that line:
 - Airbnb and Booking.com.
 - Instagram and Facebook: the Graph APIs are restricted.
 
-Phase 6 adds three of its own to review: `workable` (an undocumented widget
-endpoint), `smartrecruiters` (its docs now describe key-based access) and the
-opt-in `board_search` (Google SERP).
+Phase 6's three borderline sources are **off by default** (decided 2026-10-08):
+`workable` (an undocumented widget endpoint) and `smartrecruiters` (its docs
+now describe key-based access) run only when named in
+`lead_types.hiring.sources.ats.kinds`; `board_search` (Google SERP) only with
+`board_search.enabled`. A config that opts in takes that call for its run.
 
 Phase 1 moved these sources into packs without changing their behaviour.
 Whether each one stays, moves to an official API, or is retired is a

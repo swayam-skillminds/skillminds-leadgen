@@ -290,10 +290,10 @@ lead_types:
     remote: include            # include | only | exclude
     posted_within_days: 30
     min_roles: 1
-    boards: [greenhouse:acme, lever:acme-labs, ashby:acme, workable:acme,
-             smartrecruiters:Acme1]
+    boards: [greenhouse:acme, lever:acme-labs, ashby:acme]
     sources:
-      ats: {enabled: true, max_postings: 500}
+      ats: {enabled: true, max_postings: 500,
+            kinds: [greenhouse, lever, ashby]}   # + workable, smartrecruiters: opt-in
       hn_whos_hiring: {enabled: true, months: 1}
       careers_pages: {enabled: true, audit: run, max_orgs: 200, rescan_after_days: 7}
       board_search: {enabled: false}       # SERP for ATS board pages naming the place
@@ -330,6 +330,11 @@ lead_types:
   longer counts as open.
 - **Columns:** Open Tech Roles, Role Families, Latest Posting, Jobs Page;
   Open Roles and Hiring Sources at the tail.
+- **Opt-in:** Workable and SmartRecruiters boards are read only when their ATS is
+  in `sources.ats.kinds` (their public endpoints aren't documented as public
+  APIs); a board of another ATS is skipped and noted (`source_not_enabled`),
+  whether configured or found on a careers page. `board_search` is off unless
+  enabled.
 - **Not used:** Upwork, Indeed, Glassdoor, LinkedIn Jobs (A.2.4). No country
   job board qualified yet: Naukri forbids automated access and Arbeitnow's
   licence forbids commercial use (`docs/sources.md`).

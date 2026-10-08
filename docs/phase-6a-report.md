@@ -201,9 +201,7 @@ None of these touch the characterisation results or the existing golden workbook
 
 ## 11. Open issues
 
-- **Your terms decisions (A.2.4):**
-  - `workable` (an undocumented widget endpoint), `smartrecruiters` (its docs now describe key-based access) and the opt-in `board_search` (Google SERP);
-  - the inherited sources from earlier phases, still open.
+- **Terms decisions (A.2.4):** `workable`, `smartrecruiters` and `board_search` are now off by default (section 12). The inherited sources from earlier phases are still open.
 - **PageSpeed key:** `leadscraper secrets set pagespeed-api-key`; then a live run would confirm a 200 answer.
 - **The estimator ignores stages** (review, low). Stage-1 units are simulated overlapping stage 0, so p50/p90 can be a little low when hiring has many boards.
 - **Residual SSRF limits:**
@@ -232,3 +230,20 @@ Commits on this branch (after `phase-5/ai`):
 - `fix: findings of the Phase 6a review (medium, low)`
 - `docs: the review fixes (owned listings, public-only fetching, not-checked audits, careers precision)`
 - and this report.
+
+## 12. Follow-up (2026-10-08)
+
+**Terms decision: the borderline sources are opt-in.** Asked to decide, I chose the conservative default:
+
+| Source | Default | Why | How to opt in |
+|---|---|---|---|
+| Greenhouse, Lever, Ashby | on | Their job-board APIs are documented as public | — |
+| Workable | off | Its endpoint is the JSON behind an embed widget, not a documented API | `lead_types.hiring.sources.ats.kinds: [greenhouse, lever, ashby, workable]` |
+| SmartRecruiters | off | It answers without a key, but its docs now describe key-based access | add `smartrecruiters` to `kinds` |
+| `board_search` | off (unchanged) | Google's terms restrict automated queries | `sources.board_search.enabled: true` |
+
+A board of a kind that isn't enabled is skipped, whether configured or found on a careers page. A configured one is recorded once as `source_not_enabled`, naming the board and how to enable it. Test: `test_workable_and_smartrecruiters_are_opt_in`.
+
+**A date-dependent test fixed.** The certificate stub in `test_digital_audit.py` used the wall clock while the auditor's clock was pinned, so the test failed once the date rolled over. It now follows the auditor's clock.
+
+The suite: 674 passed, 7 skipped, 12 deselected; `ruff` clean.
