@@ -104,8 +104,10 @@ class HiringSession(LeadTypeSession):
             limiter.configure(host, sources.ats.min_delay, sources.ats.max_delay)
         limiter.configure(hn.HOST, sources.hn_whos_hiring.min_delay,
                           sources.hn_whos_hiring.max_delay)
-        for host in SERP_HOSTS:
-            limiter.configure(host, sources.board_search.min_delay, sources.board_search.max_delay)
+        if sources.board_search.enabled:    # the run's limiter: only when it searches
+            for host in SERP_HOSTS:
+                limiter.configure(host, sources.board_search.min_delay,
+                                  sources.board_search.max_delay)
         self.places = self._places()
         try:
             name = self.config.country_info.name
@@ -374,10 +376,11 @@ class HiringSession(LeadTypeSession):
         """The organisation a company is. One the project already holds gets the signals
         and is left as it is -- another lead type's record is never rewritten (A.3);
         only a company nobody holds yet becomes a new organisation."""
-        match = self.store.find_match(lead.normalized())
-        if match is not None:
-            return match
-        org_id, action, _ = self.store.upsert(lead)
+        with self.store._lock:          # no other unit's write between the find and the create
+            match = self.store.find_match(lead.normalized())
+            if match is not None:
+                return match
+            org_id, action, _ = self.store.upsert(lead)
         outcome.new += action == "new"
         outcome.merged += action == "merged"
         return org_id

@@ -116,8 +116,10 @@ def list_organizations(engine: Engine, ws: Workspace, *, project_id: int | None 
         channels = HAS.get(wanted)
         if channels is None:
             raise Invalid(f"unknown 'has' filter {wanted!r}; known: {', '.join(HAS)}")
+        # Published contacts only: an inferred address (the email pattern) is not "has email".
         query = query.where(exists().where(CONTACTS.c.organization_id == ORGS.c.id,
-                                           CONTACTS.c.channel.in_(channels)))
+                                           CONTACTS.c.channel.in_(channels),
+                                           CONTACTS.c.kind == "published"))
     if lead_type:
         # lead_types is a JSON list: filter through the evidence rows each lead
         # type writes, which needs no backend-specific JSON operator.
@@ -199,6 +201,7 @@ def erase(engine: Engine, ws: Workspace, *, domain: str | None = None, phone: st
                           "directory); it identifies nobody, so nothing can be erased by it")
         owners.append(select(KEYS.c.organization_id).where(
             and_(KEYS.c.kind == "domain", KEYS.c.value == key)))
+        # Any kind, deliberately: an erasure request covers addresses we only inferred.
         owners.append(select(CONTACTS.c.organization_id).where(
             CONTACTS.c.channel == "email", CONTACTS.c.value.ilike(f"%@{key}")))
         values.append({"kind": "domain", "value": key})

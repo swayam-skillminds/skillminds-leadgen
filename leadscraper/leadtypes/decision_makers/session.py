@@ -38,7 +38,7 @@ from ...core.normalize import domain_of, is_vendor_website, normalize_url
 from ...net.http import PrivateAddressError
 from ...packs import registries_for
 from ...sources.people import github, linkedin
-from ...sources.people.roles import employer_of, family_of, rank, same_company
+from ...sources.people.roles import employer_of, family_of, person_name, rank, same_company
 from ...sources.people.team_pages import Found, emails_on, people_on, team_links
 from ..base import LeadTypeResult, LeadTypeSession, UnitOutcome, WorkUnit
 from ..toolkit import Kit
@@ -84,10 +84,13 @@ class DecisionMakersSession(LeadTypeSession):
                                       "removed": 0}
         sources = section.sources
         limiter = self.kit.limiter
-        limiter.configure(github.HOST, sources.github.min_delay, sources.github.max_delay)
-        for host in SERP_HOSTS:
-            limiter.configure(host, sources.linkedin_search.min_delay,
-                              sources.linkedin_search.max_delay)
+        # Only for sources that run: the limiter is the run's, shared with other lead types.
+        if sources.github.enabled:
+            limiter.configure(github.HOST, sources.github.min_delay, sources.github.max_delay)
+        if sources.linkedin_search.enabled:
+            for host in SERP_HOSTS:
+                limiter.configure(host, sources.linkedin_search.min_delay,
+                                  sources.linkedin_search.max_delay)
         fields = getattr(self.config, "included_fields", None)
         fields = set(fields) if fields is not None else {"decision_makers", "emails"}
         #: A run whose fields.include leaves decision_makers out needs nothing from us (A.8).
@@ -221,7 +224,8 @@ class DecisionMakersSession(LeadTypeSession):
         for registry in self.registries if self.registry_key else []:
             try:
                 people, why = registry.find(self.kit.http, lead.business_name,
-                                            key=self.registry_key)
+                                            key=self.registry_key, locality=lead.locality,
+                                            address=lead.address)
             except Exception as exc:
                 transient = True
                 self.kit.failures.record(registry.name, "fetch_failed",
@@ -271,7 +275,7 @@ class DecisionMakersSession(LeadTypeSession):
                     self.stats["github"] += len(people)
                 found.extend(people)
         kept = self.keep(found, lead)
-        self.write(org_id, lead, kept, complete, page_emails, site)
+        self.write(org_id, lead, kept, complete, page_emails, site, transient=transient)
         if not transient:
             self.store.mark_enriched(org_id, MARK)
         with self._lock:
@@ -336,7 +340,8 @@ class DecisionMakersSession(LeadTypeSession):
             # The homepage's people only when the site has no team or about page: on a
             # bigger site they are testimonials, authors and customers, not its leaders.
             if index or len(pages) == 1:
-                people.extend(people_on(self.kit.http.soup(page_text), page_url))
+                people.extend(people_on(self.kit.http.soup(page_text), page_url,
+                                        company=lead.business_name))
         with self._lock:
             self.stats["pages"] += len(pages)
         return status, people, list(dict.fromkeys(emails)), links
@@ -365,7 +370,7 @@ class DecisionMakersSession(LeadTypeSession):
     # --- writing ----------------------------------------------------------------------
 
     def write(self, org_id: int, lead: Lead, kept: list[Found], complete: set[str],
-              page_emails: list[str], site: str | None) -> None:
+              page_emails: list[str], site: str | None, *, transient: bool = False) -> None:
         by_source: dict[str, list[str]] = {}
         for person in kept:
             source = SOURCE_OF.get(person.how, person.how)
@@ -377,15 +382,19 @@ class DecisionMakersSession(LeadTypeSession):
             removed = self.store.prune_people(org_id, source, by_source.get(source, []))
             with self._lock:
                 self.stats["removed"] += removed
-        if self.emails_wanted:
+        # A site that didn't answer this time can't tell us its pattern changed: keep the
+        # addresses inferred before (as when DNS can't answer).
+        if self.emails_wanted and not transient:
             self.infer_emails(org_id, lead, kept, page_emails, site)
 
     def infer_emails(self, org_id: int, lead: Lead, kept: list[Found], page_emails: list[str],
                      site: str | None) -> None:
         """The labelled email pattern (off by default): see ``email_pattern.py``."""
         published = [*lead.emails, *page_emails, *(p.email for p in kept if p.email)]
-        people = self.store.people(org_id)
-        names = [p["name"] for p in people] + ([lead.contact_name] if lead.contact_name else [])
+        # Named people only (A.2.5): "Front Office" as a record's contact name is nobody.
+        people = [p for p in self.store.people(org_id) if person_name(p["name"])]
+        names = [p["name"] for p in people] + \
+            ([lead.contact_name] if person_name(lead.contact_name or "") else [])
         domain = (identity_domain(site) or domain_of(site)) if site else None
         if domain is None:                    # no site: the domain its own addresses use
             domain = next((d for d in map(_email_domain, published) if d), None)

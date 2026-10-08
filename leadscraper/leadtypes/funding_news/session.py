@@ -73,6 +73,13 @@ QUERY_WORDS = {
 SOURCES = ("gdelt", "google_news", "press_releases", "feeds")
 #: OR terms per GDELT query (a longer query is refused as "too short or too long").
 GDELT_TERMS = 6
+#: Words of a company name its domain needn't spell.
+_NAME_FILLER = frozenset({"the", "and", "of", "company", "co", "group", "india", "pvt",
+                          "private", "ltd", "limited", "llp", "inc", "corp", "corporation",
+                          "plc", "llc", "gmbh"})
+#: Newswires and aggregators: their links are never the company's own site.
+_WIRES = ("globenewswire", "prnewswire", "businesswire", "news.google", "einpresswire",
+          "accesswire", "newswire")
 #: Stories about the same event (company, kind, detail) this many days apart are one event.
 SAME_EVENT_DAYS = 30
 _LANGUAGES = {"en": "english", "de": "german", "fr": "french", "es": "spanish",
@@ -103,6 +110,17 @@ def plan_units(config: Any, section: FundingNewsConfig) -> list[WorkUnit]:
     if sources.feeds.enabled:
         units.extend(WorkUnit(KEY, "feeds", None, url, "run") for url in sources.feeds.urls)
     return units
+
+
+def _aware(value: Any) -> datetime | None:
+    if isinstance(value, str):
+        try:
+            value = datetime.fromisoformat(value)
+        except ValueError:
+            return None
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    return None
 
 
 def _month(when: datetime | None) -> str:
@@ -330,7 +348,10 @@ class FundingNewsSession(LeadTypeSession):
 
     @staticmethod
     def _group(item: NewsItem, event: Event) -> tuple:
-        return (normalize_name(event.company), event.kind, event.detail)
+        """Stories about one event. A company's funding stories in one batch are one round
+        ("raises $5M Series A" and "raises $5M"); AI-read stories group by kind."""
+        detail = "" if event.kind == "funding" or event.interpreted_by else event.detail
+        return (normalize_name(event.company), event.kind, detail)
 
     def interpret(self, items: list[NewsItem]) -> list[tuple[NewsItem, Event]]:
         """AI (``signal_interpretation``) for headlines the rules couldn't read. A verdict
@@ -374,10 +395,20 @@ class FundingNewsSession(LeadTypeSession):
         stories.sort(key=lambda s: s[0].published_at or self.clock())
         item, event = stories[0]
         named = mentions(" ".join(i.text for i, _ in stories), self.places)
-        site = self._site(event.company, [link for i, _ in stories for link in i.links])
+        outlets = {domain_of(i.url) or "" for i, _ in stories} | \
+            {(i.publisher or "").casefold() for i, _ in stories}
+        site = self._site(event.company, [link for i, _ in stories for link in i.links],
+                          outlets)
         lead = Lead(business_name=event.company, website=site,
                     locality=named[0] if named else "", sources=[item.source],
                     source_urls=[item.url])
+        # Find-or-create and the signal's read-modify-write under the store's lock: another
+        # unit (another lead type's, or a second place's) can't slip in between.
+        with self.store._lock:
+            return self._record(stories, item, event, lead, named, outcome)
+
+    def _record(self, stories, item: NewsItem, event: Event, lead: Lead, named: list[str],
+                outcome: UnitOutcome) -> UnitOutcome:
         try:
             org_id = self._resolve(lead, outcome)
         except Exception as exc:
@@ -400,26 +431,30 @@ class FundingNewsSession(LeadTypeSession):
                                  "published_at": story.published_at.isoformat()
                                  if story.published_at else None})
         coverage.sort(key=lambda c: c.get("published_at") or "")
+        # The event is as old as its first story: a follow-up never makes it look fresh.
+        first = next((c for c in coverage if c.get("published_at")), coverage[0])
+        published = _aware(first.get("published_at")) or item.published_at
         best = max((e for _, e in stories), key=lambda e: (e.amount is not None,
                                                          e.round is not None,
                                                          e.investors is not None))
         payload = {"event": event.kind, "event_title": TITLES[event.kind],
                    "detail": event.detail,
-                   "headline": item.title[:300], "publisher": item.publisher,
+                   "headline": (first.get("title") or item.title)[:300],
+                   "publisher": first.get("publisher") or item.publisher,
                    "company": event.company, "evidence": event.evidence[:300],
                    "amount": best.amount.as_dict() if best.amount else None,
                    "round": best.round, "investors": best.investors,
                    "person": best.person, "role": best.role, "other": best.other,
                    "places": named, "source": item.source, "coverage": coverage[:30],
-                   "published_at": item.published_at.isoformat() if item.published_at
-                   else None}
+                   "published_at": published.isoformat() if published else None}
         if event.interpreted_by:
             payload["interpreted_by"] = event.interpreted_by
             payload["summary"] = event.summary
         added = self.store.add_signal(
-            org_id, type_, key=key, title=self._title(best, item), payload=payload,
+            org_id, type_, key=key, title=self._title(best, first.get("title") or item.title), payload=payload,
             strength=strength(event.kind, len(coverage), best),
-            published_at=item.published_at, source_url=item.url, source=item.source)
+            published_at=published, source_url=first.get("url") or item.url,
+            source=item.source)
         with self._lock:
             self.stats["events"] += 1
             self.stats["signals"] += bool(added)
@@ -434,7 +469,10 @@ class FundingNewsSession(LeadTypeSession):
         within ``SAME_EVENT_DAYS``): a later story about it refreshes that row."""
         for signal in self.store.signals(org_id):
             payload = signal.get("payload") or {}
-            if signal["type"] != type_ or payload.get("detail") != detail:
+            # A funding round is the company's funding news of the month, whatever detail
+            # (round or amount) each story gave.
+            if signal["type"] != type_ or (type_ != "funding_round"
+                                           and payload.get("detail") != detail):
                 continue
             seen = signal.get("published_at")
             if seen is not None and seen.tzinfo is None:
@@ -444,7 +482,7 @@ class FundingNewsSession(LeadTypeSession):
         return None
 
     @staticmethod
-    def _title(event: Event, item: NewsItem) -> str:
+    def _title(event: Event, headline: str) -> str:
         """"Raised Rs 22 crore (Pre-Series A)", "Appointed Priya Shah as CTO", else the
         headline."""
         if event.kind == "funding" and (event.amount or event.round):
@@ -458,7 +496,7 @@ class FundingNewsSession(LeadTypeSession):
         if event.kind == "leadership_change" and event.role:
             who = f"{event.person} as " if event.person else "a new "
             return f"Appointed {who}{event.role}"[:300]
-        return item.title[:300]
+        return headline[:300]
 
     def _resolve(self, lead: Lead, outcome: UnitOutcome) -> int | None:
         """The organisation a company is: one the project holds keeps its record (A.3);
@@ -476,22 +514,40 @@ class FundingNewsSession(LeadTypeSession):
         return org_id
 
     @staticmethod
-    def _site(company: str, links: list[str]) -> str | None:
-        """The company's own site among a story's links: its domain spells the name."""
-        words = [w for w in re.findall(r"[a-z0-9]+", company.casefold()) if len(w) > 2]
+    def _site(company: str, links: list[str], outlets: set[str] = frozenset()) -> str | None:
+        """The company's own site among a story's links: its domain spells the whole name.
+
+        Every significant word of the name must be in the domain's label ("Kalpa Health" ->
+        kalpa-health.example); a one-word name may carry a short prefix or suffix
+        ("getledgerly"). Wires, outlets (``outlets``) and the like never count: "Tata
+        Motors" is not tatacapital.com, nor "The Sleep Company" thehindubusinessline.com.
+        """
+        every = re.findall(r"[a-z0-9]+", company.casefold())
+        words = [w for w in every if len(w) > 1 and w not in _NAME_FILLER]
         if not words:
             return None
+        whole = "".join(every)
+        best: tuple[int, str] | None = None
         for link in links:
             url = normalize_url(link)
             if not url or not is_vendor_website(url):
                 continue
             host = urlsplit(url).hostname or ""
-            label = (domain_of(url) or "").split(".")[0].replace("-", "")
-            if label and (words[0] in label or label in "".join(words)) and \
-                    not any(wire in host for wire in ("globenewswire", "prnewswire",
-                                                      "businesswire", "news.google")):
-                return url
-        return None
+            domain = domain_of(url) or ""
+            if domain in outlets or any(w in host for w in _WIRES):
+                continue
+            label = domain.split(".")[0].replace("-", "")
+            if label == whole:
+                extra = 0                   # thesleepcompany.in for "The Sleep Company"
+            elif not all(w in label for w in words):
+                continue
+            else:
+                extra = len(label) - len("".join(words))
+                if len(words) == 1 and extra > 4:
+                    continue                # "acme" in "acmeinvestors": someone else
+            if best is None or extra < best[0]:
+                best = (extra, url)
+        return best[1] if best else None
 
     # --- the end ----------------------------------------------------------------------
 

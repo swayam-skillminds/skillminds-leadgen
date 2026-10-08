@@ -25,7 +25,7 @@ from typing import Any, Iterable
 from urllib.parse import urljoin, urlsplit
 
 from ...core.normalize import domain_of, extract_linkedin
-from .roles import family_of, person_name
+from .roles import family_of, is_role_mailbox, person_name
 
 #: (pattern, rank): team / leadership pages first, then about pages. A link counts when
 #: its last path segment or its text *is* such a name ("/about/team", "Our Leadership"),
@@ -41,16 +41,21 @@ _CHROME = ["nav", "header", "footer", "aside", "form", "script", "style", "noscr
            "template", "svg", "iframe"]
 _TEXT_TAGS = ["h1", "h2", "h3", "h4", "h5", "h6", "p", "span", "div", "li", "strong", "b",
               "em", "td", "dt", "dd", "figcaption", "a", "small", "label"]
+#: Blocks: a tag holding one of these with text of its own is several lines, not one.
+_BLOCK_TAGS = ["h1", "h2", "h3", "h4", "h5", "h6", "p", "div", "li", "td", "dt", "dd",
+               "figcaption", "section", "article", "ul", "ol", "table", "tr"]
 _SPLIT = re.compile(r"\s*(?:,|\||–|—|\s-\s|:)\s*")
 _EMAIL = re.compile(r"[\w.+'-]+@[\w-]+(?:\.[\w-]+)+")
+#: A name word: capitalised, no full stop inside (that ends a sentence), or an initial "R.".
+_WORD = r"(?:[A-Z]\.|[A-Z][\w'’-]+)"
+_NAME = rf"{_WORD}(?:\s+{_WORD}){{1,3}}"
 _FOUNDED_BY = re.compile(
     r"\b(?:founded|co-founded|started|established)\s+(?:in\s+\d{4}\s+)?by\s+"
-    r"(?P<names>[A-Z][\w.'’-]+(?:\s+[A-Z][\w.'’-]+){1,3}(?:\s*(?:,|and|&)\s*"
-    r"[A-Z][\w.'’-]+(?:\s+[A-Z][\w.'’-]+){1,3})*)")
+    rf"(?P<names>{_NAME}(?:\s*(?:,|and|&)\s*{_NAME})*)")
 _NAME_COMMA_TITLE = re.compile(
-    r"(?P<name>[A-Z][\w.'’-]+(?:\s+[A-Z][\w.'’-]+){1,3}),\s+(?:our|the)\s+"
-    r"(?P<title>(?:co-?\s?founder|founder|ceo|managing director|cto|chief [a-z]+ officer)"
-    r"(?:\s*(?:&|and)\s*(?:ceo|cto|managing director|md))?)\b", re.I)
+    rf"(?P<name>{_NAME}),\s+(?i:our|the)\s+"
+    r"(?P<title>(?i:(?:co-?\s?founder|founder|ceo|managing director|cto|chief [a-z]+ officer)"
+    r"(?:\s*(?:&|and)\s*(?:ceo|cto|managing director|md))?))\b")
 
 
 @dataclass
@@ -124,7 +129,18 @@ def _own_text(tag) -> str:
     for child in tag.find_all(_TEXT_TAGS, recursive=False):
         if " ".join(child.get_text(" ", strip=True).split()) == text:
             return ""                      # the child says it; read it there
+    if tag.name not in ("a", "span", "strong", "b", "em", "small", "label") and any(
+            child.get_text(strip=True) for child in tag.find_all(_BLOCK_TAGS)):
+        return ""                          # several lines: read each one
     return text
+
+
+def _line_text(tag) -> str:
+    """A one-line card's text without its links' labels ("Priya Shah, CEO Email" -> "Priya
+    Shah, CEO")."""
+    parts = [t for t in tag.find_all(string=True)
+             if tag.name == "a" or t.find_parent("a") is None]
+    return " ".join(" ".join(parts).split())
 
 
 def _card(tag, other, levels: int = 4):
@@ -164,17 +180,31 @@ def _contacts(card) -> tuple[str | None, str | None]:
         href = anchor["href"].strip()
         if href.lower().startswith("mailto:") and email is None:
             address = href[7:].split("?", 1)[0].strip().lower()
-            if _EMAIL.fullmatch(address):
-                email = address
+            if _EMAIL.fullmatch(address) and not is_role_mailbox(address):
+                email = address                # sales@ / info@ are nobody's own
         elif "linkedin.com/in/" in href and profile is None:
             profile = extract_linkedin(href)
     return email, profile
 
 
-def people_on(soup, page: str) -> list[Found]:
+def _about(sentence: str, company: str | None) -> bool:
+    """Is "… founded by X" about this company (not a customer: "Google, which was founded
+    by …")? Without a company name, any sentence counts."""
+    if not company:
+        return True
+    lowered = re.split(r"[,;:–—]", sentence)[-1].casefold()   # the clause right before
+    words = [w for w in re.findall(r"[a-z0-9]+", company.casefold()) if len(w) > 2
+             and w not in ("the", "and", "pvt", "ltd", "limited", "private", "llp", "inc")]
+    return bool(re.search(r"\b(?:we|our company|the company|it)\b", lowered)) or \
+        any(w in lowered for w in words[:2])
+
+
+def people_on(soup, page: str, company: str | None = None) -> list[Found]:
     """The people a page publishes, with titles; deduplicated by name, in page order.
 
-    Mutates ``soup``: page chrome (navigation, footer, forms…) is removed first.
+    ``company``: whose page it is, so "founded by" prose about someone else (a client,
+    a partner) doesn't count. Mutates ``soup``: page chrome (navigation, footer,
+    forms…) is removed first.
     """
     found: dict[str, Found] = {}
 
@@ -201,10 +231,11 @@ def people_on(soup, page: str) -> list[Found]:
     for index, (tag, text) in enumerate(blocks):
         name = person_name(text)
         if name is None:
-            # "Priya Shah, Co-founder & CTO" / "Priya Shah | CTO" in one line.
-            parts = [p for p in _SPLIT.split(text, maxsplit=1) if p]
+            # "Priya Shah, Co-founder & CTO" / "Priya Shah | CTO" in one line: its contacts
+            # are the ones inside that line, never its neighbours'.
+            parts = [p for p in _SPLIT.split(_line_text(tag), maxsplit=1) if p]
             if len(parts) == 2 and person_name(parts[0]) and family_of(parts[1]):
-                add(parts[0], parts[1], "card", *_contacts(_card(tag, tag, 2)))
+                add(parts[0], parts[1], "card", *_contacts(tag))
             continue
         for other, title in blocks[index + 1:index + 4]:
             if _names_someone(title):
@@ -218,6 +249,8 @@ def people_on(soup, page: str) -> list[Found]:
                 break
     text = " ".join(soup.get_text(" ").split())
     for match in _FOUNDED_BY.finditer(text):
+        if not _about(re.split(r"(?<=[.!?])\s", text[:match.start()])[-1], company):
+            continue
         for name in re.split(r"\s*(?:,|\band\b|&)\s*", match.group("names")):
             add(name, "Founder", "prose")
     for match in _NAME_COMMA_TITLE.finditer(text):

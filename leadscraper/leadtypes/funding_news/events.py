@@ -40,10 +40,22 @@ govt government ministry minister police court cm pm mla mp bjp congress aap par
 collector district mosque temple church army navy sebi rbi parliament assembly council
 municipal mayor state centre union india us usa uk china world
 rto pmc pcmc pmrda bmc mmrda msrtc mhada cidco midc nhai uidai drdo isro railway railways
-university college school collectorate corporator ward zilla panchayat tehsil
+university college school collectorate corporator ward zilla panchayat tehsil board committee
+panel jury nifty sensex man woman
+""".split())
+#: Words a company's name doesn't run back over: the subject starts after them.
+_STOP_BACK = frozenset("""
+as to in on at with amid after before from by while why how what when where who which
+vs versus over into than via
+""".split())
+#: Role words: "Zomato CEO Deepinder Goyal raises…" is a person's news, not a company's.
+_ROLE_WORDS = frozenset("""
+ceo cto cio cfo coo cmo md founder co-founder cofounder chairman chairperson chairwoman
+president director chief head promoter owner
 """.split())
 _CONNECTORS = frozenset({"&", "and", "of", "de", "the", "for"})
 _PREFIX = re.compile(r"^(?:[\w ]{2,30}?)\s*[:|]\s+(?=\S)")
+_PARENS = re.compile(r"\s*\([^)]{0,60}\)")
 _POSSESSIVE = re.compile(r"(?:'s|’s)$", re.I)
 _MAX_NAME_WORDS = 6
 
@@ -56,6 +68,12 @@ FUNDING_VERB = re.compile(_PRE + r"\s+(?P<verb>raises?|raised|secures?|secured|b
 _FUNDING_OBJECT = re.compile(r"funding|\bround\b|\bseed\b|\bseries [a-h]\b|investment|capital|"
                              r"financing|\bfund(?:ing)?\b|crore|\bcr\b|million|\bmn\b|billion|"
                              r"\bbn\b|lakh|[$₹€£]|\brs\b|\binr\b|\busd\b|\beur\b|\bgbp\b", re.I)
+#: What a company "bags" or "gets" that isn't funding: business won, or a loan.
+_WON_NOT_RAISED = re.compile(r"\b(?:orders?|contracts?|deals?|mandates?|tenders?|loans?|"
+                             r"nods?|approvals?|awards?|projects?|licen[cs]es?|"
+                             r"certifications?|accolades?|stake)\b", re.I)
+_RAISED = re.compile(r"\b(?:funding|round|seed|series [a-h]|investment|capital raise|"
+                     r"equity|investors?)\b", re.I)
 _FUNDING_NOT = re.compile(r"^\s*(?:the\s+)?(?:funds?|money)\s+for\b|^\s*(?:awareness|concerns?|"
                           r"questions?|alarm|eyebrows|stakes|prices?|rates?|tariffs?|fares?|the bar|"
                           r"(?:its\s+)?voice|objections?|demands?|hopes?|red flags?|fears?|doubts?|"
@@ -80,6 +98,12 @@ EXPANSION_VERB = re.compile(
     r"expands?(?:\s+(?:to|into|in|its|operations|presence|footprint|across))|expanded|"
     r"sets up|set up|establishes|forays? into|enters|entered|marks (?:its )?entry into)"
     r"(?P<rest>.*)$", re.I)
+#: "Expands its product line", "enters into an agreement", "sets up a Rs 100 crore fund":
+#: not a new site or market.
+_EXPANSION_NOT = re.compile(r"^(?:expands?|expanded)\s+its\s+(?!(?:footprint|presence|"
+                            r"operations|offices?|network|capacity|facilit|base|reach|"
+                            r"business)\w*)|^enter(?:s|ed)?\s+into\b|"
+                            r"^(?:sets?|set) up\b.*\bfunds?\b", re.I)
 LAUNCH_VERB = re.compile(_PRE + r"\s+(?P<verb>launches?|launched|unveils?|unveiled|introduces?|"
                          r"introduced|rolls out|rolled out|debuts?|announces launch of)\b"
                          r"(?P<rest>.*)$", re.I)
@@ -104,8 +128,10 @@ _ROLE = (r"(?P<role>(?i:(?:group\s+|global\s+|new\s+|interim\s+)?(?:chief [\w ]{
          r"c[etifmdo]o|cxo|cdio|managing director|md|president|vice[- ]president|svp|evp|"
          r"vp\b[\w ,&]{0,40}|head of [\w ]{2,30}|[\w ]{0,20}director|general manager|gm|"
          r"chairman|chairperson|chair|co-founder|partner))\b)")
-_PERSON = (r"(?P<person>(?:(?i:dr|mr|ms|mrs)\.?\s+)?[A-Z][\w.'’-]+"
-           r"(?:\s+[A-Z][\w.'’-]+){1,3})")
+#: A capitalised name word -- not one of the little words Title Case also capitalises.
+_PWORD = r"(?!(?:As|To|Its|The|New|And|Of|At|For|With|In|On)\b)[A-Z][\w.'’-]+"
+_PERSON = (rf"(?P<person>(?:(?i:dr|mr|ms|mrs)\.?\s+)?{_PWORD}"
+           rf"(?:\s+{_PWORD}){{1,3}})")
 APPOINTS = re.compile(_PRE + r"\s+(?P<verb>(?i:appoints?|appointed|names?|named|elevates?|"
                       r"elevated|promotes?|promoted|ropes in|roped in|onboards?|hires?|hired|"
                       r"welcomes?|announces (?:the )?appointment of))\s+"
@@ -159,6 +185,7 @@ class Event:
 
 def _clean(headline: str) -> str:
     text = " ".join((headline or "").replace(" ", " ").split())
+    text = _PARENS.sub("", text)               # "(NASDAQ: ACME)", "(Pune)"
     match = _PREFIX.match(text)
     if match and len(match.group(0).split()) <= 5:
         text = text[match.end():]
@@ -172,20 +199,29 @@ def _name_like(token: str) -> bool:
     return bare[0].isupper() or bare[0].isdigit() or any(ch.isupper() for ch in bare[1:])
 
 
-def subject_company(prefix: str, places: Iterable[str] = ()) -> str | None:
+def subject_company(prefix: str, places: Iterable[str] = (), *,
+                    titled: bool = False) -> str | None:
     """The company named last before the verb, or None.
 
     Walks back from the verb over name-like words, stopping at a descriptor
-    ("startup"), a "-based"/"-backed" word, a possessive ("Bengaluru's") or a
-    plain lowercase word.
+    ("startup"), a "-based"/"-backed" word, a possessive ("Bengaluru's"), a comma,
+    a little word ("as", "why") or a plain lowercase word. A role word ("CEO",
+    "founder") means the subject is a person: no company. In a Title Case headline
+    (``titled``) a subject of more than four words is a phrase, not a name.
     """
     taken: list[str] = []
     for token in reversed(prefix.split()):
-        word = token.strip("\"'“”‘’(),")
+        word = token.strip("\"'“”‘’()")
+        if word.endswith(",") and taken:
+            break                               # "Acme, Beta Labs partner…": the last name
+        word = word.strip(",")
         low = word.casefold()
-        if not word:
+        if not word or low in _STOP_BACK:
             break
-        if low in DESCRIPTORS or re.search(r"-(?:based|backed|headquartered|led|owned)$", low) \
+        if low in _ROLE_WORDS:
+            return None                         # "Zomato CEO Deepinder Goyal raises…"
+        if low in DESCRIPTORS or re.search(r"-(?:based|backed|headquartered|led|owned|bound|"
+                                           r"focused|listed|born|funded)$", low) \
                 or low in ("based", "backed", "headquartered"):
             break
         if _POSSESSIVE.search(word) and taken:
@@ -206,7 +242,7 @@ def subject_company(prefix: str, places: Iterable[str] = ()) -> str | None:
     place_words = {p.casefold() for p in places if p}
     while len(words) > 1 and _POSSESSIVE.sub("", words[0]).casefold() in place_words:
         words.pop(0)                                  # "Pune Acme" -> "Acme"
-    if not words or len(words) > _MAX_NAME_WORDS:
+    if not words or len(words) > (4 if titled else _MAX_NAME_WORDS):
         return None
     name = _POSSESSIVE.sub("", " ".join(words)).strip(" -–,:")
     if len(name) < 2 or any(w.casefold() in NOT_COMPANIES for w in name.split()):
@@ -290,10 +326,12 @@ def classify(headline: str, *, issuer: str = "", kinds: Iterable[str] = TITLES,
     if not text:
         return None
 
+    titled = _title_case(text)
+
     def company_before(match: re.Match) -> str | None:
         if issuer:
             return issuer.strip()
-        return subject_company(text[:match.start()], places)
+        return subject_company(text[:match.start()], places, titled=titled)
 
     # Order matters: a named appointment before "names new CTO"; "acquired by" before
     # "acquires"; funding before expansion ("raises … to expand"); "opens new office"
@@ -301,7 +339,7 @@ def classify(headline: str, *, issuer: str = "", kinds: Iterable[str] = TITLES,
     if "leadership_change" in wanted:
         match = JOINS.match(text)
         if match is not None:
-            company = issuer or subject_company(match.group("company"), places)
+            company = issuer or subject_company(match.group("company"), places, titled=titled)
             role = " ".join(match.group("role").split())
             if company and _LEAD_ROLE.search(role):
                 return Event("leadership_change", company, text, match.group(0)[:200],
@@ -332,8 +370,10 @@ def classify(headline: str, *, issuer: str = "", kinds: Iterable[str] = TITLES,
     if "funding" in wanted:
         match = _find(FUNDING_VERB, text)
         rest = match.group("rest") if match else ""
-        if match is not None and not _FUNDING_NOT.search(rest) and \
-                _FUNDING_OBJECT.search(" ".join(rest.split()[:10])):
+        head = " ".join(rest.split()[:10])
+        won = _WON_NOT_RAISED.search(head) and not _RAISED.search(head)
+        if match is not None and not _FUNDING_NOT.search(rest) and not won and \
+                _FUNDING_OBJECT.search(head):
             company = company_before(match)
             if company:
                 amount = parse_amount(rest)
@@ -344,6 +384,8 @@ def classify(headline: str, *, issuer: str = "", kinds: Iterable[str] = TITLES,
                              amount=amount, round=stage, investors=_who(rest), detail=detail)
     if "expansion" in wanted:
         match = _find(EXPANSION_VERB, text)
+        if match is not None and _EXPANSION_NOT.search(text[match.start("verb"):]):
+            match = None
         if match is not None:
             company = company_before(match)
             if company:

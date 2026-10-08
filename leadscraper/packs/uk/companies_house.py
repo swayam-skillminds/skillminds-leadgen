@@ -12,6 +12,7 @@ secret ``companies-house-api-key`` and never leaves the Authorization header.
 from __future__ import annotations
 
 import base64
+import re
 from typing import Any
 from urllib.parse import quote
 
@@ -26,6 +27,13 @@ PAGE = "https://find-and-update.company-information.service.gov.uk/company/{numb
 ROLES = {"director": "Director", "llp-member": "LLP member",
          "llp-designated-member": "LLP designated member",
          "managing-officer": "Managing officer"}
+
+
+_POSTCODE = re.compile(r"\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b", re.I)
+
+
+def _postcodes(address: str | None) -> list[str]:
+    return [m.group(0) for m in _POSTCODE.finditer(address or "")]
 
 
 def display_name(name: str) -> str:
@@ -48,21 +56,32 @@ class CompaniesHouseDirectors:
         token = base64.b64encode(f"{key}:".encode()).decode()
         return {"Authorization": f"Basic {token}", "Accept": "application/json"}
 
-    def find(self, http, company: str, *, key: str) -> tuple[list[Found], str | None]:
-        """(current directors, why not): ``registry_no_match`` when no active company
-        with this name is registered. HTTP errors are raised as they are."""
+    def find(self, http, company: str, *, key: str, locality: str | None = None,
+             address: str | None = None) -> tuple[list[Found], str | None]:
+        """(current directors, why not). ``registry_no_match``: no active company with this
+        name; ``registry_ambiguous``: several, and the place doesn't single one out (a
+        "Phoenix Cafe" in Leeds is not the one in London). HTTP errors are raised."""
         headers = self._headers(key)
-        data: Any = http.get(f"{API}/search/companies?q={quote(company)}&items_per_page=5",
+        data: Any = http.get(f"{API}/search/companies?q={quote(company)}&items_per_page=10",
                              rate_key=HOST, headers=headers).json()
-        best = None
+        candidates = []
         for item in (data or {}).get("items") or []:
             if str(item.get("company_status") or "active") != "active":
                 continue
             score = same_company(str(item.get("title") or ""), company)
-            if score >= 90 and (best is None or score > best[0]):
-                best = (score, item)
-        if best is None:
+            if score >= 90:
+                candidates.append((score, item))
+        if not candidates:
             return [], "registry_no_match"
+        if len({str(item.get("company_number")) for _, item in candidates}) > 1:
+            places = [p.casefold() for p in (locality, *_postcodes(address)) if p]
+            here = [(score, item) for score, item in candidates
+                    if any(p in str(item.get("address_snippet") or "").casefold()
+                           for p in places)]
+            if len({str(item.get("company_number")) for _, item in here}) != 1:
+                return [], "registry_ambiguous"
+            candidates = here
+        best = max(candidates, key=lambda c: c[0])
         number = str(best[1].get("company_number") or "")
         officers: Any = http.get(f"{API}/company/{quote(number)}/officers?items_per_page=50",
                                  rate_key=HOST, headers=headers).json()

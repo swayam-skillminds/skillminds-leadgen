@@ -451,6 +451,20 @@ class LeadStore:
         conn.execute(delete(SIGNALS).where(
             SIGNALS.c.organization_id == victim, SIGNALS.c.key != "",
             tuple_(SIGNALS.c.lead_type, SIGNALS.c.type, SIGNALS.c.key).in_(held_signals)))
+        # People: one row per (lead type, name); the survivor's keeps it, filling its blanks
+        # from the victim's.
+        held_people = {(r["lead_type"], r["name"].casefold()): r for r in conn.execute(
+            select(PEOPLE).where(PEOPLE.c.organization_id == survivor)).mappings()}
+        for row in conn.execute(select(PEOPLE).where(PEOPLE.c.organization_id == victim))\
+                .mappings().all():
+            kept = held_people.get((row["lead_type"], row["name"].casefold()))
+            if kept is None:
+                continue
+            fill = {k: row[k] for k in ("title", "profile_url", "email", "source_url")
+                    if row[k] and not kept[k]}
+            if fill:
+                conn.execute(update(PEOPLE).where(PEOPLE.c.id == kept["id"]).values(**fill))
+            conn.execute(delete(PEOPLE).where(PEOPLE.c.id == row["id"]))
         for table in (CONTACTS, PEOPLE, SIGNALS, EVIDENCE):
             conn.execute(update(table).where(table.c.organization_id == victim)
                          .values(organization_id=survivor))
@@ -844,9 +858,15 @@ class LeadStore:
             gone = [r for r in rows if r.name.casefold() not in keep]
             if gone:
                 self._conn.execute(delete(PEOPLE).where(PEOPLE.c.id.in_([r.id for r in gone])))
-                self._conn.execute(delete(CONTACTS).where(
-                    CONTACTS.c.organization_id == lead_id, CONTACTS.c.kind == "inferred",
-                    CONTACTS.c.person.in_([r.name for r in gone])))
+                # Their inferred addresses go -- unless someone of that name is still listed
+                # (by another source or lead type).
+                remaining = {r.name.casefold() for r in self._conn.execute(
+                    select(PEOPLE.c.name).where(PEOPLE.c.organization_id == lead_id))}
+                orphans = [r.name for r in gone if r.name.casefold() not in remaining]
+                if orphans:
+                    self._conn.execute(delete(CONTACTS).where(
+                        CONTACTS.c.organization_id == lead_id, CONTACTS.c.kind == "inferred",
+                        CONTACTS.c.person.in_(orphans)))
             self._conn.commit()
         return len(gone)
 

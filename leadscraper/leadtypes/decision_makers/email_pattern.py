@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 from typing import Callable, Iterable
 
 from ...core.identity import is_shared_host
-from ...sources.people.roles import name_parts
+from ...sources.people.roles import ROLE_MAILBOXES, name_parts, person_name
 
 log = logging.getLogger(__name__)
 
@@ -41,18 +41,6 @@ PATTERNS: dict[str, Callable[[str, str], str]] = {
     "lastfirst": lambda f, s: f"{s}{f}",
     "last": lambda f, s: s,
 }
-#: Mailboxes of a role, not a person: they reveal no pattern.
-ROLE_MAILBOXES = frozenset("""
-info contact contacts contactus hello hi hey admin administrator support help helpdesk office
-enquiry enquiries enquire inquiry inquiries mail email team hr careers career jobs job
-recruitment talent accounts account billing finance invoice invoices payments marketing sales
-service services booking bookings reservations reservation events press media pr news
-newsletter noreply no-reply donotreply webmaster web website care customercare customer
-customers feedback orders order shop store reception frontdesk general legal privacy
-compliance security abuse partners partner business bd biz connect query queries
-""".split())
-
-
 @dataclass(frozen=True)
 class Pattern:
     pattern: str
@@ -85,7 +73,7 @@ def learn(emails: Iterable[str], people: Iterable[str], domain: str | None) -> L
     domain = (domain or "").casefold().strip(".")
     if not domain or "." not in domain or is_shared_host(domain):
         return Learned(None, "shared_domain")
-    names = [p for p in dict.fromkeys(people) if p and name_parts(p)]
+    names = [p for p in dict.fromkeys(people) if p and person_name(p) and name_parts(p)]
     evidence: dict[str, list[str]] = {}
     seen = []
     for email in dict.fromkeys(e.strip().casefold() for e in emails if e):

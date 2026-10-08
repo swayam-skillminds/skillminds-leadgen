@@ -20,7 +20,15 @@ FAMILY_TITLES = {"owner": "Owner / founder", "executive": "Executive",
 
 _NOT_BUYERS = re.compile(r"\b(?:advis[eo]r[sy]?|advisory|investor|mentor|intern|trainee|"
                          r"non[- ]executive|independent director|board member|volunteer|"
-                         r"student|alumni|ambassador|assistant to)\b", re.I)
+                         r"student|alumni|ambassador|assistant to|"
+                         # titles that only look like an owner's or an executive's
+                         r"product owner|process owner|channel partner|delivery partner|"
+                         r"implementation partner|partner \w+ (?:manager|executive|lead)|"
+                         r"partner success|founder'?s office|(?:assistant|associate|deputy) "
+                         r"director|(?:art|creative|music|casting|film) director|"
+                         r"director of photography|instructor|trainer|teacher|"
+                         # no longer in the role
+                         r"former|ex-|ex\s|retired|emeritus|late)\b", re.I)
 _PATTERNS = (
     ("technology", re.compile(
         r"\b(?:cto|cio|cdo|cdio|ciso|chief (?:technology|technical|information|digital|data|"
@@ -100,6 +108,24 @@ offerings innovation consulting strategy design quality security network analyti
 intelligence machine learning smart future value open source events press investor investors
 relations governance sustainability culture life people partner partners overview awards
 """.split())
+
+
+#: Mailboxes of a role, not a person: they reveal no pattern, and
+#: are never a person's own address.
+ROLE_MAILBOXES = frozenset("""
+info contact contacts contactus hello hi hey admin administrator support help helpdesk office
+enquiry enquiries enquire inquiry inquiries mail email team hr careers career jobs job
+recruitment talent accounts account billing finance invoice invoices payments marketing sales
+service services booking bookings reservations reservation events press media pr news
+newsletter noreply no-reply donotreply webmaster web website care customercare customer
+customers feedback orders order shop store reception frontdesk general legal privacy
+compliance security abuse partners partner business bd biz connect query queries
+""".split())
+
+
+
+def is_role_mailbox(address: str) -> bool:
+    return (address or "").split("@", 1)[0].casefold() in ROLE_MAILBOXES
 
 
 def _fold(text: str) -> str:

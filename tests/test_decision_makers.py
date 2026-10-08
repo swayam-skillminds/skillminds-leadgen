@@ -138,6 +138,11 @@ def test_what_a_persons_name_looks_like(text, name):
     ("Independent Director", None), ("Advisor", None), ("Marketing Manager", None),
     ("Senior Developer", None), ("Intern", None), ("Head of Marketing", None),
     ("Principal", "owner"), ("Principal Software Architect", None),
+    # The Phase 6b review: look-alike titles, and people no longer in the role.
+    ("Product Owner", None), ("Channel Partner", None), ("Partner Success Manager", None),
+    ("Founder's Office Associate", None), ("Chair Yoga Instructor", None),
+    ("Former CEO", None), ("Ex-CTO", None), ("Assistant Director", None),
+    ("Art Director", None), ("Director of Photography", None), ("Managing Partner", "owner"),
     ("Extensive Partner Ecosystem", None),
     ("Explore our services & industries Our AI offerings Our partner ecosystem", None),
 ])
@@ -226,6 +231,32 @@ def test_a_bigger_sites_testimonials_and_copy_are_nobody(tmp_path):
     assert [p.name for p in found] == ["Anika Desai"]
 
 
+def test_a_line_s_contacts_are_its_own_and_role_mailboxes_are_nobodys():
+    listed = soup("<main><ul><li>Priya Shah, Co-founder &amp; CEO "
+                  "<a href='mailto:priya@acme.example'>Email</a></li>"
+                  "<li>Rahul Mehta, CTO</li><li>Anita Rao, Head of IT</li></ul></main>")
+    found = {p.name: (p.title, p.email) for p in people_on(listed, "https://acme.example/")}
+    assert found == {"Priya Shah": ("Co-founder & CEO", "priya@acme.example"),
+                     "Rahul Mehta": ("CTO", None), "Anita Rao": ("Head of IT", None)}
+    paragraphs = soup("<main><div><p>Priya Shah | Founder</p><p>Rahul Mehta | CTO</p>"
+                      "<p>Contact: <a href='mailto:sales@acme.example'>sales@acme.example</a>"
+                      "</p></div></main>")
+    assert [(p.name, p.title, p.email) for p in people_on(paragraphs, "https://acme.example/")] \
+        == [("Priya Shah", "Founder", None), ("Rahul Mehta", "CTO", None)]
+    card = soup("<main><div><h3>Priya Shah</h3><p>CEO</p>"
+                "<a href='mailto:info@acme.example'>Write</a></div></main>")
+    assert people_on(card, "https://acme.example/")[0].email is None     # info@ is a role
+
+
+def test_founded_by_prose_must_be_about_this_company():
+    page = soup("<main><p>Acme was founded by Priya Shah. We serve clients like Google, which "
+                "was founded by Larry Page and Sergey Brin.</p><p>Led by Anil Rao, our founder"
+                ".</p></main>")
+    assert [(p.name, p.title) for p in people_on(page, "https://acme.example/",
+                                                 company="Acme Robotics")] == [
+        ("Priya Shah", "Founder"), ("Anil Rao", "founder")]
+
+
 # --- the email pattern ------------------------------------------------------------------------
 
 def test_the_pattern_needs_a_published_personal_address_for_a_named_person():
@@ -285,6 +316,15 @@ def test_companies_house_directors():
     assert found[0].page.endswith("/company/09999991/officers")
     web.add(f"{CH_API}/search/companies", Page.of_json({"items": []}))
     assert CompaniesHouseDirectors().find(web, "Nobody Ltd", key="k")[1] == "registry_no_match"
+    # Two active companies of that name: the place decides, or nobody is recorded.
+    web.add(f"{CH_API}/search/companies", Page.of_json({"items": [
+        {"title": "PHOENIX CAFE LTD", "company_number": "111", "company_status": "active",
+         "address_snippet": "1 High St, London"},
+        {"title": "PHOENIX CAFE LIMITED", "company_number": "09999991",
+         "company_status": "active", "address_snippet": "9 Briggate, Leeds"}]}))
+    assert CompaniesHouseDirectors().find(web, "Phoenix Cafe", key="k")[1] == "registry_ambiguous"
+    found, why = CompaniesHouseDirectors().find(web, "Phoenix Cafe", key="k", locality="Leeds")
+    assert why is None and found[0].page.endswith("/company/09999991/officers")
     headers = CompaniesHouseDirectors._headers("k-123")
     assert headers["Authorization"] == "Basic ay0xMjM6"                  # "k-123:", the key only
 
@@ -599,6 +639,98 @@ def test_published_later_an_inferred_address_becomes_published(tmp_path):
         assert store.people(org, "decision_makers") == []
     finally:
         store.close()
+
+
+def test_the_pattern_only_names_people_and_a_failed_read_keeps_it(tmp_path):
+    store = LeadStore(f"sqlite:///{tmp_path / 'p.sqlite3'}", project="p")
+    try:
+        org, _, _ = store.upsert(Lead(business_name="Acme Foods", website="https://acmefoods.in/",
+                                      contact_name="Front Office", phones=["+912000000021"],
+                                      emails=["priya.shah@acmefoods.in"]))
+        store.lead_type = "decision_makers"
+        store.add_person(org, "Priya Shah", title="CEO", source="team_pages")
+        store.add_person(org, "Rahul Mehta", title="CTO", source="team_pages")
+        config = compile_run_config(RunConfig.model_validate({
+            "name": "n", "project": "p", "geography": {"country": "IN", "places": ["Pune"]},
+            "lead_types": {"decision_makers": {"email_pattern": {"enabled": True}}}}))
+        from fake_web import kit_for
+
+        dm = DecisionMakersSession(SimpleNamespace(config=config, store=store, run_id=None),
+                                   DECISION_MAKERS.effective(config),
+                                   kit=kit_for(FakeWeb(), tmp_path),
+                                   resolve_mx=lambda name: [SimpleNamespace(exchange="mx.")])
+        lead = store.get(org)
+        dm.infer_emails(org, lead, [], [], "https://acmefoods.in/")
+        inferred = {c.value for c in store._conn.execute(Contact.__table__.select().where(
+            Contact.__table__.c.kind == "inferred"))}
+        assert inferred == {"rahul.mehta@acmefoods.in"}           # never front.office@
+        # The site doesn't answer next time: what was inferred stays.
+        dm.write(org, lead, [], set(), [], "https://acmefoods.in/", transient=True)
+        assert {c.value for c in store._conn.execute(Contact.__table__.select().where(
+            Contact.__table__.c.kind == "inferred"))} == inferred
+    finally:
+        store.close()
+
+
+def test_consolidation_keeps_one_person_and_their_inferred_address(tmp_path):
+    store = LeadStore(f"sqlite:///{tmp_path / 'f.sqlite3'}", project="f")
+    try:
+        a, _, _ = store.upsert(Lead(business_name="Acme Foods", phones=["+912000000031"]))
+        b, _, _ = store.upsert(Lead(business_name="Acme Foods Pune", phones=["+912000000032"]))
+        store.lead_type = "decision_makers"
+        store.add_person(a, "Priya Shah", title="CEO", source="team_pages")
+        store.add_person(b, "Priya Shah", title="", profile_url="https://x.example/p",
+                         source="registry")
+        assert store.fold_pair(a, b)
+        people = store.people(a, "decision_makers")
+        assert [(p["name"], p["title"], p["profile_url"]) for p in people] == [
+            ("Priya Shah", "CEO", "https://x.example/p")]
+        # Two sources name Rahul; one stops listing him: his inferred address stays.
+        store.add_person(a, "Rahul Mehta", title="CTO", source="team_pages")
+        store.set_inferred_contacts(a, "email_pattern",
+                                    [("email", "rahul.mehta@acme.example", "Rahul Mehta", 0.6)])
+        store.lead_type = "other"
+        store.add_person(a, "Rahul Mehta", title="CTO", source="registry")
+        store.lead_type = "decision_makers"
+        store.prune_people(a, "team_pages", ["Priya Shah"])
+        assert [c.value for c in store._conn.execute(Contact.__table__.select().where(
+            Contact.__table__.c.kind == "inferred"))] == ["rahul.mehta@acme.example"]
+    finally:
+        store.close()
+
+
+def test_has_email_means_a_published_one(tmp_path):
+    from leadscraper.services import organizations
+
+    store = LeadStore(f"sqlite:///{tmp_path / 'h.sqlite3'}", project="h")
+    try:
+        org, _, _ = store.upsert(Lead(business_name="Acme Foods", phones=["+912000000041"]))
+        store.lead_type = "decision_makers"
+        store.set_inferred_contacts(org, "email_pattern",
+                                    [("email", "priya.shah@acme.example", "Priya Shah", 0.6)])
+        ws = default_workspace(store.engine)
+        found = organizations.list_organizations(store.engine, ws, project_id=store.project_id,
+                                                 has=["email"])
+        assert [o["name"] for o in found.items] == []          # only an inferred address
+        phones = organizations.list_organizations(store.engine, ws, project_id=store.project_id,
+                                                  has=["phone"])
+        assert [o["name"] for o in phones.items] == ["Acme Foods"]
+    finally:
+        store.close()
+
+
+def test_serp_pacing_is_left_alone_unless_linkedin_search_runs(tmp_path):
+    from fake_web import kit_for
+    from leadscraper.net.ratelimit import RateLimiter
+
+    config = compile_run_config(RunConfig.model_validate({
+        "name": "n", "project": "n", "geography": {"country": "IN", "places": ["Pune"]},
+        "lead_types": {"decision_makers": {}}}))
+    kit = kit_for(FakeWeb(limiter=RateLimiter()), tmp_path)
+    kit.limiter.configure("www.google.com", 1.0, 2.0)
+    DecisionMakersSession(SimpleNamespace(config=config, store=None, run_id=None),
+                          DECISION_MAKERS.effective(config), kit=kit)
+    assert kit.limiter._ranges["www.google.com"] == (1.0, 2.0)          # not slowed to 12-28 s
 
 
 def local_business_output(config) -> tuple[list, list]:

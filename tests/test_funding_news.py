@@ -132,6 +132,24 @@ def test_amounts_and_rounds_as_headlines_state_them(text, amount, value, currenc
     ("Acme Foods partners with local farmers for fresh produce", None, None),
     # Live 2026-10-08: a transport office is a public body, not a company.
     ("Pune RTO launches WhatsApp number for passengers", None, None),
+    # The Phase 6b review: business won, loans, people, questions, commas, parentheses.
+    ("Kestrel Logistics bags $1 billion deal from a state utility", None, None),
+    ("Marigold Textiles bags 'significant' order worth Rs 1,000 crore", None, None),
+    ("Lotus Logistics gets $750 million loan from banks", None, None),
+    ("Ledgerly CEO Anika Desai raises $10 million for new venture", None, None),
+    ("Byju's founder Byju Raveendran raises $1 billion", None, None),
+    ("Board names Rahul Mehta as CEO", None, None),
+    ("Man raises Rs 5 lakh for daughter's surgery through crowdfunding", None, None),
+    ("Why Zentro Labs raises $500 million now", "funding", "Zentro Labs"),
+    ("IPO-bound Zentro Labs raises Rs 1,000 crore from anchor investors", "funding",
+     "Zentro Labs"),
+    ("Nifty, Sensex Gain As Reliance Raises Rs 10,000 Crore", "funding", "Reliance"),
+    ("Acme Robotics Inc (NASDAQ: ACME) Raises $5M", "funding", "Acme Robotics Inc"),
+    ("Startup Acme closes $10M Series A", "funding", "Acme"),
+    ("Acme Expands Its Product Line", None, None),
+    ("Acme Enters Into Agreement With Beta", None, None),
+    ("Acme sets up Rs 100 crore fund for startups", None, None),
+    ("Acme Expands Its Footprint To Pune", "expansion", "Acme"),
 ])
 def test_headlines_name_an_event_and_its_company(headline, kind, company):
     event = classify(headline, places=["Pune", "India"])
@@ -159,6 +177,8 @@ def test_event_details():
     release = classify("Announces record quarter and opens new office in Pune",
                        issuer="Saffron Analytics")
     assert (release.kind, release.company) == ("expansion", "Saffron Analytics")
+    titled = classify("Microsoft Appoints Satya Nadella As Chairman")
+    assert (titled.person, titled.role) == ("Satya Nadella", "Chairman")   # not "Nadella As"
     assert subject_company("Pune Acme", ["Pune"]) == "Acme"
     assert subject_company("lab-grown diamond startup ONYA") == "ONYA"
 
@@ -231,6 +251,27 @@ def _failures(tmp_path) -> list[dict]:
 
     path = tmp_path / "failures.jsonl"
     return [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
+
+
+@pytest.mark.parametrize("company, links, site", [
+    ("Kalpa Health", ["https://www.globenewswire.com/x", "https://kalpa-health.example/news"],
+     "https://kalpa-health.example/news"),
+    ("The Sleep Company", ["https://www.thehindubusinessline.com/companies/x",
+                           "https://thesleepcompany.in"], "https://thesleepcompany.in/"),
+    ("Tata Motors", ["https://www.tatacapital.com/", "https://www.tatamotors.com/"],
+     "https://tatamotors.com/"),
+    ("Acme Robotics", ["https://www.acmeinvestors.vc/portfolio"], None),
+    ("Ledgerly", ["https://getledgerly.example/"], "https://getledgerly.example/"),
+    ("Ledgerly", ["https://ledgerlyventurepartners.example/"], None),
+    ("Indian Hotels Company", ["https://www.indianexpress.com/a"], None),
+])
+def test_a_news_companys_site_must_spell_its_name(company, links, site):
+    assert FundingNewsSession._site(company, links) == site
+
+
+def test_the_outlet_is_never_the_companys_site():
+    assert FundingNewsSession._site("Startup Wire", ["https://startupwire.example/2026/x"],
+                                    {"startupwire.example"}) is None
 
 
 def test_google_news_titles_lose_their_outlet():
@@ -431,6 +472,29 @@ def test_press_releases_google_news_and_your_own_feeds(tmp_path, monkeypatch, ne
     assert orgs["Kalpa Health"]["record"]["website"] == "https://kalpa-health.example/news"
     assert "Insight Reports" not in orgs                     # a report from Delhi: no event
     assert orgs["Lotus Logistics"]["lead_types"] == ["local_business", "funding_news"]
+
+
+def test_a_follow_up_story_never_makes_an_event_look_fresh(tmp_path, monkeypatch, news):
+    config, _ = run(tmp_path, monkeypatch, "fresh", {**LOCAL, "funding_news": GDELT_ONLY})
+    first = signals_by_org(config)["Ledgerly"][0]
+    # A week later, a follow-up about the same round (amount only, no stage).
+    news.add(GDELT_API, Page(json_dump({"articles": [{
+        "url": "https://citybusiness.example/news/ledgerly-follow-up", "domain": "citybusiness.example",
+        "title": "Pune-based Ledgerly raises Rs 22 crore to hire engineers",
+        "seendate": datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")}]}),
+        headers={"Content-Type": "application/json"}))
+    run(tmp_path, monkeypatch, "fresh", {**LOCAL, "funding_news": GDELT_ONLY})
+    after = signals_by_org(config)["Ledgerly"]
+    assert len(after) == 1                                       # the same round, refreshed
+    assert after[0]["published_at"] == first["published_at"]     # still as old as its first story
+    assert after[0]["payload"]["headline"] == first["payload"]["headline"]
+    assert len(after[0]["payload"]["coverage"]) == 3
+
+
+def json_dump(data) -> str:
+    import json
+
+    return json.dumps(data)
 
 
 def test_no_new_companies_when_create_new_is_off(tmp_path, monkeypatch, news):

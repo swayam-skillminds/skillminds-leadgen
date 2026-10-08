@@ -32,8 +32,12 @@ DIRECT_BONUS = 0.05
 
 
 def _mine(record: Any) -> list[dict[str, Any]]:
-    people = getattr(record, "people", None) or []
-    return [p for p in people if p.get("lead_type") == KEY and p.get("name")]
+    """Its own people on the record, one per name (case-folded), first seen first."""
+    out: dict[str, dict[str, Any]] = {}
+    for person in getattr(record, "people", None) or []:
+        if person.get("lead_type") == KEY and person.get("name"):
+            out.setdefault(" ".join(str(person["name"]).split()).casefold(), person)
+    return list(out.values())
 
 
 def _role(person: dict[str, Any]) -> str:
