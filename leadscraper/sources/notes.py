@@ -168,6 +168,87 @@ NOTES.update({
                  "practice. Lead type digital_audit.",
         "review": False,
         "last_verified": "2026-10-07 (keyless: 429 'Quota exceeded … Queries per day')"},
+    # funding_news (Phase 6.3)
+    "gdelt": {
+        "endpoint": "https://api.gdeltproject.org/api/v2/doc/doc?query=…&mode=artlist"
+                    "&format=json&sort=datedesc&timespan={days}d",
+        "method": "requests (JSON), one query per event kind and place",
+        "terms": "GDELT's data is free for any use, commercial included, with a citation of "
+                 "the GDELT Project; it asks for at most one request every 5 seconds (paced "
+                 "6-9 s). Headlines and links only; articles are never fetched. Lead type "
+                 "funding_news.",
+        "review": False,
+        "last_verified": "2026-10-08 (200; articles[] with url, title, seendate, domain; "
+                         "429 text when faster than 1 per 5 s)"},
+    "google_news": {
+        "endpoint": "https://news.google.com/rss/search?q=…&hl={locale}&gl={CC}&ceid={CC}:{lang}",
+        "method": "requests (RSS)",
+        "terms": "The feed's own terms: \"solely for the purpose of rendering Google News "
+                 "results within a personal feed reader for personal, non-commercial use. Any "
+                 "other use of the feed is expressly prohibited.\" Off by default; enabling it "
+                 "needs Google's permission. Lead type funding_news.",
+        "review": True, "last_verified": "2026-10-08 (200; RSS with <source>, the terms above)"},
+    "press_releases": {
+        "endpoint": "https://www.globenewswire.com/RssFeed/country/{Country}/feedTitle/…",
+        "method": "requests (RSS); the issuer from dc:contributor",
+        "terms": "robots.txt allows /RssFeed/ and the feed carries no restriction, but "
+                 "GlobeNewswire's terms page could not be found: off by default, to review. "
+                 "PR Newswire's terms (personal, non-commercial use; no robots) exclude it. "
+                 "Lead type funding_news.",
+        "review": True,
+        "last_verified": "2026-10-08 (200 for India, 20 releases with dc:contributor; a "
+                         "browser User-Agent was refused once)"},
+    "feeds": {
+        "endpoint": "RSS / Atom URLs the config lists",
+        "method": "requests (RSS / Atom)",
+        "terms": "Each feed's terms are the config author's call. Inc42 and YourStory forbid "
+                 "automated access and Entrackr's feed is gone (2026-10-08), so no regional "
+                 "feed ships with a country pack. Lead type funding_news.",
+        "review": True, "last_verified": None},
+    # decision_makers (Phase 6.4)
+    "team_pages": {
+        "endpoint": "the organisation's own site: home, then up to 3 team / leadership / "
+                    "about pages it links",
+        "method": "requests (robots.txt honoured); JSON-LD, microdata, name-and-title cards",
+        "terms": "The business's public pages, one request at a time per site. Only people the "
+                 "page names with a title. Lead type decision_makers.",
+        "review": False, "last_verified": None},
+    "companies_house": {
+        "endpoint": "https://api.company-information.service.gov.uk/search/companies?q=…, "
+                    "then /company/{number}/officers",
+        "method": "requests (JSON); HTTP Basic with the secret companies-house-api-key",
+        "terms": "The UK registry's official public API: a free key, 600 requests per 5 "
+                 "minutes, for real-time lookups (not bulk). Current directors and LLP members "
+                 "only. Pack uk (GB). Lead type decision_makers.",
+        "review": False,
+        "last_verified": "2026-10-08 (401 'Empty Authorization header' without a key; no key "
+                         "here for a 200)"},
+    "linkedin_search": {
+        "endpoint": "Google search (then DuckDuckGo) for site:linkedin.com/in \"<company>\" "
+                    "(founder OR CTO …)",
+        "method": "via google_search's SERP client; profile URLs and result titles only",
+        "terms": "LinkedIn is never fetched or logged into (A.2.4): only URLs a search engine "
+                 "indexed. Google's terms restrict automated queries: off by default. Lead "
+                 "type decision_makers.",
+        "review": True, "last_verified": None},
+    "github": {
+        "endpoint": "https://api.github.com/orgs/{org}, /orgs/{org}/public_members, "
+                    "/users/{login}",
+        "method": "requests (JSON); optional token from the secret github-token",
+        "terms": "GitHub's official REST API (60 requests/hour without a token). Its Acceptable "
+                 "Use Policies limit personal information to the purpose its users published "
+                 "it for and forbid unsolicited email: off by default, never used for the "
+                 "email pattern. Lead type decision_makers.",
+        "review": True,
+        "last_verified": "2026-10-08 (200 for /orgs/github, /orgs/github/public_members, "
+                         "/users/defunkt)"},
+    "email_pattern": {
+        "endpoint": "DNS MX records of the organisation's own domain (the system resolver)",
+        "method": "dnspython; no SMTP, ever",
+        "terms": "An inference (A.2.5), off by default: only from published personal addresses "
+                 "at the same domain, always labelled Inferred Email (unverified), never "
+                 "published, never used for matching. Lead type decision_makers.",
+        "review": False, "last_verified": "2026-10-08 (example.com: a null MX, so no mail)"},
 })
 
 

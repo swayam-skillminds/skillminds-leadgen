@@ -37,12 +37,15 @@ class Pack:
     applicable_verticals: frozenset[str] | None = None
     discovery: tuple[type, ...] = ()
     enrichment: tuple[type, ...] = ()
+    #: Company registries whose officers are decision-makers (Phase 6: decision_makers).
+    #: Each class has ``name`` and ``find(http, company, *, key)``; see ``packs/uk``.
+    registries: tuple[type, ...] = ()
     #: source name -> {lower-cased city -> URL segment}, for directories that
     #: route a city under a name other than its plain slug.
     city_slugs: Mapping[str, Mapping[str, str]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        for cls in (*self.discovery, *self.enrichment):
+        for cls in (*self.discovery, *self.enrichment, *self.registries):
             cls.pack = self.key
 
     @property

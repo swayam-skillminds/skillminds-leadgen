@@ -5,6 +5,7 @@
 * ``hospitality`` -- stays and venues: StayVista, SaffronStays, Elivaas, Airbnb,
   Booking.com, plus venue classification and tiers (``venues.py``).
 * ``social``      -- Facebook, Instagram, search-indexed LinkedIn URLs.
+* ``uk``          -- United Kingdom: Companies House officers (decision_makers).
 
 Core sources (Google Maps, Google Search, website, Maps lookup) are not in a
 pack: they apply everywhere. See ``sources/registry.py``.
@@ -17,7 +18,8 @@ from typing import Iterable
 
 from .base import Pack, slugify
 
-__all__ = ["Pack", "all_packs", "pack", "inactive_reason", "slugify", "city_slug"]
+__all__ = ["Pack", "all_packs", "pack", "inactive_reason", "registries_for", "slugify",
+           "city_slug"]
 
 
 @lru_cache(maxsize=1)
@@ -28,12 +30,19 @@ def _packs() -> tuple[Pack, ...]:
     from .hospitality import PACK as HOSPITALITY
     from .india import PACK as INDIA
     from .social import PACK as SOCIAL
+    from .uk import PACK as UK
 
-    return (INDIA, EVENTS, HOSPITALITY, SOCIAL)
+    return (INDIA, EVENTS, HOSPITALITY, SOCIAL, UK)
 
 
 def all_packs() -> list[Pack]:
     return list(_packs())
+
+
+def registries_for(country: str) -> list[type]:
+    """Company registries (decision_makers) of every pack that applies to ``country``."""
+    return [cls for p in _packs() if p.applicable_countries is None
+            or (country or "").upper() in p.applicable_countries for cls in p.registries]
 
 
 def pack(key: str) -> Pack | None:
