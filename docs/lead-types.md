@@ -379,7 +379,9 @@ lead_types:
   funds for flood relief" names no company and "Sensex raises concerns" no
   event. Descriptors ("fintech startup", "Pune-based"), possessives
   ("Bengaluru's") and prefixes ("Exclusive:") are dropped; public bodies (RTO,
-  PMC, ministries, police, courts) are not companies. A press release's issuer
+  PMC, ministries, police, courts, boards) are not companies, nor is a person
+  with a role ("Zomato CEO … raises"). Orders, contracts and loans a company
+  "bags" or "gets" are not funding. A press release's issuer
   (`dc:contributor`) is the company whatever the grammar.
 - **Place.** With `place_filter: headline` (the default) a story counts only
   when its headline or a feed's summary names one of the run's places or
@@ -397,8 +399,9 @@ lead_types:
   The payload carries the amount as stated (`{text, value, currency}`; a crore
   is 10^7), round, investors ("led by …"), person and role (leadership), the
   other party (acquisition, partner) and every outlet that covered it. Stories
-  about the same event (company, kind, detail) within 30 days are one signal: a
-  re-run refreshes it. Strength: the type's default (funding 0.8, digital
+  about the same event (company, kind, detail; any funding news of a company)
+  within 30 days are one signal: a re-run refreshes it, and the event keeps the
+  date and headline of its first story. Strength: the type's default (funding 0.8, digital
   transformation 0.75, expansion and acquisition 0.6, leadership 0.6 or 0.75
   for a technology role, launch 0.45) plus 0.05 per further outlet, up to 0.95.
 - **Score:** *intent* = the strongest event's strength, halving every
@@ -456,7 +459,10 @@ lead_types:
   prose; navigation, header, footer and forms are ignored. The homepage's own
   people count only when a site has no team or about page: on bigger sites
   they are testimonials, authors and customers. A card holds one person; an
-  email or LinkedIn link inside it is theirs.
+  email or LinkedIn link inside it (or inside a one-line "Name, Title" entry)
+  is theirs, and a role mailbox (info@, sales@ …) is nobody's. "Founded by"
+  prose counts only when it is about this company ("Google, which was founded
+  by …" on a vendor's page isn't).
 - **Who counts.** A name is two to four capitalised words (initials and
   particles allowed, acronyms, role words and business words not). A title is
   short, isn't marketing copy, and falls in a wanted family: **owner**
@@ -470,6 +476,8 @@ lead_types:
 - **Registries (packs).** UK runs: Companies House directors and LLP members
   who haven't resigned, for an active company whose registered name matches
   (similarity ≥ 90), with the free key in the secret `companies-house-api-key`.
+  Several active companies of that name: the one whose registered address names
+  the organisation's locality or postcode, else nobody (`registry_ambiguous`).
   Without the key it says so once (`key_missing`) and skips. India: the MCA
   has no free public API, so no Indian registry yet.
 - **LinkedIn (opt-in).** A search for `site:linkedin.com/in "<company>"
@@ -492,7 +500,9 @@ lead_types:
   it. Then, if the domain's MX records say it takes mail (a null MX says it
   doesn't), named people without a published address get one, stored as an
   `inferred` contact naming its person (confidence 0.6, or 0.75 from two
-  examples). No SMTP, ever. Inferred addresses appear only in `Inferred Email
+  examples). Only real person names count, for learning and for applying ("Front
+  Office" as a record's contact name is nobody); a run whose team page didn't
+  answer keeps the addresses inferred before. No SMTP, ever. Inferred addresses appear only in `Inferred Email
   (unverified)`, are never on the record, never identity keys, and become
   published contacts if the address is later published. The pattern itself is
   the `email_pattern` attribute (`origin: rule`), shown in Email Pattern.
