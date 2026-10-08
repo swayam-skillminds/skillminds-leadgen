@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss
+  version="2.0">
+  <channel xmlns:dc="http://dublincore.org/documents/dcmi-namespace/" xmlns:media="http://search.yahoo.com/mrss/">
+    <title>GlobeNewswire - News from India</title>
+    <link>https://www.globenewswire.com/RssFeed/country/India/feedTitle/GlobeNewswire%20-%20News%20from%20India</link>
+    <description>Contains the last 20 releases</description>
+    <lastBuildDate>@rfc:0</lastBuildDate>
+    <item>
+      <guid isPermaLink="true">https://www.globenewswire.com/news-release/fixture/1/0/en/saffron-analytics-expansion.html</guid>
+      <link>https://www.globenewswire.com/news-release/fixture/1/0/en/saffron-analytics-expansion.html</link>
+      <title>Saffron Analytics Announces Expansion of Its Delivery Network</title>
+      <description><![CDATA[<p>PUNE, India -- Saffron Analytics today opened a new delivery centre in Pune, India. The centre will employ 200 engineers. Learn more at <a href="https://saffron-analytics.example/">saffron-analytics.example</a>.</p>]]></description>
+      <pubDate>@rfc:2</pubDate>
+      <dc:publisher>GlobeNewswire Inc.</dc:publisher>
+      <dc:contributor>Saffron Analytics</dc:contributor>
+      <dc:subject>Business Operations</dc:subject>
+    </item>
+    <item>
+      <guid isPermaLink="true">https://www.globenewswire.com/news-release/fixture/2/0/en/kalpa-health-cio.html</guid>
+      <link>https://www.globenewswire.com/news-release/fixture/2/0/en/kalpa-health-cio.html</link>
+      <title>Kalpa Health Names Arjun Mehta Chief Information Officer</title>
+      <description><![CDATA[<p>PUNE, India -- Kalpa Health, a Pune hospital group, named Arjun Mehta its Chief Information Officer. See <a href="https://www.globenewswire.com/fixture">the release</a> and <a href="https://kalpa-health.example/news">kalpa-health.example</a>.</p>]]></description>
+      <pubDate>@rfc:4</pubDate>
+      <dc:publisher>GlobeNewswire Inc.</dc:publisher>
+      <dc:contributor>Kalpa Health</dc:contributor>
+    </item>
+    <item>
+      <guid isPermaLink="true">https://www.globenewswire.com/news-release/fixture/3/0/en/clinical-trial.html</guid>
+      <link>https://www.globenewswire.com/news-release/fixture/3/0/en/clinical-trial.html</link>
+      <title>Clinical Trial Pipeline Highlights 65+ Leading Players</title>
+      <description><![CDATA[<p>DELHI, India -- A market report on the global therapeutics landscape.</p>]]></description>
+      <pubDate>@rfc:1</pubDate>
+      <dc:contributor>Insight Reports</dc:contributor>
+    </item>
+  </channel>
+</rss>

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>Pune Industry Association: member news (fictional)</title>
+  <id>urn:fixture:pia</id>
+  <updated>@iso:0</updated>
+  <entry>
+    <title>Lotus Logistics launches fleet-tracking app for Pune transporters</title>
+    <link rel="alternate" href="https://pia.example/news/lotus-fleet-app"/>
+    <id>urn:fixture:pia:1</id>
+    <updated>@iso:5</updated>
+    <summary>Lotus Logistics, a Pune member, has launched an app for transporters.</summary>
+  </entry>
+  <entry>
+    <title>Annual general meeting notice</title>
+    <link href="https://pia.example/news/agm"/>
+    <id>urn:fixture:pia:2</id>
+    <updated>@iso:2</updated>
+  </entry>
+</feed>

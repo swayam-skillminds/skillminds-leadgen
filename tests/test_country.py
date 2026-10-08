@@ -105,7 +105,12 @@ def test_every_registered_source_belongs_to_core_or_one_pack():
         "events": {"wedmegood", "weddingwire"},
         "hospitality": {"stayvista", "saffronstays", "elivaas", "airbnb", "booking"},
         "social": {"facebook", "instagram", "linkedin_serp"},
+        # Phase 6: the UK pack has no local_business source, only a company registry
+        # (decision_makers' Companies House directors).
+        "uk": set(),
     }
+    assert {pack.key: [cls.name for cls in pack.registries] for pack in all_packs()
+            if pack.registries} == {"uk": ["companies_house"]}
     every = set(DISCOVERY_SOURCES) | set(ENRICHMENT_SOURCES)
     assert every == core | set().union(*by_pack.values())
 

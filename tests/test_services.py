@@ -363,7 +363,8 @@ def test_every_source_has_catalog_notes_and_applicability():
     assert "covers IN" in us["justdial"]["reason"]
     assert us["linkedin_serp"]["fills"] == ["decision_makers"]
     by_key = {lt["key"]: lt for lt in catalog.lead_types("US")}
-    assert list(by_key) == ["local_business", "hiring", "digital_audit"]
+    assert list(by_key) == ["local_business", "hiring", "funding_news", "decision_makers",
+                            "digital_audit"]
     local = by_key["local_business"]
     assert local["key"] == "local_business" and local["applicable"]
     # Phase 6: a lead type's own sources are in the catalog too, with terms notes.
