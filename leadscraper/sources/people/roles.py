@@ -35,8 +35,8 @@ _PATTERNS = (
         r"information technology|systems|mis)\b", re.I)),
     ("owner", re.compile(
         r"\b(?:co-?\s?founder|founder|founding partner|owner|proprietor|propriter|"
-        r"managing partner|partner|principal|chairman|chairperson|chairwoman|chair|"
-        r"llp (?:designated )?member)\b", re.I)),
+        r"managing partner|partner|chairman|chairperson|chairwoman|chair|"
+        r"llp (?:designated )?member)\b|^\s*principal\s*$", re.I)),
     ("executive", re.compile(
         r"\b(?:ceo|coo|cfo|cmo|cbo|md|chief (?:executive|operating|financial|marketing|"
         r"business|commercial|strategy) officer|managing director|executive director|"
@@ -45,10 +45,21 @@ _PATTERNS = (
 )
 
 
+#: Words of marketing copy, never of a job title ("Extensive Partner Ecosystem").
+_NOT_TITLES = re.compile(r"\b(?:our|your|we|explore|discover|learn|ecosystem|expertise|"
+                         r"offerings?|services|solutions|industries|programs?|network|"
+                         r"benefits|opportunit(?:y|ies)|click|read|view|more)\b", re.I)
+
+
 def family_of(title: str) -> str | None:
-    """The decision-maker family a job title belongs to, or None (not a decision-maker)."""
+    """The decision-maker family a job title belongs to, or None (not a decision-maker).
+
+    A title is short (at most 12 words) and isn't marketing copy; "Principal" alone is
+    an owner, a "Principal Software Architect" an engineer.
+    """
     title = " ".join((title or "").split())
-    if not title or len(title) > 120 or _NOT_BUYERS.search(title):
+    if not title or len(title) > 120 or len(title.split()) > 12 or \
+            _NOT_BUYERS.search(title) or _NOT_TITLES.search(title):
         return None
     for family, pattern in _PATTERNS:
         if pattern.search(title):
@@ -82,6 +93,12 @@ office offices address phone mobile follow join apply submit send message subscr
 sign up get started learn explore discover why what how who when where gallery portfolio
 projects project products product pricing faq faqs support help manager head chief officer
 executive engineering marketing sales operations finance human resources hr president
+co-founder cofounder chairman chairperson owner proprietor principal vp svp evp cxo coo cfo
+cmo gm ai assistant application applications development expertise extensive ecosystem deep
+data cloud platform enterprise industry industries insights case studies study success global
+offerings innovation consulting strategy design quality security network analytics automation
+intelligence machine learning smart future value open source events press investor investors
+relations governance sustainability culture life people partner partners overview awards
 """.split())
 
 
@@ -108,6 +125,9 @@ def person_name(text: str) -> str | None:
         return None
     if bare.isupper():
         words = [w.capitalize() if len(w.rstrip(".")) > 1 else w for w in words]
+    if not bare.isupper() and any(len(w.strip(".,")) > 1 and w.strip(".,").isupper()
+                                  for w in words):
+        return None                       # an acronym ("CIB", "LLP") isn't part of a name
     initials = 0
     for index, word in enumerate(words):
         core = word.strip(".,'’")
@@ -146,3 +166,19 @@ def same_company(a: str, b: str) -> float:
 
     return name_similarity(SimpleNamespace(name_key=name_key(a or "")),
                            SimpleNamespace(name_key=name_key(b or "")))
+
+
+_EMPLOYER = re.compile(r"(?:,|\bat\b|@)\s*(?P<org>[^,]+?)\s*$", re.I)
+
+
+def employer_of(title: str) -> str | None:
+    """The organisation a title names as the person's employer ("CIO, Rosendin" ->
+    "Rosendin"; "CTO at Acme" -> "Acme"), or None. Testimonials on a vendor's site
+    name their customers' executives this way."""
+    match = _EMPLOYER.search(" ".join((title or "").split()))
+    if match is None:
+        return None
+    org = match.group("org").strip(" .")
+    if not org or family_of(org) is not None or not org[0].isupper():
+        return None                       # "Founder, CEO" names two roles, not an employer
+    return org

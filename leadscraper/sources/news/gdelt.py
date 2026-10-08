@@ -57,7 +57,8 @@ def search(http, query: str, *, days: int, max_records: int = 100) -> list[NewsI
     params = {"query": query, "mode": "artlist", "format": "json", "sort": "datedesc",
               "maxrecords": str(max(1, min(250, max_records))),
               "timespan": f"{max(1, min(MAX_DAYS, days))}d"}
-    response = http.get(API, rate_key=HOST, params=params,
+    # One attempt: GDELT throttles per IP, and retrying a 429 only digs the hole deeper.
+    response = http.get(API, rate_key=HOST, params=params, attempts=1,
                         headers={**FEED_HEADERS, "Accept": "application/json"})
     try:
         data: Any = response.json()

@@ -122,6 +122,8 @@ def soup(html: str):
     ("Meet the Team", None), ("Our Leadership", None), ("Read More", None), ("Priya", None),
     ("R. K.", None), ("Ravi Kumar Pvt Ltd", None), ("Sales Head", None),
     ("Call 98200 12345", None), ("priya shah", None), ("info@kestrel.example", None),
+    ("AI Assistant", None), ("Lena Okoro CIB", None), ("Kiran Patil Co-founder", None),
+    ("Deep Application Development Expertise", None),
 ])
 def test_what_a_persons_name_looks_like(text, name):
     assert person_name(text) == name
@@ -135,6 +137,9 @@ def test_what_a_persons_name_looks_like(text, name):
     ("CFO", "executive"),
     ("Independent Director", None), ("Advisor", None), ("Marketing Manager", None),
     ("Senior Developer", None), ("Intern", None), ("Head of Marketing", None),
+    ("Principal", "owner"), ("Principal Software Architect", None),
+    ("Extensive Partner Ecosystem", None),
+    ("Explore our services & industries Our AI offerings Our partner ecosystem", None),
 ])
 def test_which_titles_are_decision_makers(title, family):
     assert family_of(title) == family
@@ -171,6 +176,54 @@ def test_people_on_team_pages():
         ("Sunil Kapoor", "Managing Director", "microdata")]
     assert emails_on(soup(KESTREL_HOME)) == ["info@kestrel.example"]
     assert emails_on(soup(KESTREL_TEAM)) == ["anika.desai@kestrel.example"]
+
+
+# Live 2026-10-08, rewritten as fiction: a bigger company's site whose homepage carries
+# customer testimonials, a blog author and marketing copy, and a services page whose URL
+# merely contains "management".
+BIG_HOME = """<!doctype html><html><body>
+<nav><a href="/company-overview/">Company</a>
+<a href="/services/application-development-and-management/">App development</a></nav>
+<main>
+<section><h3>AI Assistant</h3><p>Explore our services &amp; industries Our AI offerings Our partner
+ecosystem</p></section>
+<div class="quote"><h4>Owen Marsh</h4><p>CIO, Fernwood Retail</p></div>
+<div class="quote"><h4>Lena Okoro CIB</h4><p>Head of Technology Payments, Coastline Bank</p></div>
+<div class="blog"><h4>Ravi Gokhale</h4><p>Principal Software Architect, Sahyadri Systems</p></div>
+</main></body></html>"""
+BIG_OVERVIEW = """<!doctype html><html><body><main>
+<div><h3>Dr. Anil Joshi</h3><p>Founder, Chairman and Managing Director</p></div>
+<div><h3>Seema Kale</h3><p>Executive Director &amp; Chief Executive Officer</p></div>
+<div><h3>Kiran Patil Co-founder</h3><p>CEO and Managing Director</p></div>
+<div><h3>Tom Becker</h3><p>MD &amp; Chief Technology Officer, Rheinwerk Engineering</p></div>
+</main></body></html>"""
+
+
+def test_a_bigger_sites_testimonials_and_copy_are_nobody(tmp_path):
+    from fake_web import kit_for
+
+    web = FakeWeb({"https://sahyadri.example/": Page(BIG_HOME),
+                   "https://sahyadri.example/company-overview/": Page(BIG_OVERVIEW)})
+    assert team_links(soup(BIG_HOME), "https://sahyadri.example/") == [
+        "https://sahyadri.example/company-overview/"]        # not the services page
+    config = compile_run_config(RunConfig.model_validate({
+        "name": "n", "project": "n", "geography": {"country": "IN", "places": ["Pune"]},
+        "lead_types": {"decision_makers": FAST}}))
+    dm = DecisionMakersSession(SimpleNamespace(config=config, store=None, run_id=None),
+                               DECISION_MAKERS.effective(config), kit=kit_for(web, tmp_path))
+    lead = Lead(business_name="Sahyadri Systems", website="https://sahyadri.example/")
+    status, found, _, _ = dm.read_site("https://sahyadri.example/", lead)
+    kept = dm.keep(found, lead)
+    assert status == "complete"
+    assert [(p.name, p.title) for p in kept] == [
+        ("Dr. Anil Joshi", "Founder, Chairman and Managing Director"),
+        ("Seema Kale", "Executive Director & Chief Executive Officer")]
+    # The homepage counts only for a site with no team or about page.
+    small = FakeWeb({"https://kestrel.example/": Page(
+        "<main><div><h3>Anika Desai</h3><p>Founder</p></div></main>")})
+    dm.kit = kit_for(small, tmp_path)
+    _, found, _, _ = dm.read_site("https://kestrel.example/", Lead(business_name="Kestrel"))
+    assert [p.name for p in found] == ["Anika Desai"]
 
 
 # --- the email pattern ------------------------------------------------------------------------

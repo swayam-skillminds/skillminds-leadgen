@@ -347,6 +347,7 @@ class HttpClient:
         params: dict[str, Any] | None = None,
         allow_redirects: bool = True,
         blocked_statuses: tuple[int, ...] = (),
+        attempts: int | None = None,
     ) -> requests.Response:
         """Paced, retried GET. Raises BlockedError when the host pushes back.
 
@@ -354,6 +355,9 @@ class HttpClient:
         DuckDuckGo, for instance, answers 202 with an empty results page when
         it wants you to slow down -- without this it reads as a clean "no
         results" and the backoff never kicks in.
+
+        `attempts` overrides the client's retry count for this call (an API
+        that asks callers not to retry a throttle answer gets 1).
         """
         key = rate_key or domain_of(url) or "default"
         # Dead-domain bookkeeping is keyed by the canonical domain, the same
@@ -402,7 +406,7 @@ class HttpClient:
 
         return with_retry(
             _attempt,
-            attempts=self.max_retries,
+            attempts=attempts if attempts is not None else self.max_retries,
             base=self.backoff_base,
             label=f"GET {url[:80]}",
             give_up_on=(PermanentError, PrivateAddressError),

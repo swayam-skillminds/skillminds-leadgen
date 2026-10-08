@@ -27,12 +27,15 @@ from urllib.parse import urljoin, urlsplit
 from ...core.normalize import domain_of, extract_linkedin
 from .roles import family_of, person_name
 
-#: (pattern, rank): team / leadership pages first, then about pages.
+#: (pattern, rank): team / leadership pages first, then about pages. A link counts when
+#: its last path segment or its text *is* such a name ("/about/team", "Our Leadership"),
+#: not when the words merely occur in it ("/services/development-and-management").
 _TEAM_LINKS = (
-    (re.compile(r"\b(?:leadership|management|our[-_ ]?team|the[-_ ]?team|team|founders?|"
-                r"our[-_ ]?people|people|board|directors|key[-_ ]?people)\b", re.I), 0),
-    (re.compile(r"\b(?:about(?:[-_ ]?us)?|who[-_ ]?we[-_ ]?are|our[-_ ]?story|company|"
-                r"meet[-_ ]?us)\b", re.I), 1),
+    (re.compile(r"(?:our|the|meet|meet[-_ ]the|key)?[-_ ]?(?:leadership(?:[-_ ]team)?|"
+                r"management(?:[-_ ]team)?|team|founders?|people|board(?:[-_ ]of[-_ ]"
+                r"directors)?|directors|executives?|leaders)(?:[-_ ]us)?", re.I), 0),
+    (re.compile(r"(?:about(?:[-_ ]us)?|who[-_ ]we[-_ ]are|our[-_ ]story|company(?:[-_ ]"
+                r"(?:overview|profile))?|meet[-_ ]us|about[-_ ]the[-_ ]company)", re.I), 1),
 )
 _CHROME = ["nav", "header", "footer", "aside", "form", "script", "style", "noscript",
            "template", "svg", "iframe"]
@@ -71,9 +74,10 @@ def team_links(soup, base: str, limit: int = 3) -> list[str]:
         if parts.scheme not in ("http", "https") or domain_of(url) != home or \
                 url.rstrip("/") == base.rstrip("/"):
             continue
-        text = f"{parts.path} {anchor.get_text(' ', strip=True)}"
+        segment = parts.path.rstrip("/").rsplit("/", 1)[-1].rsplit(".", 1)[0]
+        label = " ".join(anchor.get_text(" ", strip=True).split())
         for pattern, rank in _TEAM_LINKS:
-            if pattern.search(text):
+            if pattern.fullmatch(segment) or pattern.fullmatch(label):
                 ranked[url] = min(rank, ranked.get(url, rank))
                 break
     return [u for u, _ in sorted(ranked.items(), key=lambda kv: kv[1])][:limit]

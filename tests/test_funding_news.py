@@ -130,6 +130,8 @@ def test_amounts_and_rounds_as_headlines_state_them(text, amount, value, currenc
     ("Elevate Campuses debuts at discount, valued at $625 mn", None, None),
     ("Tech M&A deals: HumanTronik, CloudMoyo, Shipyard", None, None),
     ("Acme Foods partners with local farmers for fresh produce", None, None),
+    # Live 2026-10-08: a transport office is a public body, not a company.
+    ("Pune RTO launches WhatsApp number for passengers", None, None),
 ])
 def test_headlines_name_an_event_and_its_company(headline, kind, company):
     event = classify(headline, places=["Pune", "India"])
@@ -203,6 +205,32 @@ def test_gdelt_answering_with_text_is_a_failure_not_a_crash(tmp_path):
     assert session(tmp_path, web=web, events=["funding"]).read_gdelt("Pune").status == "failed"
     web = FakeWeb({GDELT_API: BlockedError("HTTP 429 from api.gdeltproject.org")})
     assert session(tmp_path, web=web, events=["funding"]).read_gdelt("Pune").status == "failed"
+
+
+def test_one_gdelt_query_per_place_and_none_after_a_throttle(tmp_path):
+    asked: list[str] = []
+
+    def throttled(url):
+        asked.append(url)
+        return Page("Please limit requests to one every 5 seconds or contact us.")
+
+    news = session(tmp_path, web=FakeWeb({GDELT_API: throttled}), places=("Pune", "Nashik"))
+    assert news.read_gdelt("Pune").status == "failed"
+    assert news.read_gdelt("Nashik").error.startswith("GDELT throttled")
+    assert len(asked) == 1                          # one request, then the breaker
+    reasons = [f["reason"] for f in _failures(tmp_path)]
+    assert reasons == ["rate_limited"]
+    plain = session(tmp_path)
+    queries = plain.gdelt_queries("Pune")
+    assert len(queries) == 3 and all(q.count(" OR ") <= 5 for q in queries)
+    assert plain.read_gdelt("Pune").found == 27      # three queries, the same 9 fixture items
+
+
+def _failures(tmp_path) -> list[dict]:
+    import json
+
+    path = tmp_path / "failures.jsonl"
+    return [json.loads(line) for line in path.read_text().splitlines()] if path.exists() else []
 
 
 def test_google_news_titles_lose_their_outlet():

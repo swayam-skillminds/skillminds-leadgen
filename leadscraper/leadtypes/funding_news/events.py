@@ -39,6 +39,8 @@ NOT_COMPANIES = frozenset("""
 govt government ministry minister police court cm pm mla mp bjp congress aap party cabinet
 collector district mosque temple church army navy sebi rbi parliament assembly council
 municipal mayor state centre union india us usa uk china world
+rto pmc pcmc pmrda bmc mmrda msrtc mhada cidco midc nhai uidai drdo isro railway railways
+university college school collectorate corporator ward zilla panchayat tehsil
 """.split())
 _CONNECTORS = frozenset({"&", "and", "of", "de", "the", "for"})
 _PREFIX = re.compile(r"^(?:[\w ]{2,30}?)\s*[:|]\s+(?=\S)")

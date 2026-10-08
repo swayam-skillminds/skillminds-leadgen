@@ -3,8 +3,8 @@
 Discovery units (stage 1: after the finders, so a company they hold gets the
 signal and keeps its record), each on its own host:
 
-* ``gdelt``: one per place (or one for the country) -- a GDELT DOC query per
-  event kind, newest first;
+* ``gdelt``: one per place (or one for the country) -- a few short GDELT DOC
+  queries over the wanted events' words, newest first;
 * ``google_news`` (opt-in): one per place, a Google News RSS search;
 * ``press_releases`` (opt-in): GlobeNewswire's feed for the run's country;
 * ``feeds``: one per RSS / Atom URL the config lists.
@@ -63,15 +63,16 @@ SPECS = [
 SPEC_OF = {s.type: s for s in SPECS}
 #: GDELT / Google News search words per event kind (headlines decide; these only find).
 QUERY_WORDS = {
-    "funding": ["raises", "raised", "funding round", "seed round", "series a", "pre-seed"],
-    "launch": ["launches", "unveils", "rolls out"],
-    "expansion": ["new office", "opens office", "expands", "inaugurates", "sets up"],
-    "acquisition": ["acquires", "acquired by", "acquisition"],
-    "digital_transformation": ["digital transformation", "digitisation", "digitization",
-                               "goes live", "ERP", "cloud migration"],
-    "leadership_change": ["appoints", "names new", "joins as", "new CEO", "new CTO"],
+    "funding": ["raises", "funding round", "seed round", "series a"],
+    "launch": ["launches", "unveils"],
+    "expansion": ["new office", "expands", "inaugurates"],
+    "acquisition": ["acquires", "acquisition"],
+    "digital_transformation": ["digital transformation", "digitisation", "goes live"],
+    "leadership_change": ["appoints", "new CEO", "new CTO"],
 }
 SOURCES = ("gdelt", "google_news", "press_releases", "feeds")
+#: OR terms per GDELT query (a longer query is refused as "too short or too long").
+GDELT_TERMS = 6
 #: Stories about the same event (company, kind, detail) this many days apart are one event.
 SAME_EVENT_DAYS = 30
 _LANGUAGES = {"en": "english", "de": "german", "fr": "french", "es": "spanish",
@@ -144,6 +145,8 @@ class FundingNewsSession(LeadTypeSession):
         except Exception:
             self.country_name, self.locale = "", "en-US"
         self._seen: set[str] = set()
+        #: GDELT said "too many requests": no more GDELT queries this run.
+        self._gdelt_throttled = False
         self._units = plan_units(self.config, section)
 
     def _places(self) -> list[str]:
@@ -170,8 +173,8 @@ class FundingNewsSession(LeadTypeSession):
     def prior(self, unit: WorkUnit) -> UnitCost:
         if unit.source == "gdelt":
             gd = self.section.sources.gdelt
-            return prior_cost(len(self.section.events) * ((gd.min_delay + gd.max_delay) / 2
-                                                          + 1.5), 3.0)
+            return prior_cost(len(self.gdelt_queries(unit.area)) * ((gd.min_delay + gd.max_delay)
+                                                                    / 2 + 3.0), 3.0)
         return prior_cost(5.0, 2.0)
 
     # --- discovery --------------------------------------------------------------------
@@ -198,31 +201,50 @@ class FundingNewsSession(LeadTypeSession):
             self.units_done += 1
         return outcome
 
-    def read_gdelt(self, place: str | None) -> UnitOutcome:
-        source = self.section.sources.gdelt
+    def gdelt_queries(self, place: str | None) -> list[str]:
+        """The place's GDELT queries: the wanted events' words, at most ``GDELT_TERMS`` per
+        query (GDELT answers a longer one with "too short or too long"; 5-6 terms were
+        verified live on 2026-10-08)."""
         language = _LANGUAGES.get((self.locale or "en").split("-")[0].lower())
-        items: list[NewsItem] = []
-        failed = 0
-        for kind in self.section.events:
-            query = gdelt.build_query(QUERY_WORDS[kind], place=place,
+        words = list(dict.fromkeys(w for kind in self.section.events for w in QUERY_WORDS[kind]))
+        out = []
+        for start in range(0, len(words), GDELT_TERMS):
+            query = gdelt.build_query(words[start:start + GDELT_TERMS], place=place,
                                       country=self.country_name or None, language=language)
             if self.section.keywords:
-                query = f"{query} {gdelt.build_query(self.section.keywords)}"
+                query = f"{query} {gdelt.build_query(self.section.keywords[:GDELT_TERMS])}"
+            out.append(query)
+        return out
+
+    def read_gdelt(self, place: str | None) -> UnitOutcome:
+        """GDELT for one place, a few short queries; the headline rules sort the events
+        out. GDELT throttles per IP: once it says so, the run asks it nothing more."""
+        items: list[NewsItem] = []
+        failed = 0
+        queries = self.gdelt_queries(place)
+        for query in queries:
+            if self._gdelt_throttled:
+                break
             try:
                 items.extend(gdelt.search(self.kit.http, query, days=self.section.recency_days,
-                                          max_records=source.max_records))
+                                          max_records=self.section.sources.gdelt.max_records))
                 continue
-            except BlockedError as exc:
-                reason, detail = "rate_limited", str(exc)
-            except gdelt.GdeltError as exc:
-                reason, detail = "bad_query", str(exc)
             except Exception as exc:
-                reason, detail = "fetch_failed", repr(exc)
+                throttled = isinstance(exc, BlockedError) or (
+                    isinstance(exc, gdelt.GdeltError) and "limit requests" in str(exc).lower())
+                reason = "rate_limited" if throttled else (
+                    "bad_query" if isinstance(exc, gdelt.GdeltError) else "fetch_failed")
+                detail = str(exc) if reason != "fetch_failed" else repr(exc)
             failed += 1
+            if throttled:
+                with self._lock:
+                    self._gdelt_throttled = True
             self.kit.failures.record("gdelt", reason, query=query, locality=place,
                                      detail=detail[:200])
+        if self._gdelt_throttled and not items:
+            return UnitOutcome(status="failed", error="GDELT throttled this run")
         outcome = self.process(items, query_place=place)
-        if self.section.events and failed == len(self.section.events):
+        if queries and failed == len(queries):
             outcome.status, outcome.error = "failed", "every GDELT query failed"
         return outcome
 

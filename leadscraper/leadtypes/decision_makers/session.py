@@ -38,7 +38,7 @@ from ...core.normalize import domain_of, is_vendor_website, normalize_url
 from ...net.http import PrivateAddressError
 from ...packs import registries_for
 from ...sources.people import github, linkedin
-from ...sources.people.roles import family_of, rank
+from ...sources.people.roles import employer_of, family_of, rank, same_company
 from ...sources.people.team_pages import Found, emails_on, people_on, team_links
 from ..base import LeadTypeResult, LeadTypeSession, UnitOutcome, WorkUnit
 from ..toolkit import Kit
@@ -270,7 +270,7 @@ class DecisionMakersSession(LeadTypeSession):
                 with self._lock:
                     self.stats["github"] += len(people)
                 found.extend(people)
-        kept = self.keep(found)
+        kept = self.keep(found, lead)
         self.write(org_id, lead, kept, complete, page_emails, site)
         if not transient:
             self.store.mark_enriched(org_id, MARK)
@@ -280,11 +280,18 @@ class DecisionMakersSession(LeadTypeSession):
             self.stats["with_people"] += bool(kept)
         return kept
 
-    def keep(self, found: list[Found]) -> list[Found]:
-        """The wanted decision-makers, one per name, owners and chief executives first."""
+    def keep(self, found: list[Found], lead: Lead | None = None) -> list[Found]:
+        """The wanted decision-makers, one per name, owners and chief executives first.
+
+        A title naming another employer ("CIO, Rosendin" on a vendor's testimonials)
+        is someone else's decision-maker, and is left out.
+        """
         merged: dict[str, Found] = {}
         for person in found:
             if family_of(person.title) not in self.section.roles:
+                continue
+            employer = employer_of(person.title)
+            if employer and lead is not None and not self._same_org(employer, lead):
                 continue
             held = merged.get(person.name.casefold())
             if held is None:
@@ -294,6 +301,14 @@ class DecisionMakersSession(LeadTypeSession):
             held.profile_url = held.profile_url or person.profile_url
         ordered = sorted(merged.values(), key=lambda p: rank(p.title))
         return ordered[:self.section.max_people]
+
+    @staticmethod
+    def _same_org(employer: str, lead: Lead) -> bool:
+        if same_company(employer, lead.business_name) >= 80:
+            return True
+        label = (domain_of(lead.website or "") or "").split(".")[0].replace("-", "")
+        squashed = "".join(ch for ch in employer.casefold() if ch.isalnum())
+        return bool(label) and len(squashed) >= 3 and (squashed in label or label in squashed)
 
     def read_site(self, site: str, lead: Lead) -> tuple[str, list[Found], list[str], list[str]]:
         """(complete | partial | retry | refused, people, published emails, homepage links)."""
@@ -316,9 +331,12 @@ class DecisionMakersSession(LeadTypeSession):
                 status = "retry" if page == "retry" else "partial"
         people: list[Found] = []
         emails: list[str] = []
-        for page_url, page_text in pages:
+        for index, (page_url, page_text) in enumerate(pages):
             emails.extend(emails_on(self.kit.http.soup(page_text)))
-            people.extend(people_on(self.kit.http.soup(page_text), page_url))
+            # The homepage's people only when the site has no team or about page: on a
+            # bigger site they are testimonials, authors and customers, not its leaders.
+            if index or len(pages) == 1:
+                people.extend(people_on(self.kit.http.soup(page_text), page_url))
         with self._lock:
             self.stats["pages"] += len(pages)
         return status, people, list(dict.fromkeys(emails)), links
