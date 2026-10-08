@@ -6,9 +6,9 @@ roles (`hiring`, Phase 6), public tenders (`tenders`, Phase 7), and so on.
 Each one is a self-contained plugin, and all of them resolve what they find
 to the same deduplicated **organisation** in a project.
 
-Built today: **`local_business`**, **`hiring`** and **`digital_audit`**
-(Phase 6, items 1 and 2). The rest of the A.7 table arrives in Phases 6 to 8,
-each as its own plugin under this contract.
+Built today: **`local_business`**, **`hiring`**, **`funding_news`**,
+**`decision_makers`** and **`digital_audit`** (Phase 6). The rest of the A.7
+table arrives in Phases 7 and 8, each as its own plugin under this contract.
 
 ## The contract (`leadscraper/leadtypes/base.py`)
 
@@ -26,6 +26,7 @@ class LeadType(ABC):
     def columns(self, cfg) -> list[ColumnSpec]   # its own Records columns (not the core ones)
     def column_values(self, org, cfg) -> dict    # Phase 4: values for them, keyed by ColumnSpec.key
     def score(self, org, signals, cfg) -> ScoreParts   # fit / intent / reach, 0..1, with reasons
+    # (it may also take now= and record=: the export's moment and its whole ExportRecord)
     def run(self, context) -> LeadTypeResult     # execute its units; must not raise
     # Phase 2: how the engine drives it
     def open(self, context) -> LeadTypeSession   # default: run() as a single unit
@@ -341,6 +342,173 @@ lead_types:
 - **Depth:** quick scans at most 50 careers pages, deep up to 500. (More HN
   threads only help with `posted_within_days` above 30.)
 
+## `funding_news` (Phase 6.3)
+
+Companies in the news with a reason to buy now: funding rounds, launches,
+expansion and new offices, acquisitions, digital transformation and leadership
+changes.
+
+| Part | Where |
+|---|---|
+| Plugin, columns, score | `leadtypes/funding_news/plugin.py` (`FUNDING_NEWS`) |
+| Config | `leadtypes/funding_news/config.py` (`FundingNewsConfig`) |
+| Headline rules | `events.py`: event verbs, the company before them, exclusions; `amounts.py`: amounts and rounds as stated |
+| News sources | `sources/news/gdelt.py` (GDELT DOC 2.0), `google_news.py` (Google News RSS), `feeds.py` (GlobeNewswire per country; any RSS/Atom), `base.py` (`NewsItem`, a hardened feed parser) |
+| Engine session | `session.py`: units `gdelt` and `google_news` (one per place), `press_releases` (one), `feeds` (one per URL), all at stage 1 |
+
+```yaml
+lead_types:
+  funding_news:
+    events: [funding, launch, expansion, acquisition, digital_transformation,
+             leadership_change]          # default: all
+    keywords: []               # extra search words, ANDed with every query
+    recency_days: 30
+    place_filter: headline     # headline | article | none
+    create_new: true           # a company nobody holds becomes an organisation
+    sources:
+      gdelt: {enabled: true, max_records: 100, min_delay: 6, max_delay: 9}   # >= 5 s
+      google_news: {enabled: false}      # its feed terms forbid it: the owner's call
+      press_releases: {enabled: false}   # GlobeNewswire's country feed: to review
+      feeds: {enabled: true, urls: []}   # RSS / Atom feeds you are entitled to read
+```
+
+- **Which stories count.** The headline (for a press release, also the first
+  sentence of its summary) reports an event the rules know, about a company
+  named right before the verb: "Pune-based fintech startup Ledgerly raises
+  Rs 22 crore in pre-Series A" is Ledgerly's funding round; "Pune mosque … raises
+  funds for flood relief" names no company and "Sensex raises concerns" no
+  event. Descriptors ("fintech startup", "Pune-based"), possessives
+  ("Bengaluru's") and prefixes ("Exclusive:") are dropped; public bodies (RTO,
+  PMC, ministries, police, courts) are not companies. A press release's issuer
+  (`dc:contributor`) is the company whatever the grammar.
+- **Place.** With `place_filter: headline` (the default) a story counts only
+  when its headline or a feed's summary names one of the run's places or
+  areas. GDELT matches the whole article text, so `article` keeps GDELT's
+  place-scoped results too (noisier); `none` keeps the country's news.
+- **AI.** With the `signal_interpretation` feature, headlines the rules can't
+  read go to the model, kept only with a verbatim quote and a company name the
+  item itself contains.
+- **Organisations.** A company the project already holds gets the signal and
+  keeps its record (rule 6); a new one is created from its name (and, for a
+  press release, the issuer's own site among the release's links), unless
+  `create_new: false`.
+- **Signals:** one per event, typed `funding_round`, `product_launch`,
+  `expansion`, `acquisition`, `digital_transformation` or `leadership_change`.
+  The payload carries the amount as stated (`{text, value, currency}`; a crore
+  is 10^7), round, investors ("led by …"), person and role (leadership), the
+  other party (acquisition, partner) and every outlet that covered it. Stories
+  about the same event (company, kind, detail) within 30 days are one signal: a
+  re-run refreshes it. Strength: the type's default (funding 0.8, digital
+  transformation 0.75, expansion and acquisition 0.6, leadership 0.6 or 0.75
+  for a technology role, launch 0.45) plus 0.05 per further outlet, up to 0.95.
+- **Score:** *intent* = the strongest event's strength, halving every
+  half-life of its type (funding, acquisition, transformation 90 days;
+  expansion, leadership 60; launch 45), plus 0.1 for each further kind of
+  event (max 1); an event older than four half-lives no longer counts.
+- **Columns:** News Event (front, a breakdown), Latest News, News Date, Amount
+  Raised, News Link; News Events and News Sources at the tail.
+- **GDELT etiquette.** At most one request every 5 seconds (the config can't
+  go lower), one attempt per query (a 429 is not retried), queries of at most
+  six OR terms (GDELT refuses longer ones), and no more GDELT in a run once it
+  throttles. News endpoints get an identifying User-Agent.
+- **Depth:** quick reads 50 GDELT articles per query, deep 250.
+- **Not used:** Inc42 and YourStory (their terms forbid automated access), PR
+  Newswire (personal, non-commercial use only), Entrackr (its feed is gone).
+  No regional feed qualified for a country pack; `feeds.urls` takes yours.
+
+## `decision_makers` (Phase 6.4)
+
+Who to talk to at the organisations any lead type found: founders, owners,
+CEOs and MDs, CTOs and heads of technology, IT heads. An enrichment lead type:
+it finds no organisations.
+
+| Part | Where |
+|---|---|
+| Plugin, columns, score | `leadtypes/decision_makers/plugin.py` (`DECISION_MAKERS`, `post_order = 7`) |
+| Config | `leadtypes/decision_makers/config.py` (`DecisionMakersConfig`) |
+| Names and titles | `sources/people/roles.py`: role families, `person_name`, `employer_of` |
+| People sources | `sources/people/team_pages.py`, `linkedin.py` (search-indexed profiles), `github.py` (org members); `packs/uk/companies_house.py` (directors) |
+| Email pattern | `email_pattern.py`: the pattern, MX records; nothing else |
+| Engine session | `session.py`: no units; everything in post-discovery, several sites at once |
+
+```yaml
+lead_types:
+  decision_makers:
+    scope: run                 # run | project: whose organisations
+    roles: [owner, executive, technology, it]
+    max_people: 5              # per organisation, owners and chief executives first
+    max_orgs: 200
+    refresh_after_days: 30     # looked into more recently: skipped (--force-enrich re-reads)
+    workers: 4
+    sources:
+      team_pages: {enabled: true, max_pages: 3}
+      registry: {enabled: true, key_secret_name: companies-house-api-key}   # packs (UK)
+      linkedin_search: {enabled: false}   # SERP: Google's terms restrict automated queries
+      github: {enabled: false, token_secret_name: github-token}   # GitHub's AUP: opt-in
+    email_pattern: {enabled: false}
+```
+
+- **Team pages.** The homepage, then up to `max_pages` team / leadership /
+  management / board pages and then about / company pages it links (a link
+  counts by its last path segment or its text). People are read from JSON-LD
+  `Person` objects, microdata, name-and-title cards ("Anika Desai" /
+  "Co-founder & CEO", or "Sanjay Kulkarni, IT Manager") and "founded by …"
+  prose; navigation, header, footer and forms are ignored. The homepage's own
+  people count only when a site has no team or about page: on bigger sites
+  they are testimonials, authors and customers. A card holds one person; an
+  email or LinkedIn link inside it is theirs.
+- **Who counts.** A name is two to four capitalised words (initials and
+  particles allowed, acronyms, role words and business words not). A title is
+  short, isn't marketing copy, and falls in a wanted family: **owner**
+  (founder, owner, partner, chairman, LLP member, "Principal" alone),
+  **executive** (CEO, MD, directors, GM, COO, CFO, president, VPs),
+  **technology** (CTO, CIO, chief digital officer, heads/VPs of engineering,
+  technology, IT, digital) or **it** (IT manager, systems manager). Advisors,
+  investors, mentors, interns and non-executive or independent directors don't.
+  A title naming another employer ("CIO, Fernwood Retail" on a vendor's
+  testimonials) is someone else's.
+- **Registries (packs).** UK runs: Companies House directors and LLP members
+  who haven't resigned, for an active company whose registered name matches
+  (similarity ≥ 90), with the free key in the secret `companies-house-api-key`.
+  Without the key it says so once (`key_missing`) and skips. India: the MCA
+  has no free public API, so no Indian registry yet.
+- **LinkedIn (opt-in).** A search for `site:linkedin.com/in "<company>"
+  (founder OR CEO OR CTO …)`; a result counts when its title names this
+  company and a decision-maker's title. Profile URLs only: LinkedIn itself is
+  never fetched or logged into (A.2.4).
+- **GitHub (opt-in).** The org the company's site links, only when the org's
+  own `blog` is the company's domain; public members whose own profile bio
+  names a leadership title. Never used for the email pattern.
+- **Writing.** Each person is a `people` row of this lead type (name, title,
+  profile URL, source, the page, an address published for them), refreshed by
+  name. The organisation is stamped (tag, evidence, run membership) and its
+  record left alone (rule 6). A source read in full is a snapshot: someone it
+  no longer lists is removed, with their inferred address; a page that didn't
+  answer removes nobody and is read again next run.
+- **The email pattern** (A.2.5, off by default). Only when a published
+  personal address at the organisation's own domain is exactly one pattern
+  (`first.last`, `flast`, `first`, …) of a person we know by name; role
+  mailboxes (info@, sales@ …) reveal nothing and disagreeing addresses cancel
+  it. Then, if the domain's MX records say it takes mail (a null MX says it
+  doesn't), named people without a published address get one, stored as an
+  `inferred` contact naming its person (confidence 0.6, or 0.75 from two
+  examples). No SMTP, ever. Inferred addresses appear only in `Inferred Email
+  (unverified)`, are never on the record, never identity keys, and become
+  published contacts if the address is later published. The pattern itself is
+  the `email_pattern` attribute (`origin: rule`), shown in Email Pattern.
+- **Score:** *reach* = the core contact reach + 0.15 for a named
+  decision-maker with a title + 0.05 when there is a way to reach them (a
+  profile, or an address published for them); max 1. Without people it adds
+  nothing (core reach applies). It needs the whole record, so its `score`
+  takes `record=`.
+- **Columns:** the core Decision Makers, Decision Maker Profile and Decision
+  Maker Email (published for them only) columns, plus DM Roles and People
+  Found; People Sources and Email Pattern at the tail.
+- **Fields.** A run whose `fields.include` leaves out `decision_makers` gets
+  nothing from it; the email pattern also needs `emails`.
+- **Depth:** quick reads one team page each for at most 50 organisations,
+  deep up to six for up to 500.
+
 ## The export (Phase 4)
 
 `export/columns.py` assembles the Records columns for each export: the core
@@ -393,7 +561,8 @@ ledger under the feature it used.
 6. Tests: fixture-based tests for its sources, signals, columns and score,
    plus an isolation test like `test_enabling_or_disabling_a_lead_type_leaves_local_business_unchanged`.
    To see it in the workbook, add it to a scenario in `tests/workbook_fixtures.py`
-   (the `audit_hiring` scenario shows the real Phase 6 lead types).
+   (the `audit_hiring` and `news_people` scenarios show the real Phase 6 lead
+   types).
 7. If it finds companies other lead types may also hold, resolve them with
    `find_match` first and only attach to a match (rule 6), and set
    `discovery_stage = 1`. If it assesses others' organisations, do that in
@@ -402,3 +571,6 @@ ledger under the feature it used.
    rate limiter, a public-only HTTP client (internal addresses refused, every
    redirect hop included; bound to the dead-domain cache), a failure log and a
    robots.txt cache; `tests/fake_web.py` serves fixtures to it in tests.
+9. People and inferred contacts (Phase 6.4) go through `LeadStore.add_person`,
+   `prune_people` and `set_inferred_contacts`, never through the record: a
+   record write keeps every inferred contact and never stores one as published.

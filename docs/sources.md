@@ -118,6 +118,47 @@ hiring unit applicable to its countries.
 | `site_audit` | the organisation's own site: one TLS handshake, the homepage (HTTPS, then HTTP), at most one contact page, a HEAD (or streamed GET) per checked homepage link (8 by default) | requests + `ssl` | none | 1–3 s per site; 6 sites at once | The business's public pages. **robots.txt honoured for every page and every link** (`runtime.robots_txt`, on by default); a site that refuses us is recorded and left unjudged. Hosts resolving to internal addresses (loopback, private, link-local, reserved) are refused, redirects included (`LEADSCRAPER_ALLOW_PRIVATE_TARGETS=1` opts in). Never logs in, never submits a form | **2026-10-07**: `pytest -m live tests/test_digital_audit.py` audits example.com (IANA's reserved site): reachable over HTTPS, valid certificate |
 | `pagespeed` | `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=…&strategy=mobile&category=performance&key=…` | requests, JSON | an API key (secret `pagespeed-api-key`): optional on paper, needed in practice | 1–2 s; at most 25 calls a run | Google's official, free API; its docs recommend a key for automated use. The key goes only to `www.googleapis.com` and is never logged or recorded | **2026-10-07**: keyless request answered 429 "Quota exceeded for quota metric 'Queries' and limit 'Queries per day'"; no key was available to test a 200 |
 
+## `funding_news` lead type (Phase 6.3; every country)
+
+Re-verified live on **2026-10-08** (A.9.2). Only headlines, links, dates and
+feed summaries are used: no article is ever fetched. News APIs and feeds get
+an identifying User-Agent (`core/geo.USER_AGENT`). `pytest -m live
+tests/test_funding_news.py` makes one GDELT query and reads GlobeNewswire's
+India feed.
+
+| Source | Endpoint | Method | Auth | Default delays | Terms note | Last verified |
+|---|---|---|---|---|---|---|
+| `gdelt` | `https://api.gdeltproject.org/api/v2/doc/doc?query=…&mode=artlist&format=json&sort=datedesc&maxrecords=…&timespan={days}d` | requests, JSON; a few queries of at most six OR terms per place; one attempt each | none | 6–9 s (it asks for ≤ 1 request per 5 s; the config can't go below 5) | [GDELT](https://www.gdeltproject.org/about.html): "unlimited and unrestricted use for any academic, commercial, or governmental use … without fee", with a citation of the GDELT Project. Matches the whole article text, so results are candidates; headline rules decide. A 429 or its "Please limit requests" text stops GDELT for the run | **2026-10-08**: 200, `articles[]` {url, title, seendate `20261002T083000Z`, domain, language, sourcecountry}; titles carry spaces around punctuation; "Your query was too short or too long" for a 17-term OR group; repeated 429s for this IP after a burst of probes |
+| `google_news` (opt-in) | `https://news.google.com/rss/search?q=…&hl={locale}&gl={CC}&ceid={CC}:{lang}` | requests, RSS | none | 2–4 s | The feed's own `<copyright>`: "made available solely for the purpose of rendering Google News results within a personal feed reader for personal, non-commercial use. Any other use of the feed is expressly prohibited." **Off by default; enabling it needs Google's permission (A.2.4)** | **2026-10-08**: 200, RSS `<item>` {title "Headline - Outlet", news.google.com link, pubDate, `<source url>`} |
+| `press_releases` (opt-in) | `https://www.globenewswire.com/RssFeed/country/{Country}/feedTitle/GlobeNewswire%20-%20News%20from%20{Country}` | requests, RSS; the issuer from `dc:contributor` | none | 2–4 s | robots.txt allows `/RssFeed/`; the feed carries no restriction; its terms page could not be found (`/Home/TermsOfUse` is a 404 page). **Off by default; to review**. A browser User-Agent is refused (HTTP/2 reset); an identifying one is answered | **2026-10-08**: 200 for India, United Kingdom, United States, United Arab Emirates; 20 releases each, every one with `dc:contributor` |
+| `feeds` | RSS / Atom URLs in `lead_types.funding_news.sources.feeds.urls` | requests, RSS/Atom (lxml, entities unresolved, no network) | none | 2–4 s per feed host | Each feed's terms are the config author's call | n/a (any feed) |
+
+**Not used** (checked 2026-10-08):
+
+| Source | Why |
+|---|---|
+| PR Newswire RSS | Its site terms: "solely for your personal, noncommercial use"; no "robot, spider, site search/retrieval application" |
+| Business Wire RSS | The home feed answers "The RSS channel you requested was deactivated" |
+| Inc42 (IN) | Terms §8.1: no "screen scraping … data mining, … spidering", no automated tools without prior written consent |
+| YourStory (IN) | Terms 2.5 / 2.6.17: no "robot, spider or other automatic device" |
+| Entrackr (IN) | `/feed/` answers 404 |
+
+So no regional startup feed qualified for a country pack; a licensed feed goes
+in `feeds.urls`.
+
+## `decision_makers` lead type (Phase 6.4)
+
+| Source | Endpoint | Method | Auth | Default delays | Terms note | Last verified |
+|---|---|---|---|---|---|---|
+| `team_pages` | the organisation's own site: home, then up to 3 team / leadership / about pages it links | requests | none | 1.5–4 s per site; 4 sites at once | The business's public pages; robots.txt honoured; internal addresses refused. Only people the page names with a title | **2026-10-08**: a live run over three Pune IT companies' sites found 15 leaders from their leadership / company-overview pages (see `docs/phase-6b-report.md`) |
+| `companies_house` (pack `uk`, GB) | `https://api.company-information.service.gov.uk/search/companies?q=…`, then `/company/{number}/officers` | requests, JSON; HTTP Basic, the key as user name | a free API key, secret `companies-house-api-key` (must start `companies-house`) | 0.6–1.2 s; the API allows 600 requests per 5 minutes | The UK registry's official public API, for real-time lookups (not bulk). Current directors and LLP members only | **2026-10-08**: 401 `{"error":"Empty Authorization header"}` without a key; no key here for a 200 (fixtures follow the documented shape) |
+| `linkedin_search` (opt-in) | Google search (then DuckDuckGo) for `site:linkedin.com/in "<company>" (founder OR CEO OR …)` | via `google_search`'s SERP client | none | 12–28 s | **LinkedIn is never fetched or logged into**: only profile URLs and result titles a search engine indexed (A.2.4). Google's terms restrict automated queries: **off by default** | not re-verified (same client as `google_search`) |
+| `github` (opt-in) | `https://api.github.com/orgs/{org}`, `/orgs/{org}/public_members`, `/users/{login}` | requests, JSON | none (60 requests/hour); optional token, secret `github-token` | 1–2 s | GitHub's official REST API. Its [Acceptable Use Policies](https://docs.github.com/en/site-policy/acceptable-use-policies/github-acceptable-use-policies) limit personal information to "the purpose for which that User has authorized it" and forbid using it for unsolicited email: **off by default**, and the email pattern is never applied to people found here | **2026-10-08**: 200 for `/orgs/github`, `/orgs/github/public_members`, `/users/defunkt` |
+| `email_pattern` (opt-in) | DNS MX records of the organisation's own domain | dnspython, the system resolver; **no SMTP, ever** | none | — | The only inference A.2.5 allows: labelled `Inferred Email (unverified)`, never published, never matched on | **2026-10-08**: example.com has a null MX (`.`, RFC 7505: no mail); github.com has MX hosts |
+
+**Company registries elsewhere:** India's MCA has no free public API (its
+master-data search sits behind a captcha), so no Indian registry yet.
+
 ## Open questions for the project owner
 
 A.2.4 says: never scrape sites whose terms prohibit it when a public API
@@ -133,6 +174,11 @@ Phase 6's three borderline sources are **off by default** (decided 2026-10-08):
 now describe key-based access) run only when named in
 `lead_types.hiring.sources.ats.kinds`; `board_search` (Google SERP) only with
 `board_search.enabled`. A config that opts in takes that call for its run.
+
+Phase 6b adds four more, all **off by default** (2026-10-08): `google_news`
+(its feed terms forbid other than personal use), `press_releases`
+(GlobeNewswire's terms page could not be found), `linkedin_search` (Google
+SERP) and `github` (GitHub's Acceptable Use Policies on personal information).
 
 Phase 1 moved these sources into packs without changing their behaviour.
 Whether each one stays, moves to an official API, or is retired is a

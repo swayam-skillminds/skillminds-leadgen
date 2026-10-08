@@ -46,13 +46,15 @@ Each unit has an expected cost (`UnitCost`: seconds, new organisations, spread):
 In both modes, `run`-scope units go first, and **stages** order lead types
 (Phase 6): a unit starts only once every unit of a lower `discovery_stage` has
 finished. The finders (`local_business`) are stage 0; lead types that attach
-signals to organisations others may hold (`hiring`, `digital_audit`'s uploads)
-are stage 1, so they find the finders' records instead of racing them. Stages
+signals to organisations others may hold (`hiring`, `funding_news`,
+`digital_audit`'s uploads) are stage 1, so they find the finders' records instead of racing them. Stages
 order units; they don't change what fits a budget (the estimate is the same).
 
 Post-discovery runs session by session in `post_order` (ties: registry
-order): `local_business` (0, enrichment and AI), `hiring` (5, careers pages),
-`digital_audit` (10, the audit, over everyone's enriched organisations). A
+order): `local_business` (0, enrichment and AI), `funding_news` (0, nothing to
+do after discovery), `hiring` (5, careers pages), `decision_makers` (7, people of
+everyone's organisations), `digital_audit` (10, the audit, over everyone's
+enriched organisations). A
 session whose `post_scope` is `"run"` is estimated from every lead type's
 expected new organisations, not only its own.
 

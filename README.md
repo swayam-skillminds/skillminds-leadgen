@@ -231,6 +231,8 @@ reason to buy now. Add them to the same config:
 lead_types:
   local_business: {categories: [{name: Dentists}]}
   hiring: {boards: [greenhouse:acme]}          # tech roles: ATS boards, HN, careers pages
+  funding_news: {}                             # funding, launches, new offices… (GDELT news)
+  decision_makers: {}                          # founders, CEOs, CTOs from team pages
   digital_audit: {}                            # audit every organisation the run found
 ```
 

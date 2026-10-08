@@ -158,7 +158,7 @@ every new feature is opt-in.
 | `extraction_fallback` (`extract`) | after enrichment | Reads contacts off pages whose selectors found nothing, from token-lean Markdown, grounded. |
 | `normalisation` (`names`, `industry`, `size`, `dedup`) | after enrichment | Clean names; industry tags; a company-size **estimate**; duplicate adjudication by the judge tier (look-alike pairs the rules kept apart; merged only at ≥ 0.85 confidence). |
 | `venue_classification` (`venues`) | venue runs | Types venues the rules could not. |
-| `signal_interpretation` | for signal lead types (Phase 6) | `ai.features.signals.interpret(client, items, specs)`: a signal type from the lead type's own specs, a strength, and a verbatim evidence quote (or it is dropped). |
+| `signal_interpretation` | for signal lead types (Phase 6) | `ai.features.signals.interpret(client, items, specs)`: a signal type from the lead type's own specs, a strength, and a verbatim evidence quote (or it is dropped). `with_company=True` (funding_news) also asks which organisation the item is about, kept only when the item contains that name verbatim; without it the prompt is unchanged (hiring's cache stays valid). |
 | `lead_summary` | after enrichment | One factual line: what the organisation does and why it matched. No outreach copy: a line that addresses anyone, pitches or calls to action is rejected. |
 
 Config-time features run under the workspace's `ai.assist_budget_usd` (default
