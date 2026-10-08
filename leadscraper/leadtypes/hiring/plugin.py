@@ -86,7 +86,8 @@ class HiringLeadType(LeadType):
         section = self._section(cfg)
         found = {u.source for u in plan_units(cfg, section)} - {"ats"}
         if section.sources.ats.enabled:
-            found |= {b.split(":", 1)[0] for b in section.boards}
+            found |= {b.split(":", 1)[0] for b in section.boards
+                      if b.split(":", 1)[0] in section.sources.ats.kinds}
         return {"discovery": sorted(found),
                 "enrichment": ["careers_pages"] if section.sources.careers_pages.enabled else []}
 

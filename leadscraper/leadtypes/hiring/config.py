@@ -12,7 +12,7 @@ lead_types:
     min_roles: 1               # fewer matching open roles: not a lead
     boards: [greenhouse:acme, lever:acme-labs]   # known ATS boards to check
     sources:
-      ats: {enabled: true}               # boards above + boards found on careers pages
+      ats: {enabled: true, kinds: [greenhouse, lever, ashby]}   # + workable, smartrecruiters (opt-in)
       hn_whos_hiring: {enabled: true, months: 1}
       careers_pages: {enabled: true, audit: run, max_orgs: 200}
       board_search: {enabled: false}     # SERP for ATS boards in the run's places (opt-in)
@@ -32,6 +32,11 @@ ALL_FAMILIES: list[str] = ["developer", "qa", "devops", "data", "it_support",
 DEFAULT_FAMILIES: list[str] = ["developer", "qa", "devops", "data", "it_support",
                                "digital_marketing"]
 ATS_KINDS = ("greenhouse", "lever", "ashby", "workable", "smartrecruiters")
+AtsKind = Literal["greenhouse", "lever", "ashby", "workable", "smartrecruiters"]
+#: ATSs whose public job-board API is documented as public. Workable (an
+#: undocumented widget endpoint) and SmartRecruiters (whose docs now describe
+#: key-based access) are opt-in: A.2.4 is the project owner's call per source.
+DEFAULT_ATS: list[str] = ["greenhouse", "lever", "ashby"]
 
 
 class _Strict(BaseModel):
@@ -46,6 +51,11 @@ class _Source(_Strict):
 
 class ATSSource(_Source):
     max_postings: int = Field(500, ge=1, description="Postings read per board.")
+    kinds: list[AtsKind] = Field(
+        default_factory=lambda: list(DEFAULT_ATS),
+        description="ATSs read (configured boards and boards found on careers pages). "
+                    "workable and smartrecruiters are opt-in: their public endpoints are "
+                    "not documented as public APIs.")
 
 
 class HNSource(_Source):

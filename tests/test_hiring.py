@@ -260,7 +260,9 @@ def signals_by_org(config) -> dict[str, list[dict]]:
 
 
 NO_CAREERS = {"careers_pages": {"enabled": False}}
-FAST = {name: {"min_delay": 0, "max_delay": 0} for name in ("ats", "hn_whos_hiring")}
+FAST = {"ats": {"min_delay": 0, "max_delay": 0,
+                "kinds": ["greenhouse", "lever", "ashby", "workable", "smartrecruiters"]},
+        "hn_whos_hiring": {"min_delay": 0, "max_delay": 0}}
 
 
 def test_a_run_turns_open_tech_roles_into_signals(tmp_path, monkeypatch):
@@ -711,3 +713,21 @@ def test_lead_types_share_one_pace_per_site(tmp_path, monkeypatch, careers):
 
     monkeypatch.undo()                                      # the real Kit.build
     assert Kit.build(outcome.contexts["hiring"]).limiter is limiter
+
+
+def test_workable_and_smartrecruiters_are_opt_in(tmp_path, monkeypatch, careers):
+    """Only the ATSs documented as public run by default (A.2.4 is the owner's call)."""
+    assert HiringConfig().sources.ats.kinds == ["greenhouse", "lever", "ashby"]
+    careers.add("https://lotus.example/", Page(
+        '<html><body><a href="https://apply.workable.com/lotus-logistics/">Careers</a>'
+        '</body></html>'))
+    config, outcome = run(tmp_path, monkeypatch, "optin", {**LOCAL, "hiring": {
+        "boards": BOARDS, "sources": {"ats": {"min_delay": 0, "max_delay": 0},
+                                      "hn_whos_hiring": {"enabled": False},
+                                      "careers_pages": {"min_delay": 0, "max_delay": 0}}}})
+    assert outcome.ok
+    assert not any("workable.com" in u or "smartrecruiters.com" in u for u in careers.calls)
+    assert {"Kestrel Robotics Pvt Ltd", "Marigold Labs", "Tamarind"} <= set(signals_by_org(config))
+    assert not {"Saffron Analytics", "Nilgiri Textiles"} & set(signals_by_org(config))
+    notes = [f for f in rows(config, FailureRow) if f["reason"] == "source_not_enabled"]
+    assert notes and "workable:saffron-analytics" in notes[0]["detail"]

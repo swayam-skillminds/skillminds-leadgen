@@ -113,6 +113,12 @@ class HiringSession(LeadTypeSession):
             name = ""
         self.country_terms = country_words(self.config.country, name)
         self._units = plan_units(self.config, section)
+        skipped = [b for b in section.boards
+                   if b.split(":", 1)[0] not in section.sources.ats.kinds]
+        if skipped:
+            self.kit.failures.record(
+                "ats", "source_not_enabled", detail=f"boards skipped: {', '.join(skipped)} "
+                "(add their ATS to lead_types.hiring.sources.ats.kinds to read them)")
 
     def _places(self) -> list[str]:
         names: list[str] = list(self.config.get("places") or [])
@@ -305,7 +311,7 @@ class HiringSession(LeadTypeSession):
             self.kit.failures.record("board_search", "no_results", query=query, locality=place)
             return UnitOutcome(status="done")
         outcome = UnitOutcome(status="done")
-        for ref in find_boards(r.url for r in results):
+        for ref in self._allowed(find_boards(r.url for r in results)):
             self._add(outcome, self.read_board(ref))
         return outcome
 
@@ -442,7 +448,7 @@ class HiringSession(LeadTypeSession):
         if home is None:
             return
         page_url, soup = home
-        boards = find_boards(_urls(soup, page_url))
+        boards = self._allowed(find_boards(_urls(soup, page_url)))
         careers_url = None
         if not boards:
             careers_url = _careers_link(soup, page_url)
@@ -450,7 +456,7 @@ class HiringSession(LeadTypeSession):
                 page = self._fetch(lead, careers_url, host)
                 if page is not None:
                     careers_url, soup = page
-                    boards = find_boards(_urls(soup, careers_url))
+                    boards = self._allowed(find_boards(_urls(soup, careers_url)))
                 else:
                     careers_url = None
         outcomes = [self.read_board(ref, org_id=org_id, company_url=site) for ref in boards]
@@ -463,6 +469,12 @@ class HiringSession(LeadTypeSession):
         # Scanned: not again within rescan_after_days -- unless a board failed to answer.
         if all(o.status != "failed" for o in outcomes):
             self.store.mark_enriched(org_id, CAREERS_MARK)
+
+    def _allowed(self, refs: list[BoardRef]) -> list[BoardRef]:
+        """Boards on the ATSs this run may read (``sources.ats.kinds``)."""
+        kinds = set(self.section.sources.ats.kinds) if self.section.sources.ats.enabled \
+            else set()
+        return [ref for ref in refs if ref.kind in kinds]
 
     def _fetch(self, lead: Lead, url: str, host: str):
         if not self.kit.robots.allowed(url, rate_key=host):
@@ -498,7 +510,8 @@ def plan_units(config: Any, section: HiringConfig) -> list[WorkUnit]:
     sources = section.sources
     units: list[WorkUnit] = []
     if sources.ats.enabled:
-        units.extend(WorkUnit(KEY, "ats", None, board, "run") for board in section.boards)
+        units.extend(WorkUnit(KEY, "ats", None, board, "run") for board in section.boards
+                     if board.split(":", 1)[0] in sources.ats.kinds)
     if sources.hn_whos_hiring.enabled:
         units.append(WorkUnit(KEY, "hn_whos_hiring", None, None, "run"))
     if sources.board_search.enabled:

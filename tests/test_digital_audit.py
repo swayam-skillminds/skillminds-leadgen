@@ -41,12 +41,15 @@ DENTAL = "https://brightwater-dental.example/"
 BISTRO = "oldmill-bistro.example"
 
 
-def cert(days: float = 200, valid: bool = True, error: str = ""):
+def cert(days: float = 200, valid: bool = True, error: str = "", wall: bool = False):
+    """A TLS stub expiring `days` after the auditor's clock: NOW in the unit tests, the
+    wall clock (`wall`) in engine runs, whose sessions use the real time."""
     def handshake(host: str) -> Certificate:
         if not valid:
             return Certificate(valid=False, error=error)
-        return Certificate(valid=True, expires_at=datetime.now(timezone.utc)
-                           + timedelta(days=days), issuer="Fictional CA")
+        base = datetime.now(timezone.utc) if wall else NOW
+        return Certificate(valid=True, expires_at=base + timedelta(days=days),
+                           issuer="Fictional CA")
     return handshake
 
 
@@ -362,7 +365,7 @@ AUDIT = {"min_delay": 0, "max_delay": 0, "checks": [c for c in DigitalAuditConfi
 def offline(monkeypatch):
     web = sites()
     patch_kit(monkeypatch, web)
-    monkeypatch.setattr("leadscraper.net.tls.certificate", cert())
+    monkeypatch.setattr("leadscraper.net.tls.certificate", cert(wall=True))
     monkeypatch.setattr(pipeline_mod, "DISCOVERY_SOURCES", {"stub": SiteSource})
     monkeypatch.setattr(pipeline_mod, "ENRICHMENT_SOURCES", {"probe": probe_enricher()})
     return web
