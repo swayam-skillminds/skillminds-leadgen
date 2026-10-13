@@ -13,9 +13,9 @@ custom_software:
                healthcare clinics, educational institutes]
   roles: [Founder, Managing Director, CTO, IT Head, Operations Head]
   signals: [hiring developers, digital transformation news, outdated website,
-            new office or expansion]
+            new office or expansion, public IT tenders]
   industries: [manufacturing, logistics, healthcare, education, distribution]
-  lead_types: [local_business, digital_audit, hiring, funding_news, decision_makers]
+  lead_types: [local_business, digital_audit, hiring, funding_news, tenders, decision_makers]
   must_have: [phone]
 
 web_app_dev:
@@ -25,9 +25,9 @@ web_app_dev:
                coaching classes, hotels]
   roles: [Owner, Founder, Marketing Manager]
   signals: [no website, site not mobile-friendly, no online booking, poor page speed,
-            neglected app]
+            neglected app, newly incorporated company]
   industries: [hospitality, retail, healthcare, real estate, fitness, education]
-  lead_types: [local_business, digital_audit, app_store]
+  lead_types: [local_business, digital_audit, registrations, app_store]
   must_have: [phone]
 
 erp:

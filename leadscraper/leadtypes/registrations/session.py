@@ -27,7 +27,7 @@ from ...engine.costs import UnitCost, prior_cost
 from ...net.ratelimit import BlockedError, PermanentError
 from ...packs import incorporation_sources_for
 from ...sources.registers.base import Incorporation, IncorporationQuery
-from ...sources.registers.sic import describe
+from ...sources.registers.sic import describe, division
 from ..base import LeadTypeResult, LeadTypeSession, SignalSpec, UnitOutcome, WorkUnit
 from ..toolkit import KEY_NOT_CONFIGURED, Kit, key_not_configured, secret
 from .config import RegistrationsConfig
@@ -275,8 +275,11 @@ class RegistrationsSession(LeadTypeSession):
                 "registered_office": company.address, "postcode": company.postcode,
                 "url": company.url,
             }
-            title = f"Incorporated {company.incorporated_on:%d %b %Y}" \
-                if company.incorporated_on else "Newly incorporated"
+            # Shown after its label: "Newly incorporated: 26 Sep 2026 (computer programming…)".
+            field = division(company.industry_codes[0]) if company.industry_codes else ""
+            title = " ".join(x for x in (
+                f"{company.incorporated_on:%d %b %Y}" if company.incorporated_on else "",
+                f"({field})" if field else "") if x) or company.name
             added = self.store.add_signal(
                 org_id, "incorporation", key=company.key[:300], title=title, payload=payload,
                 strength=SPEC_OF["incorporation"].default_strength, published_at=when,

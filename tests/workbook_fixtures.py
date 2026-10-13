@@ -39,10 +39,12 @@ from leadscraper.db.models import (AIUsage, Contact, OrgAttribute, Person, Run, 
                                    WorkUnitRow)
 from leadscraper.db.runs import finish_run, record_failure, start_run
 from leadscraper.leadtypes.base import ColumnSpec, LeadType, LeadTypeResult, SignalSpec
+from leadscraper.sources.registers.sic import division
 
 UTC = timezone.utc
 FIXED_NOW = datetime(2026, 10, 1, 9, 30, tzinfo=UTC)
-SCENARIOS = ("local_business", "mix", "venues", "empty", "audit_hiring", "news_people")
+SCENARIOS = ("local_business", "mix", "venues", "empty", "audit_hiring", "news_people",
+             "tenders_registrations")
 ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -210,10 +212,13 @@ class _Run:
             conn.execute(table.__table__.insert().values(workspace_id=self.ws.id, **values))
 
     def signal(self, org: str, lead_type: str, type_: str, title: str, days: float | None,
-               url: str, strength: float, key: str = "", **payload) -> None:
+               url: str, strength: float, key: str = "", expires: float | None = None,
+               **payload) -> None:
+        """``expires``: days before FIXED_NOW the signal stops counting (negative: after)."""
         self.insert(Signal, organization_id=self.ids[org], run_id=self.run_id, type=type_,
                     lead_type=lead_type, key=key, title=title, payload=payload,
                     observed_at=ago(1), published_at=ago(days) if days is not None else None,
+                    expires_at=ago(expires) if expires is not None else None,
                     strength=strength, source_url=url)
 
     def tag(self, org: str, lead_type: str) -> None:
@@ -647,8 +652,106 @@ def news_people(engine) -> int:
     return run.finish(minutes=12)
 
 
+def tenders_registrations(engine) -> int:
+    """Phase 7 in London: local_business firms, public buyers' tenders (one buyer the finders
+    hold, one closed tender that no longer counts) and new incorporations with directors."""
+    document = _doc("Sample London tenders and registrations", "GB", ["London"],
+                    {"local_business": {"categories": [{"name": "Software companies"}]},
+                     "tenders": {}, "registrations": {}},
+                    center=[51.51, -0.13], admin_area="England",
+                    scoring={"weights": {"fit": 0.4, "intent": 0.4, "reach": 0.2}})
+    run = _Run(engine, document, "GB")
+    firms = [
+        ("Thameside Digital", ["+442079460101"], "https://thameside-digital.example/", 4.6, 41,
+         1),
+        ("Kestrel Lane Bakery", ["+442079460102"], "https://kestrel-lane.example/", 4.3, 18, 2),
+        ("Northwick Borough Council", ["+442079460103"], "https://northwick.example/", 3.4, 96,
+         3),
+    ]
+    for name, phones, site, rating, reviews, n in firms:
+        run.add(Lead(business_name=name, category="Software companies", locality="London",
+                     phones=phones, website=site, gmaps_url=_maps(400 + n),
+                     gmaps_rating=rating, gmaps_reviews=reviews,
+                     emails=[f"hello@{site.split('//')[1].rstrip('/')}"],
+                     address=f"{n} Sample Street, London", sources=["google_maps"]),
+                days=30 - n)
+    # Public buyers only the portals know.
+    run.add(Lead(business_name="Eastvale Health Trust", locality="London",
+                 emails=["procurement@eastvale-health.example"],
+                 registry_ids={"gb_fts": "GB-FTS-9001"}, sources=["find_a_tender"],
+                 source_urls=["https://www.find-tender.service.gov.uk/Notice/090001-2026"]),
+            lead_type="tenders", days=6)
+    run.add(Lead(business_name="Ashby Parish Council", locality="London",
+                 sources=["contracts_finder"],
+                 source_urls=["https://www.contractsfinder.service.gov.uk/Notice/0000-1"]),
+            lead_type="tenders", days=40)
+    run.tag("Northwick Borough Council", "tenders")
+    for org, source in (("Northwick Borough Council", "find_a_tender"),
+                        ("Eastvale Health Trust", "find_a_tender"),
+                        ("Ashby Parish Council", "contracts_finder")):
+        run.attribute(org, "org_type", "public_buyer", origin="rule", lead_type="tenders")
+    tenders = [
+        ("Northwick Borough Council", "tender",
+         "Revenues and benefits software replacement", 4, -24, 0.75,
+         "https://www.find-tender.service.gov.uk/Notice/090002-2026",
+         {"portal": "find_a_tender", "value": {"text": "£850,000", "amount": 850000.0,
+                                               "currency": "GBP"},
+          "documents_url": "https://northwick.example/procurement/rb-software",
+          "matched_codes": ["48000000", "72260000"], "contact": "Procurement Team"}),
+        ("Northwick Borough Council", "tender", "Website accessibility audit", 9, -12, 0.75,
+         "https://www.contractsfinder.service.gov.uk/Notice/0000-2",
+         {"portal": "contracts_finder", "value": {"text": "£5,000–£15,000", "amount": 15000.0,
+                                                  "low": 5000.0, "currency": "GBP"},
+          "matched_codes": ["72413000"]}),
+        ("Eastvale Health Trust", "tender_planned", "Intention to procure a data platform", 6,
+         None, 0.5, "https://www.find-tender.service.gov.uk/Notice/090001-2026",
+         {"portal": "find_a_tender", "matched_codes": ["72300000"]}),
+        # Closed before the run: it no longer counts towards intent.
+        ("Ashby Parish Council", "tender", "Website redesign", 40, 10, 0.75,
+         "https://www.contractsfinder.service.gov.uk/Notice/0000-1",
+         {"portal": "contracts_finder", "value": {"text": "£12,000", "amount": 12000.0,
+                                                  "currency": "GBP"},
+          "matched_codes": ["72413000"]}),
+    ]
+    for org, type_, title, days, expires, strength, url, payload in tenders:
+        run.signal(org, "tenders", type_, title, days, url, strength,
+                   key=f"{payload['portal']}:{url.rsplit('/', 1)[-1]}", expires=expires,
+                   **payload)
+
+    run.add(Lead(business_name="BRIGHTPATH SOFTWARE LTD", locality="London",
+                 address="1 Example Way, London, EC1A 1AA",
+                 registry_ids={"uk_company": "15550001"}, sources=["companies_house"],
+                 source_urls=["https://find-and-update.company-information.service.gov.uk/"
+                              "company/15550001"]),
+            lead_type="registrations", days=5)
+    run.tag("Kestrel Lane Bakery", "registrations")
+    for org, number, days, codes, kind in (("BRIGHTPATH SOFTWARE LTD", "15550001", 5,
+                                            ["62012"], "ltd"),
+                                           ("Kestrel Lane Bakery", "15550003", 20,
+                                            ["10710", "47240"], "ltd")):
+        url = f"https://find-and-update.company-information.service.gov.uk/company/{number}"
+        title = f"{ago(days):%d %b %Y} ({division(codes[0])})"
+        run.signal(org, "registrations", "incorporation", title,
+                   days, url, 0.7, key=f"uk_company:{number}", register="companies_house",
+                   number=number, industry_codes=codes, company_type=kind,
+                   incorporated_on=ago(days).date().isoformat())
+    for org, name, title in (("BRIGHTPATH SOFTWARE LTD", "Ada Okafor", "Director"),
+                             ("Kestrel Lane Bakery", "Tobias Wren", "Director")):
+        run.insert(Person, organization_id=run.ids[org], name=name, title=title,
+                   source="registry", lead_type="registrations",
+                   source_url="https://find-and-update.company-information.service.gov.uk/"
+                              "company/15550001/officers", created_at=FIXED_NOW)
+    run.unit("local_business", "google_maps", "London", "Software companies", found=3, new=3)
+    run.unit("tenders", "find_a_tender", None, None, found=1840, new=1)
+    run.unit("tenders", "contracts_finder", None, None, found=12, new=1)
+    run.unit("registrations", "companies_house", "London", None, found=214, new=1)
+    run.failure("find_a_tender", "fetch_failed")
+    return run.finish(minutes=9)
+
+
 BUILDERS = {"local_business": local_business, "mix": mix, "venues": venues, "empty": empty,
-            "audit_hiring": audit_hiring, "news_people": news_people}
+            "audit_hiring": audit_hiring, "news_people": news_people,
+            "tenders_registrations": tenders_registrations}
 
 
 def build(engine, scenario: str) -> int:

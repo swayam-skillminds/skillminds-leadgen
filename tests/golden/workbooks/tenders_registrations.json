@@ -1,0 +1,3761 @@
+{
+ "Overview": {
+  "autofilter": null,
+  "cells": {
+   "A1": {
+    "align": "center",
+    "font": "Arial 16 b #1F3864",
+    "t": "s",
+    "v": "Sample London tenders and registrations — Lead Book"
+   },
+   "A100": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Lead Types"
+   },
+   "A101": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Open Tender"
+   },
+   "A102": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Tender Closes"
+   },
+   "A103": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Tender Value"
+   },
+   "A104": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Tender Link"
+   },
+   "A105": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Tender Documents"
+   },
+   "A106": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Incorporated"
+   },
+   "A107": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Company No."
+   },
+   "A108": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Register Link"
+   },
+   "A109": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Decision Makers"
+   },
+   "A11": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "RUN SUMMARY"
+   },
+   "A110": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Fit"
+   },
+   "A111": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Intent"
+   },
+   "A112": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Reach"
+   },
+   "A113": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Score Reasons"
+   },
+   "A114": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Top Signal"
+   },
+   "A115": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Signal Date"
+   },
+   "A116": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Open Tenders"
+   },
+   "A117": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Tenders"
+   },
+   "A118": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Tender Portals"
+   },
+   "A119": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Tender Codes"
+   },
+   "A12": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Project"
+   },
+   "A120": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Tender Contact"
+   },
+   "A121": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Industry Codes"
+   },
+   "A122": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Sources"
+   },
+   "A123": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Change"
+   },
+   "A124": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Last Seen"
+   },
+   "A125": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Org ID"
+   },
+   "A127": {
+    "align": "top wrap",
+    "font": "Arial 8 i #7F7F7F",
+    "t": "s",
+    "v": "Every figure is computed from the project database when the workbook is generated; Records holds the rows behind each. Contact details appear only where they were published. Re-export at any time from the API or CLI, without re-scraping."
+   },
+   "A13": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Config"
+   },
+   "A14": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Run"
+   },
+   "A15": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Date"
+   },
+   "A16": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Duration"
+   },
+   "A17": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Places"
+   },
+   "A18": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Country"
+   },
+   "A19": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Lead types"
+   },
+   "A2": {
+    "align": "center",
+    "font": "Arial 9 i #7F7F7F",
+    "t": "s",
+    "v": "6 records · sorted by score (highest first) · generated 01 Oct 2026, 10:30 (Europe/London)"
+   },
+   "A20": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Sources used"
+   },
+   "A21": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Work units"
+   },
+   "A22": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Depth"
+   },
+   "A23": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "AI"
+   },
+   "A24": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Score weights"
+   },
+   "A25": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "This workbook"
+   },
+   "A26": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Sorted by"
+   },
+   "A27": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Generated"
+   },
+   "A29": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "RESULTS"
+   },
+   "A30": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Records"
+   },
+   "A31": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Change in this run"
+   },
+   "A33": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "TOP 6 LEADS"
+   },
+   "A34": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Name"
+   },
+   "A35": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Northwick Borough Council"
+   },
+   "A36": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Kestrel Lane Bakery"
+   },
+   "A37": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Thameside Digital"
+   },
+   "A38": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "BRIGHTPATH SOFTWARE LTD"
+   },
+   "A39": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Eastvale Health Trust"
+   },
+   "A4": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "RECORDS"
+   },
+   "A40": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Ashby Parish Council"
+   },
+   "A42": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "BY LEAD TYPE"
+   },
+   "A43": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Lead type"
+   },
+   "A44": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Local businesses"
+   },
+   "A45": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Public tenders"
+   },
+   "A46": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "New registrations"
+   },
+   "A48": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "BY CATEGORY"
+   },
+   "A49": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Category"
+   },
+   "A5": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 18 b #1F3864",
+    "t": "n",
+    "v": 6
+   },
+   "A50": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Software companies"
+   },
+   "A51": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "(none)"
+   },
+   "A53": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "BY ORG TYPE"
+   },
+   "A54": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Org type"
+   },
+   "A55": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Public buyer"
+   },
+   "A56": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "(none)"
+   },
+   "A58": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "BY INDUSTRY"
+   },
+   "A59": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Industry"
+   },
+   "A60": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Computer programming and consultancy"
+   },
+   "A61": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Food manufacturing"
+   },
+   "A62": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "(none)"
+   },
+   "A64": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "BY LOCALITY"
+   },
+   "A65": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Locality"
+   },
+   "A66": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "London"
+   },
+   "A68": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "BY SIGNAL TYPE"
+   },
+   "A69": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Signal type"
+   },
+   "A7": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "FILTERED VIEW"
+   },
+   "A70": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "(no signal)"
+   },
+   "A71": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Newly incorporated"
+   },
+   "A72": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Open tender"
+   },
+   "A73": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Planned tender"
+   },
+   "A75": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "BY SCORE BAND"
+   },
+   "A76": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Score band"
+   },
+   "A77": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "60–79"
+   },
+   "A78": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "40–59"
+   },
+   "A79": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "20–39"
+   },
+   "A8": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "SHOWING (OF 6)"
+   },
+   "A80": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "0–19"
+   },
+   "A82": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "DATA QUALITY"
+   },
+   "A83": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Field"
+   },
+   "A84": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Any contact"
+   },
+   "A85": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Phone"
+   },
+   "A86": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Email"
+   },
+   "A87": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Website"
+   },
+   "A88": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Address"
+   },
+   "A89": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Social profile"
+   },
+   "A9": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 14 b #44546A",
+    "t": "f",
+    "v": "=SUBTOTAL(103,Records!$B$2:$B$7)"
+   },
+   "A90": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Google Maps listing"
+   },
+   "A91": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Decision-maker"
+   },
+   "A92": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Rating"
+   },
+   "A93": {
+    "align": "top",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Signal"
+   },
+   "A95": {
+    "align": "top",
+    "font": "Arial 11 b #1F3864",
+    "t": "s",
+    "v": "COLUMN LEGEND"
+   },
+   "A96": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Column"
+   },
+   "A97": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Score"
+   },
+   "A98": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Org Type"
+   },
+   "A99": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Industry"
+   },
+   "B100": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The lead types that found or enriched the organisation."
+   },
+   "B101": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Its strongest open tender (or planned procurement)."
+   },
+   "B102": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "When bids for that tender close."
+   },
+   "B103": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "As the notice states it, in its own currency; blank when it states none."
+   },
+   "B104": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The notice on the portal."
+   },
+   "B105": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Where its tender documents are."
+   },
+   "B106": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "When the company was incorporated."
+   },
+   "B107": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Its number at the register."
+   },
+   "B108": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The company's page at the register (officers, filings)."
+   },
+   "B109": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "People found on public pages: name (title)."
+   },
+   "B110": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Is it the kind of organisation we sell to? 0–100."
+   },
+   "B111": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Is there a reason to buy now (hiring, funding, tenders…)? 0–100: 0 when nothing was found, blank when no lead type in the run looks for one."
+   },
+   "B112": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Can we get hold of someone? 0–100, from the published contact channels."
+   },
+   "B113": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Why it ranks where it does: each lead type's reasons, strongest first."
+   },
+   "B114": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The strongest unexpired signal (strength fades with age)."
+   },
+   "B115": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "When the top signal happened. Green: within 30 days; amber: within 90."
+   },
+   "B116": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Its tenders still open."
+   },
+   "B117": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Every open tender: title and closing date."
+   },
+   "B118": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Where its tenders were published."
+   },
+   "B119": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The classification codes (CPV, NAICS) or words that matched."
+   },
+   "B12": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Sample London tenders and registrations"
+   },
+   "B120": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The contact point the notice names."
+   },
+   "B121": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Every registered industry code, with its division."
+   },
+   "B122": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Which sources found or enriched it."
+   },
+   "B123": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "What this run did: New (first found), Updated (added something), Unchanged (found again, nothing to add)."
+   },
+   "B124": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The last run that found it (or changed it)."
+   },
+   "B125": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The organisation's id in the API (/organizations/{id})."
+   },
+   "B13": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Sample London tenders and registrations"
+   },
+   "B14": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "#1 · completed"
+   },
+   "B15": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "30 Sep 2026, 10:30 (Europe/London)"
+   },
+   "B16": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "9 min"
+   },
+   "B17": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "London"
+   },
+   "B18": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "United Kingdom (GB)"
+   },
+   "B19": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses, Public tenders, New registrations"
+   },
+   "B20": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "google_maps (3 found), find_a_tender (1840 found), contracts_finder (12 found), companies_house (214 found)"
+   },
+   "B21": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "4 of 4 done"
+   },
+   "B22": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "balanced"
+   },
+   "B23": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "off"
+   },
+   "B24": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Fit 40% · Intent 40% · Reach 20%"
+   },
+   "B25": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "organisations this run found"
+   },
+   "B26": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "score (highest first)"
+   },
+   "B27": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "01 Oct 2026, 10:30 (Europe/London), from the project database"
+   },
+   "B30": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "6"
+   },
+   "B31": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "6 new · 0 updated · 0 found again unchanged"
+   },
+   "B34": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Score"
+   },
+   "B35": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 63.76
+   },
+   "B36": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 57.61
+   },
+   "B37": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 35.71
+   },
+   "B38": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 28.94
+   },
+   "B39": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 24.1
+   },
+   "B4": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "NEW"
+   },
+   "B40": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "B43": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Records"
+   },
+   "B44": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "B45": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "B46": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "B49": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Records"
+   },
+   "B5": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 18 b #1F3864",
+    "t": "n",
+    "v": 6
+   },
+   "B50": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "B51": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "B54": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Records"
+   },
+   "B55": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "B56": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "B59": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Records"
+   },
+   "B60": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B61": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B62": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
+   },
+   "B65": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Records"
+   },
+   "B66": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 6
+   },
+   "B69": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Records"
+   },
+   "B7": {
+    "font": "Arial 8 i #7F7F7F",
+    "t": "s",
+    "v": "follows the filter on Records (recalculated when the workbook opens)"
+   },
+   "B70": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "B71": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "B72": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B73": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B76": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Records"
+   },
+   "B77": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B78": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B79": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "B8": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "AVG SCORE"
+   },
+   "B80": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "B83": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Filled"
+   },
+   "B84": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
+   },
+   "B85": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "B86": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
+   },
+   "B87": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "B88": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
+   },
+   "B89": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "B9": {
+    "align": "left center",
+    "fmt": "0.0",
+    "font": "Arial 14 b #44546A",
+    "t": "f",
+    "v": "=IFERROR(SUBTOTAL(101,Records!$A$2:$A$7),\"–\")"
+   },
+   "B90": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "B91": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "B92": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "B93": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
+   },
+   "B96": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Meaning"
+   },
+   "B97": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Overall rank, 0–100: the run's weights over Fit, Intent and Reach. A component no lead type in the run scores is left out and the other weights are scaled up; one that some lead type scores counts 0 for an organisation without it."
+   },
+   "B98": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Public buyer: a public body that publishes tenders."
+   },
+   "B99": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Its main registered industry (UK SIC 2007 division)."
+   },
+   "C34": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Where"
+   },
+   "C35": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "London"
+   },
+   "C36": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "London"
+   },
+   "C37": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "London"
+   },
+   "C38": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "London"
+   },
+   "C39": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "London"
+   },
+   "C4": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "UPDATED"
+   },
+   "C40": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "London"
+   },
+   "C43": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Share"
+   },
+   "C44": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.5
+   },
+   "C45": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.5
+   },
+   "C46": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.3333
+   },
+   "C49": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Share"
+   },
+   "C5": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 18 b #1F3864",
+    "t": "n",
+    "v": 0
+   },
+   "C50": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.5
+   },
+   "C51": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.5
+   },
+   "C54": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Share"
+   },
+   "C55": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.5
+   },
+   "C56": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.5
+   },
+   "C59": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Share"
+   },
+   "C60": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1667
+   },
+   "C61": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1667
+   },
+   "C62": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.6667
+   },
+   "C65": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Share"
+   },
+   "C66": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "C69": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Share"
+   },
+   "C70": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.3333
+   },
+   "C71": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.3333
+   },
+   "C72": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1667
+   },
+   "C73": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1667
+   },
+   "C76": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Share"
+   },
+   "C77": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1667
+   },
+   "C78": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1667
+   },
+   "C79": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.5
+   },
+   "C8": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "WITH PHONE"
+   },
+   "C80": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.1667
+   },
+   "C83": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Coverage"
+   },
+   "C84": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.6667
+   },
+   "C85": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.5
+   },
+   "C86": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.6667
+   },
+   "C87": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.5
+   },
+   "C88": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.6667
+   },
+   "C89": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "C9": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 14 b #44546A",
+    "t": "f",
+    "v": "=SUMPRODUCT(SUBTOTAL(103,OFFSET(Records!$S$2,ROW(Records!$S$2:$S$7)-ROW(Records!$S$2),0)))"
+   },
+   "C90": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.5
+   },
+   "C91": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.3333
+   },
+   "C92": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.5
+   },
+   "C93": {
+    "align": "top",
+    "fmt": "0.0%",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0.6667
+   },
+   "D4": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "WITH PHONE"
+   },
+   "D43": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Avg score"
+   },
+   "D44": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 52.4
+   },
+   "D45": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 29.3
+   },
+   "D46": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 43.3
+   },
+   "D49": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Avg score"
+   },
+   "D5": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 18 b #1F3864",
+    "t": "n",
+    "v": 3
+   },
+   "D50": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 52.4
+   },
+   "D51": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 17.7
+   },
+   "D54": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Avg score"
+   },
+   "D55": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 29.3
+   },
+   "D56": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 40.8
+   },
+   "D59": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Avg score"
+   },
+   "D60": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 28.9
+   },
+   "D61": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 57.6
+   },
+   "D62": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 30.9
+   },
+   "D65": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Avg score"
+   },
+   "D66": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 35
+   },
+   "D69": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Avg score"
+   },
+   "D70": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 17.9
+   },
+   "D71": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 43.3
+   },
+   "D72": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 63.8
+   },
+   "D73": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 24.1
+   },
+   "D76": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Avg score"
+   },
+   "D77": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 63.8
+   },
+   "D78": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 57.6
+   },
+   "D79": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 29.6
+   },
+   "D8": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "WITH EMAIL"
+   },
+   "D80": {
+    "align": "top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "D83": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Reading"
+   },
+   "D84": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "A phone, email, website, social profile or booking line."
+   },
+   "D85": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Published numbers only."
+   },
+   "D86": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Published addresses only; inferred ones are counted separately."
+   },
+   "D87": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "The organisation's own site (directory and platform pages excluded)."
+   },
+   "D89": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "Instagram, Facebook, LinkedIn or WhatsApp."
+   },
+   "D9": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 14 b #44546A",
+    "t": "f",
+    "v": "=SUMPRODUCT(SUBTOTAL(103,OFFSET(Records!$T$2,ROW(Records!$T$2:$T$7)-ROW(Records!$T$2),0)))"
+   },
+   "D91": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "A named person (and title) from a public page."
+   },
+   "D93": {
+    "align": "top wrap",
+    "font": "Arial 9 #404040",
+    "t": "s",
+    "v": "At least one unexpired buying signal."
+   },
+   "E34": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Category"
+   },
+   "E35": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Software companies"
+   },
+   "E36": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Software companies"
+   },
+   "E37": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Software companies"
+   },
+   "E4": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "WITH EMAIL"
+   },
+   "E43": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "With phone"
+   },
+   "E44": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "E45": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E46": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E49": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "With phone"
+   },
+   "E5": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 18 b #1F3864",
+    "t": "n",
+    "v": 4
+   },
+   "E50": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "E51": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "E54": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "With phone"
+   },
+   "E55": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E56": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "E59": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "With phone"
+   },
+   "E60": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "E61": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E62": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "E65": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "With phone"
+   },
+   "E66": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "E69": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "With phone"
+   },
+   "E70": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E71": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E72": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E73": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "E76": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "With phone"
+   },
+   "E77": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E78": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E79": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "E8": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "WITH SIGNAL"
+   },
+   "E80": {
+    "align": "top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "E9": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 14 b #44546A",
+    "t": "f",
+    "v": "=SUMPRODUCT(SUBTOTAL(103,OFFSET(Records!$AC$2,ROW(Records!$AC$2:$AC$7)-ROW(Records!$AC$2),0)))"
+   },
+   "F34": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Phone"
+   },
+   "F35": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+44 20 7946 0103"
+   },
+   "F36": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+44 20 7946 0102"
+   },
+   "F37": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+44 20 7946 0101"
+   },
+   "F4": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "WITH SIGNAL"
+   },
+   "F5": {
+    "align": "left center",
+    "fmt": "#,##0",
+    "font": "Arial 18 b #1F3864",
+    "t": "n",
+    "v": 4
+   },
+   "G34": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Website"
+   },
+   "G35": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://northwick.example/",
+    "t": "s",
+    "v": "northwick.example"
+   },
+   "G36": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://kestrel-lane.example/",
+    "t": "s",
+    "v": "kestrel-lane.example"
+   },
+   "G37": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://thameside-digital.example/",
+    "t": "s",
+    "v": "thameside-digital.example"
+   },
+   "G4": {
+    "align": "top",
+    "font": "Arial 9 #7F7F7F",
+    "t": "s",
+    "v": "AVG SCORE"
+   },
+   "G5": {
+    "align": "left center",
+    "fmt": "0.0",
+    "font": "Arial 18 b #1F3864",
+    "t": "n",
+    "v": 35
+   },
+   "H34": {
+    "align": "left center wrap",
+    "fill": "44546A",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Top signal"
+   },
+   "H35": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Revenues and benefits software replacement"
+   },
+   "H36": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "11 Sep 2026 (food manufacturing)"
+   },
+   "H38": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "26 Sep 2026 (computer programming and consultancy)"
+   },
+   "H39": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Intention to procure a data platform"
+   }
+  },
+  "conditional": [
+   "B35:B40 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "C84:C93 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D44:D46 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D50:D51 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D55:D56 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D60:D62 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D66 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D70:D73 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "D77:D80 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']"
+  ],
+  "dimensions": "A1:H127",
+  "freeze": null,
+  "gridlines": false,
+  "merged": [
+   "A127:H127",
+   "A1:H1",
+   "A2:H2",
+   "B100:H100",
+   "B101:H101",
+   "B102:H102",
+   "B103:H103",
+   "B104:H104",
+   "B105:H105",
+   "B106:H106",
+   "B107:H107",
+   "B108:H108",
+   "B109:H109",
+   "B110:H110",
+   "B111:H111",
+   "B112:H112",
+   "B113:H113",
+   "B114:H114",
+   "B115:H115",
+   "B116:H116",
+   "B117:H117",
+   "B118:H118",
+   "B119:H119",
+   "B120:H120",
+   "B121:H121",
+   "B122:H122",
+   "B123:H123",
+   "B124:H124",
+   "B125:H125",
+   "B12:H12",
+   "B13:H13",
+   "B14:H14",
+   "B15:H15",
+   "B16:H16",
+   "B17:H17",
+   "B18:H18",
+   "B19:H19",
+   "B20:H20",
+   "B21:H21",
+   "B22:H22",
+   "B23:H23",
+   "B24:H24",
+   "B25:H25",
+   "B26:H26",
+   "B27:H27",
+   "B30:H30",
+   "B31:H31",
+   "B96:H96",
+   "B97:H97",
+   "B98:H98",
+   "B99:H99",
+   "C34:D34",
+   "C35:D35",
+   "C36:D36",
+   "C37:D37",
+   "C38:D38",
+   "C39:D39",
+   "C40:D40",
+   "D83:H83",
+   "D84:H84",
+   "D85:H85",
+   "D86:H86",
+   "D87:H87",
+   "D88:H88",
+   "D89:H89",
+   "D90:H90",
+   "D91:H91",
+   "D92:H92",
+   "D93:H93"
+  ],
+  "tab": "C00000",
+  "widths": {
+   "A": 34.0,
+   "B": 12.0,
+   "C": 12.0,
+   "D": 12.0,
+   "E": 14.0,
+   "F": 18.0,
+   "G": 22.0,
+   "H": 30.0
+  }
+ },
+ "Records": {
+  "autofilter": "A1:AS7",
+  "cells": {
+   "A1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Score"
+   },
+   "A2": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 63.76
+   },
+   "A3": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 57.61
+   },
+   "A4": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 35.71
+   },
+   "A5": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 28.94
+   },
+   "A6": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 24.1
+   },
+   "A7": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "AA1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Reach"
+   },
+   "AA2": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 80
+   },
+   "AA3": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 80
+   },
+   "AA4": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 80
+   },
+   "AA5": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 10
+   },
+   "AA6": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 25
+   },
+   "AA7": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "AB1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Score Reasons"
+   },
+   "AB2": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Google rating 3.4 from 96 reviews; reachable by phone, email, website; found on google_maps only; open tender: Revenues and benefits software replacement (closes 2026-10-25, £850,000, Find a Tender); open tender: Website accessibility audit (closes 2026-10-13, £5,000–£15,000, Contracts Finder)"
+   },
+   "AB3": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Google rating 4.3 from 18 reviews; reachable by phone, email, website; found on google_maps only; newly incorporated (2026-09-11; 10710 (food manufacturing), 47240 (retail trade); Companies House)"
+   },
+   "AB4": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Google rating 4.6 from 41 reviews; reachable by phone, email, website; found on google_maps only"
+   },
+   "AB5": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "newly incorporated (2026-09-26; 62012 (computer programming and consultancy); Companies House); no published phone, email or website"
+   },
+   "AB6": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "planned tender: Intention to procure a data platform (Find a Tender); reachable by email"
+   },
+   "AB7": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "no published phone, email or website"
+   },
+   "AC1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Top Signal"
+   },
+   "AC2": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Open tender: Revenues and benefits software replacement"
+   },
+   "AC3": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Newly incorporated: 11 Sep 2026 (food manufacturing)"
+   },
+   "AC5": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Newly incorporated: 26 Sep 2026 (computer programming and consultancy)"
+   },
+   "AC6": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Planned tender: Intention to procure a data platform"
+   },
+   "AD1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Signal Date"
+   },
+   "AD2": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-27T10:30:00"
+   },
+   "AD3": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-11T10:30:00"
+   },
+   "AD5": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-26T10:30:00"
+   },
+   "AD6": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-25T10:30:00"
+   },
+   "AE1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Signal Link"
+   },
+   "AE2": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://www.find-tender.service.gov.uk/Notice/090002-2026",
+    "t": "s",
+    "v": "Source"
+   },
+   "AE3": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://find-and-update.company-information.service.gov.uk/company/15550003",
+    "t": "s",
+    "v": "Source"
+   },
+   "AE5": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://find-and-update.company-information.service.gov.uk/company/15550001",
+    "t": "s",
+    "v": "Source"
+   },
+   "AE6": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://www.find-tender.service.gov.uk/Notice/090001-2026",
+    "t": "s",
+    "v": "Source"
+   },
+   "AF1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Other Signals"
+   },
+   "AF2": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Open tender: Website accessibility audit (2026-09-22)"
+   },
+   "AG1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Open Tenders"
+   },
+   "AG2": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "AG6": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "AH1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Tenders"
+   },
+   "AH2": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Revenues and benefits software replacement (closes 2026-10-25); Website accessibility audit (closes 2026-10-13)"
+   },
+   "AH6": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Intention to procure a data platform (planned)"
+   },
+   "AI1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Tender Portals"
+   },
+   "AI2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Find a Tender, Contracts Finder"
+   },
+   "AI6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Find a Tender"
+   },
+   "AJ1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Tender Codes"
+   },
+   "AJ2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "48000000, 72260000, 72413000"
+   },
+   "AJ6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "72300000"
+   },
+   "AK1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Tender Contact"
+   },
+   "AK2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Procurement Team"
+   },
+   "AL1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Industry Codes"
+   },
+   "AL3": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "10710 (food manufacturing); 47240 (retail trade)"
+   },
+   "AL5": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "62012 (computer programming and consultancy)"
+   },
+   "AM1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Register"
+   },
+   "AM3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Companies House"
+   },
+   "AM5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Companies House"
+   },
+   "AN1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Sources"
+   },
+   "AN2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "google_maps"
+   },
+   "AN3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "google_maps"
+   },
+   "AN4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "google_maps"
+   },
+   "AN5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "companies_house"
+   },
+   "AN6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "find_a_tender"
+   },
+   "AN7": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "contracts_finder"
+   },
+   "AO1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Src #"
+   },
+   "AO2": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "AO3": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "AO4": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "AO5": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "AO6": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "AO7": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "AP1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Change"
+   },
+   "AP2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "AP3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "AP4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "AP5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "AP6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "AP7": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New"
+   },
+   "AQ1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "First Seen"
+   },
+   "AQ2": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-04T10:30:00"
+   },
+   "AQ3": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-03T10:30:00"
+   },
+   "AQ4": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-02T10:30:00"
+   },
+   "AQ5": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-26T10:30:00"
+   },
+   "AQ6": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-25T10:30:00"
+   },
+   "AQ7": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-08-22T10:30:00"
+   },
+   "AR1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Last Seen"
+   },
+   "AR2": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T10:30:00"
+   },
+   "AR3": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T10:30:00"
+   },
+   "AR4": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T10:30:00"
+   },
+   "AR5": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T10:30:00"
+   },
+   "AR6": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T10:30:00"
+   },
+   "AR7": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy hh:mm",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-30T10:30:00"
+   },
+   "AS1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Org ID"
+   },
+   "AS2": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3
+   },
+   "AS3": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 2
+   },
+   "AS4": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 1
+   },
+   "AS5": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 6
+   },
+   "AS6": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4
+   },
+   "AS7": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 5
+   },
+   "B1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Name"
+   },
+   "B2": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Northwick Borough Council"
+   },
+   "B3": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Kestrel Lane Bakery"
+   },
+   "B4": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Thameside Digital"
+   },
+   "B5": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "BRIGHTPATH SOFTWARE LTD"
+   },
+   "B6": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Eastvale Health Trust"
+   },
+   "B7": {
+    "align": "top wrap",
+    "font": "Arial 10 b",
+    "t": "s",
+    "v": "Ashby Parish Council"
+   },
+   "C1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Category"
+   },
+   "C2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Software companies"
+   },
+   "C3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Software companies"
+   },
+   "C4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Software companies"
+   },
+   "D1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Org Type"
+   },
+   "D2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Public buyer"
+   },
+   "D6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Public buyer"
+   },
+   "D7": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Public buyer"
+   },
+   "E1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Industry"
+   },
+   "E3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Food manufacturing"
+   },
+   "E5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Computer programming and consultancy"
+   },
+   "F1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Lead Types"
+   },
+   "F2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses, Public tenders"
+   },
+   "F3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses, New registrations"
+   },
+   "F4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Local businesses"
+   },
+   "F5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "New registrations"
+   },
+   "F6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Public tenders"
+   },
+   "F7": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Public tenders"
+   },
+   "G1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Locality"
+   },
+   "G2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "London"
+   },
+   "G3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "London"
+   },
+   "G4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "London"
+   },
+   "G5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "London"
+   },
+   "G6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "London"
+   },
+   "G7": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "London"
+   },
+   "H1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Maps Rating"
+   },
+   "H2": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 3.4
+   },
+   "H3": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4.3
+   },
+   "H4": {
+    "align": "center top",
+    "fmt": "0.0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 4.6
+   },
+   "I1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Maps Reviews"
+   },
+   "I2": {
+    "align": "center top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 96
+   },
+   "I3": {
+    "align": "center top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 18
+   },
+   "I4": {
+    "align": "center top",
+    "fmt": "#,##0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 41
+   },
+   "J1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Open Tender"
+   },
+   "J2": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Revenues and benefits software replacement"
+   },
+   "J6": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Intention to procure a data platform"
+   },
+   "K1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Tender Closes"
+   },
+   "K2": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-10-25T09:30:00"
+   },
+   "L1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Tender Value"
+   },
+   "L2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "£850,000"
+   },
+   "M1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Tender Link"
+   },
+   "M2": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://www.find-tender.service.gov.uk/Notice/090002-2026",
+    "t": "s",
+    "v": "Notice"
+   },
+   "M6": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://www.find-tender.service.gov.uk/Notice/090001-2026",
+    "t": "s",
+    "v": "Notice"
+   },
+   "N1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Tender Documents"
+   },
+   "N2": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://northwick.example/procurement/rb-software",
+    "t": "s",
+    "v": "Documents"
+   },
+   "O1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Incorporated"
+   },
+   "O3": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-11T10:30:00"
+   },
+   "O5": {
+    "align": "center top",
+    "fmt": "dd-mmm-yy",
+    "font": "Arial 10",
+    "t": "d",
+    "v": "2026-09-26T10:30:00"
+   },
+   "P1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Company No."
+   },
+   "P3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "15550003"
+   },
+   "P5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "15550001"
+   },
+   "Q1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Company Type"
+   },
+   "Q3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Private limited"
+   },
+   "Q5": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Private limited"
+   },
+   "R1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Register Link"
+   },
+   "R3": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://find-and-update.company-information.service.gov.uk/company/15550003",
+    "t": "s",
+    "v": "Register"
+   },
+   "R5": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://find-and-update.company-information.service.gov.uk/company/15550001",
+    "t": "s",
+    "v": "Register"
+   },
+   "S1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Primary Phone"
+   },
+   "S2": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+44 20 7946 0103"
+   },
+   "S3": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+44 20 7946 0102"
+   },
+   "S4": {
+    "align": "top",
+    "fmt": "@",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "+44 20 7946 0101"
+   },
+   "T1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Primary Email"
+   },
+   "T2": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "hello@northwick.example"
+   },
+   "T3": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "hello@kestrel-lane.example"
+   },
+   "T4": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "hello@thameside-digital.example"
+   },
+   "T6": {
+    "align": "top",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "procurement@eastvale-health.example"
+   },
+   "U1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Website"
+   },
+   "U2": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://northwick.example/",
+    "t": "s",
+    "v": "northwick.example"
+   },
+   "U3": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://kestrel-lane.example/",
+    "t": "s",
+    "v": "kestrel-lane.example"
+   },
+   "U4": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://thameside-digital.example/",
+    "t": "s",
+    "v": "thameside-digital.example"
+   },
+   "V1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Google Maps"
+   },
+   "V2": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://maps.google.com/?cid=1000000000000000403",
+    "t": "s",
+    "v": "View map"
+   },
+   "V3": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://maps.google.com/?cid=1000000000000000402",
+    "t": "s",
+    "v": "View map"
+   },
+   "V4": {
+    "align": "top",
+    "font": "Arial 10 u #0563C1",
+    "link": "https://maps.google.com/?cid=1000000000000000401",
+    "t": "s",
+    "v": "View map"
+   },
+   "W1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Address"
+   },
+   "W2": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "3 Sample Street, London"
+   },
+   "W3": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "2 Sample Street, London"
+   },
+   "W4": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "1 Sample Street, London"
+   },
+   "W5": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "1 Example Way, London, EC1A 1AA"
+   },
+   "X1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Decision Makers"
+   },
+   "X3": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Tobias Wren (Director)"
+   },
+   "X5": {
+    "align": "top wrap",
+    "font": "Arial 10",
+    "t": "s",
+    "v": "Ada Okafor (Director)"
+   },
+   "Y1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Fit"
+   },
+   "Y2": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 42.8
+   },
+   "Y3": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 44
+   },
+   "Y4": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 49.3
+   },
+   "Y5": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "Y6": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "Y7": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "Z1": {
+    "align": "left center wrap",
+    "fill": "1F3864",
+    "font": "Arial 10 b #FFFFFF",
+    "t": "s",
+    "v": "Intent"
+   },
+   "Z2": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 76.6
+   },
+   "Z3": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 60
+   },
+   "Z4": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   },
+   "Z5": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 67.4
+   },
+   "Z6": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 47.7
+   },
+   "Z7": {
+    "align": "center top",
+    "fmt": "0",
+    "font": "Arial 10",
+    "t": "n",
+    "v": 0
+   }
+  },
+  "conditional": [
+   "A2:A7 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "A2:AS7 expression ['MOD(ROW(),2)=0']",
+   "AA2:AA7 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "AD2:AD7 expression ['AND(ISNUMBER(AD2),TODAY()-AD2<=30)']",
+   "AD2:AD7 expression ['AND(ISNUMBER(AD2),TODAY()-AD2<=90)']",
+   "Y2:Y7 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']",
+   "Z2:Z7 colorScale  ['F8C9C4', 'FFF0C2', 'C6E7C8']"
+  ],
+  "dimensions": "A1:AS7",
+  "freeze": "C2",
+  "gridlines": null,
+  "merged": [],
+  "tab": "1F3864",
+  "widths": {
+   "A": 8.0,
+   "AA": 7.0,
+   "AB": 50.0,
+   "AC": 40.0,
+   "AD": 11.0,
+   "AE": 14.0,
+   "AF": 44.0,
+   "AG": 10.0,
+   "AH": 50.0,
+   "AI": 22.0,
+   "AJ": 24.0,
+   "AK": 24.0,
+   "AL": 34.0,
+   "AM": 16.0,
+   "AN": 22.0,
+   "AO": 6.0,
+   "AP": 11.0,
+   "AQ": 15.0,
+   "AR": 15.0,
+   "AS": 8.0,
+   "B": 38.0,
+   "C": 20.0,
+   "D": 14.0,
+   "E": 24.0,
+   "F": 18.0,
+   "G": 20.0,
+   "H": 9.0,
+   "I": 9.0,
+   "J": 50.0,
+   "K": 13.0,
+   "L": 18.0,
+   "M": 12.0,
+   "N": 12.0,
+   "O": 13.0,
+   "P": 12.0,
+   "Q": 18.0,
+   "R": 12.0,
+   "S": 18.0,
+   "T": 28.0,
+   "U": 26.0,
+   "V": 12.0,
+   "W": 44.0,
+   "X": 36.0,
+   "Y": 7.0,
+   "Z": 7.0
+  }
+ },
+ "active": "Overview",
+ "sheets": [
+  "Overview",
+  "Records"
+ ]
+}
