@@ -213,6 +213,16 @@ class LeadTypeSession(ABC):
     def run_unit(self, unit: WorkUnit) -> UnitOutcome:
         """Execute one unit. Never raises: failures are recorded and returned."""
 
+    def unit_skip_reason(self, unit: WorkUnit) -> str | None:
+        """Why this unit can't run in this run, or None (Phase 7).
+
+        A unit whose source needs something the run doesn't have -- an API key that
+        isn't configured -- is planned (so the plan says what it would do) but never
+        started: the engine records it ``skipped`` with this reason, in the estimate,
+        the ``unit_skipped`` event, ``work_units.skip_reason`` and the run report. It is
+        asked again on resume, so configuring the key and resuming runs it."""
+        return None
+
     def hosts(self, unit: WorkUnit) -> frozenset[str]:
         """Hosts the unit hits: units sharing one never run at the same time."""
         return frozenset({f"{self.lead_type}:{unit.source}"})

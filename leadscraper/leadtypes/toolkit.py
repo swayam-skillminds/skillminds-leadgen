@@ -57,6 +57,30 @@ class Kit:
             pass
 
 
+def secret(name: str | None) -> str | None:
+    """The secret called ``name`` (env, secret file, keychain), or None. Never logged."""
+    if not name:
+        return None
+    try:
+        from ..core.secrets import get_secret
+
+        return get_secret(name)
+    except Exception:
+        return None
+
+
+#: The failure reason (and work-unit skip reason prefix) for a source whose API key
+#: is missing: the source is skipped, never tried without it.
+KEY_NOT_CONFIGURED = "key_not_configured"
+
+
+def key_not_configured(title: str, secret_name: str, register_url: str = "") -> str:
+    """The skip reason a run reports for a source whose key isn't configured."""
+    where = f"; get one at {register_url}" if register_url else ""
+    return (f"key not configured: {title} needs the secret {secret_name} "
+            f"(leadscraper secrets set {secret_name}){where}")
+
+
 def lead_type_section(config: Any, key: str, model: type) -> Any:
     """``lead_types.<key>`` of a compiled config, or the model's defaults."""
     run_config = getattr(config, "run_config", None)

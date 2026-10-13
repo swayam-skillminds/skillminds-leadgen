@@ -124,8 +124,12 @@ def _post(sessions: dict[str, Any], units: list[Planned], costs: CostModel) -> t
 def estimate(planned: list[Planned], costs: CostModel, sessions: dict[str, Any], *,
              workers: int = 1, budget_seconds: float | None = None, tail_seconds: float = 90.0,
              enrichment_share: float = 0.3, order: str | None = None,
-             done_units: int = 0) -> dict[str, Any]:
-    """The pre-run answer: units, p50/p90, what fits the budget, AI cost."""
+             done_units: int = 0,
+             unavailable: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    """The pre-run answer: units, p50/p90, what fits the budget, AI cost.
+
+    ``unavailable``: units that won't run at all ({unit, lead_type, source, reason}: a
+    source whose API key isn't configured); listed, never simulated."""
     order = order or ("priority" if budget_seconds else "plan")
     ordered = order_units(planned, costs, order)
 
@@ -165,6 +169,7 @@ def estimate(planned: list[Planned], costs: CostModel, sessions: dict[str, Any],
         "expected_new": round(expected_new, 1),
         "budget": None,
         "ai": _ai(sessions, expected_new),
+        "unavailable": list(unavailable or []),
     }
 
     if budget_seconds:
@@ -302,4 +307,13 @@ def describe_estimate(est: dict[str, Any]) -> str:
     if ai:
         lines.append(f"AI           : ~{ai['calls']} calls, ~${ai['cost_usd']:.2f}"
                      " (rough, list-price equivalent)")
+    unavailable = est.get("unavailable") or []
+    if unavailable:
+        lines.append(f"Not run      : {len(unavailable)} unit(s)")
+        reasons: dict[str, list[str]] = {}
+        for item in unavailable:
+            reasons.setdefault(item["reason"], []).append(
+                f"{item['lead_type']}/{item['source']}")
+        for reason, labels in reasons.items():
+            lines.append(f"  {', '.join(dict.fromkeys(labels))}: {reason}")
     return "\n".join(lines)

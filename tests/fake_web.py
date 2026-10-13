@@ -114,6 +114,7 @@ class FakeWeb:
         self.routes: dict[str, Route] = dict(routes or {})
         self.limiter = limiter or NoWait()
         self.calls: list[str] = []
+        self.posts: list[tuple[str, Any]] = []
 
     def add(self, url: str, route: Route) -> None:
         self.routes[url] = route
@@ -144,6 +145,13 @@ class FakeWeb:
         if page.status >= 400:
             raise requests.HTTPError(f"HTTP {page.status}")
         return Response(page, url)
+
+    def post(self, url, *, rate_key=None, headers=None, params=None, json=None, data=None,
+             **_kwargs) -> Response:
+        """``get``'s semantics; every body is kept in ``posts`` (Phase 7: TED, Contracts
+        Finder and GeM take their query as a body)."""
+        self.posts.append((url, json if json is not None else data))
+        return self.get(url, rate_key=rate_key, headers=headers, params=params)
 
     def get_once(self, url, *, rate_key=None) -> Response:
         return Response(self._page(url), url)

@@ -210,6 +210,16 @@ def phones_contradict(a, b) -> bool:
     return not (set(a.phones) & set(b.phones))
 
 
+def registries_contradict(a, b) -> bool:
+    """True when both carry an id in the same register and the ids differ."""
+    if b is None:
+        return False
+    theirs = {str(k).lower(): str(v) for k, v in (getattr(b, "registry_ids", None) or {}).items()
+              if v}
+    return any(str(k).lower() in theirs and theirs[str(k).lower()] != str(v)
+               for k, v in (getattr(a, "registry_ids", None) or {}).items() if v)
+
+
 def locality_compatible(a, b) -> bool:
     """Same-name records merge only when locality agrees or is unknown."""
     if not a.locality or not b.locality:
@@ -264,15 +274,18 @@ class IdentityResolver:
     def find_match(self, lead, index: CandidateIndex,
                    exclude: Iterable[int] = ()) -> int | None:
         exclude = frozenset(exclude)
-        return (
-            self.by_registry(lead, index, exclude)
-            or self.by_phone(lead, index, exclude)
-            or self.by_place(lead, index, exclude)
-            or self.by_name(lead, index, exclude)
-            or self.by_fuzzy_name(lead, index, exclude)
-            or self.by_location(lead, index, exclude)
-            or self.by_domain(lead, index, exclude)
-        )
+        for rule in (self.by_registry, self.by_phone, self.by_place, self.by_name,
+                     self.by_fuzzy_name, self.by_location, self.by_domain):
+            found = rule(lead, index, exclude)
+            if found is None:
+                continue
+            # Phase 7: two official numbers in one register are two organisations, however
+            # alike they look (two councils behind one procurement helpdesk's phone).
+            if getattr(lead, "registry_ids", None) and \
+                    registries_contradict(lead, index.get(found)):
+                continue
+            return found
+        return None
 
     # --- rules ---------------------------------------------------------------
 

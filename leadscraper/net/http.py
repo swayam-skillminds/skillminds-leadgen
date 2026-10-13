@@ -359,6 +359,34 @@ class HttpClient:
         `attempts` overrides the client's retry count for this call (an API
         that asks callers not to retry a throttle answer gets 1).
         """
+        return self._send("GET", url, rate_key=rate_key, headers=headers, params=params,
+                          allow_redirects=allow_redirects, blocked_statuses=blocked_statuses,
+                          attempts=attempts)
+
+    def post(
+        self,
+        url: str,
+        *,
+        rate_key: str | None = None,
+        headers: dict[str, str] | None = None,
+        params: dict[str, Any] | None = None,
+        json: Any = None,
+        data: Any = None,
+        blocked_statuses: tuple[int, ...] = (),
+        attempts: int | None = None,
+    ) -> requests.Response:
+        """Paced, retried POST, with ``get``'s semantics: for search APIs that take their
+        query as a body (TED, Contracts Finder) and listing pages that load by form post.
+
+        It shares the host's session with ``get``, cookies included, so a page fetched
+        first can hand its form token to the post."""
+        return self._send("POST", url, rate_key=rate_key, headers=headers, params=params,
+                          json=json, data=data, allow_redirects=True,
+                          blocked_statuses=blocked_statuses, attempts=attempts)
+
+    def _send(self, method: str, url: str, *, rate_key: str | None, headers: dict | None,
+              params: dict | None, allow_redirects: bool, blocked_statuses: tuple[int, ...],
+              attempts: int | None, json: Any = None, data: Any = None) -> requests.Response:
         key = rate_key or domain_of(url) or "default"
         # Dead-domain bookkeeping is keyed by the canonical domain, the same
         # string the store records; DNS is asked about the literal host, since
@@ -373,13 +401,16 @@ class HttpClient:
             request_headers["User-Agent"] = random.choice(USER_AGENTS)
             if headers:
                 request_headers.update(headers)
+            send = session.get if method == "GET" else session.post
+            body = {} if method == "GET" else {"json": json, "data": data}
             try:
-                response = session.get(
+                response = send(
                     url,
                     headers=request_headers,
                     params=params,
                     timeout=self.timeout,
                     allow_redirects=allow_redirects,
+                    **body,
                 )
             except requests.ConnectionError as exc:
                 if not looks_like_dns_failure(exc):
@@ -408,7 +439,7 @@ class HttpClient:
             _attempt,
             attempts=attempts if attempts is not None else self.max_retries,
             base=self.backoff_base,
-            label=f"GET {url[:80]}",
+            label=f"{method} {url[:80]}",
             give_up_on=(PermanentError, PrivateAddressError),
         )
 

@@ -404,6 +404,7 @@ class _Run:
                                                           error=repr(exc))
 
             planned, done_rows = self._plan(run_id, workspace_id)
+            planned, unavailable = self._unavailable(planned)
             workers = int(request.discovery_workers
                           or _number(config, "runtime.discovery_workers",
                                      DEFAULT_DISCOVERY_WORKERS))
@@ -413,7 +414,10 @@ class _Run:
                                    self._stats_key)
             est = estimate(planned, self.costs, self.sessions, workers=workers,
                            budget_seconds=budget, tail_seconds=tail, enrichment_share=share,
-                           order=order, done_units=len(done_rows))
+                           order=order, done_units=len(done_rows),
+                           unavailable=[{"unit": p.key, "lead_type": p.unit.lead_type,
+                                         "source": p.unit.source, "reason": reason}
+                                        for p, reason in unavailable])
             outcome.estimate = est
 
             if request.dry_run:
@@ -435,11 +439,15 @@ class _Run:
             for p in planned:
                 sources = breakdown.setdefault(p.unit.lead_type, {})
                 sources[p.unit.source] = sources.get(p.unit.source, 0) + 1
-            bus.publish(ev.PlanEvent(units_total=len(planned) + len(done_rows),
+            bus.publish(ev.PlanEvent(units_total=len(planned) + len(done_rows)
+                                     + len(unavailable),
                                      units_resumed=len(done_rows), breakdown=breakdown,
                                      estimate={k: est[k] for k in ("p50_seconds", "p90_seconds",
                                                                    "expected_new", "budget")}))
-            self.units_total = len(planned) + len(done_rows)
+            self.units_total = len(planned) + len(done_rows) + len(unavailable)
+            for p, reason in unavailable:                # e.g. "key not configured: …"
+                log.warning("unit %s skipped: %s", p.key, reason)
+                self._skipped(p, reason)
             self.units_done = len(done_rows)
             self.new = sum(int(r.get("new") or 0) for r in done_rows)
             self.merged = sum(int(r.get("merged") or 0) for r in done_rows)
@@ -600,6 +608,24 @@ class _Run:
                              "priority": round(cost.priority, 5)})
         plan_units(self.engine, workspace_id, run_id, new_rows)
         return [p for p in planned if p.key not in finished], done_rows
+
+    @staticmethod
+    def _unavailable(planned: list[Planned]) -> tuple[list[Planned], list[tuple[Planned, str]]]:
+        """(units to schedule, units their session says can't run here: a source's API key
+        isn't configured). Those are recorded skipped with the session's reason."""
+        ready, unavailable = [], []
+        for p in planned:
+            try:
+                reason = p.session.unit_skip_reason(p.unit) \
+                    if hasattr(p.session, "unit_skip_reason") else None
+            except Exception as exc:  # a session's bug never stops the plan
+                log.warning("could not ask whether %s can run: %s", p.key, exc)
+                reason = None
+            if reason:
+                unavailable.append((p, str(reason)))
+            else:
+                ready.append(p)
+        return ready, unavailable
 
     def _session_of(self, unit) -> Any:
         planned = self.by_key.get(unit.key)
