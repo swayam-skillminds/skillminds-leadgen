@@ -567,7 +567,8 @@ def test_registry_directors_in_the_uk_pack(tmp_path, monkeypatch, people):
     config, outcome = run(tmp_path, monkeypatch, "nokey", {**LOCAL, "decision_makers": section},
                           country="GB", places=("London",))
     assert outcome.ok and people_by_org(config) == {}
-    assert any(f["reason"] == "key_missing" for f in project_rows(config, FailureRow))
+    missing = [f for f in project_rows(config, FailureRow) if f["reason"] == "key_not_configured"]
+    assert missing and "developer.company-information.service.gov.uk" in missing[0]["detail"]
     monkeypatch.setenv("LEADSCRAPER_SECRET_COMPANIES_HOUSE_API_KEY", "k-123")
     config, outcome = run(tmp_path, monkeypatch, "key", {**LOCAL, "decision_makers": section},
                           country="GB", places=("London",))

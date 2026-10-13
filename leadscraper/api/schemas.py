@@ -156,6 +156,23 @@ class SourceInfo(BaseModel):
     review: bool
     last_verified: str | None
     health: dict[str, Any]
+    #: Phase 7: for a source that only answers with an API key -- whether one is configured
+    #: (never the key) and where to get one. ``health.status`` is ``key_not_configured``
+    #: while none is and the source has no history.
+    key: "SourceKey | None" = None
+
+
+class SourceKey(BaseModel):
+    model_config = examples({"secret_name": "sam-gov-api-key", "configured": False,
+                             "register_url": "https://sam.gov (sign in, then Account Details → "
+                                             "Public API Key)"})
+
+    secret_name: str
+    configured: bool
+    register_url: str = ""
+
+
+SourceInfo.model_rebuild()
 
 
 class RunOptions(BaseModel):

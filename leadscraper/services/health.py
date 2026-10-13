@@ -127,6 +127,16 @@ def keys() -> dict[str, Any]:
             configured[f"ai_{kind}_key"] = build(make_spec(kind)).key_source() is not None
     except Exception:            # health never fails on an optional component
         pass
+    # Source keys (Phases 6-7), by their default secret names: without one, the source is
+    # skipped with "key not configured".
+    try:
+        from ..core.secrets import get_secret
+
+        for secret_name in ("companies-house-api-key", "sam-gov-api-key",
+                            "opencorporates-api-token", "pagespeed-api-key"):
+            configured[secret_name.replace("-", "_")] = get_secret(secret_name) is not None
+    except Exception:
+        pass
     names = [k for k, v in configured.items() if v]
     return _check("ok", ", ".join(names) or "none configured (all optional)",
                   configured=configured)

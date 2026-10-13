@@ -40,12 +40,20 @@ class Pack:
     #: Company registries whose officers are decision-makers (Phase 6: decision_makers).
     #: Each class has ``name`` and ``find(http, company, *, key)``; see ``packs/uk``.
     registries: tuple[type, ...] = ()
+    #: Public-procurement portals (Phase 7: tenders). Each class has ``name``, ``host``
+    #: and ``search(http, query, *, key=None)``; see ``sources/tenders/base.py``.
+    tenders: tuple[type, ...] = ()
+    #: Company registers' new incorporations (Phase 7: registrations). Each class has
+    #: ``name``, ``host`` and ``search(http, query, *, key=None)``; see
+    #: ``sources/registers/base.py``.
+    incorporations: tuple[type, ...] = ()
     #: source name -> {lower-cased city -> URL segment}, for directories that
     #: route a city under a name other than its plain slug.
     city_slugs: Mapping[str, Mapping[str, str]] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        for cls in (*self.discovery, *self.enrichment, *self.registries):
+        for cls in (*self.discovery, *self.enrichment, *self.registries, *self.tenders,
+                    *self.incorporations):
             cls.pack = self.key
 
     @property

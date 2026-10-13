@@ -120,7 +120,7 @@ def test_planner_suggests_and_returns_a_valid_revised_config(client, monkeypatch
         "category_queries": [{"category": "dentists",
                               "queries": ["dental clinic", "Dentists", "orthodontist"]}],
         "role_titles": [{"role": "CTO", "titles": ["Chief Technology Officer"]}],
-        "lead_types": ["local_business", "tenders"], "notes": []})
+        "lead_types": ["local_business", "tech_stack"], "notes": []})
     document = {"schema_version": 1, "name": "Pune dentists", "project": "pune-dentists",
                 "geography": {"country": "IN", "places": ["Pune"]},
                 "lead_types": {"local_business": {"categories": [{"name": "Dentists"}]}}}
@@ -130,7 +130,7 @@ def test_planner_suggests_and_returns_a_valid_revised_config(client, monkeypatch
     assert [a.name for a in revised.geography.areas] == ["Baner", "Kothrud", "Hinjewadi"]
     assert revised.lead_type("local_business").categories[0].queries == \
         ["Dentists", "dental clinic", "orthodontist"]                # no duplicate "Dentists"
-    assert body["suggestions"]["lead_types"] == ["local_business"]  # tenders isn't built
+    assert body["suggestions"]["lead_types"] == ["local_business"]  # tech_stack isn't built
     assert body["suggestions"]["role_titles"][0]["titles"] == ["Chief Technology Officer"]
     assert any(p["key"] == "in" and p["applies"] for p in body["applicable"]["packs"])
     bad = client.post(f"{PREFIX}/ai/plan", json={"config": {"name": "x"}})

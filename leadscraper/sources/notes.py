@@ -214,15 +214,86 @@ NOTES.update({
                  "page names with a title. Lead type decision_makers.",
         "review": False, "last_verified": None},
     "companies_house": {
-        "endpoint": "https://api.company-information.service.gov.uk/search/companies?q=…, "
-                    "then /company/{number}/officers",
+        "endpoint": "https://api.company-information.service.gov.uk: /search/companies?q=… "
+                    "then /company/{number}/officers (decision_makers); "
+                    "/advanced-search/companies?incorporated_from=…&location=… "
+                    "(registrations)",
         "method": "requests (JSON); HTTP Basic with the secret companies-house-api-key",
-        "terms": "The UK registry's official public API: a free key, 600 requests per 5 "
-                 "minutes, for real-time lookups (not bulk). Current directors and LLP members "
-                 "only. Pack uk (GB). Lead type decision_makers.",
+        "terms": "The UK registry's official public API: a free key (register at "
+                 "developer.company-information.service.gov.uk), 600 requests per 5 minutes, "
+                 "for real-time lookups (not bulk). Without the key it is skipped: 'key not "
+                 "configured'. Current directors and LLP members only. Pack uk (GB). Lead "
+                 "types decision_makers and registrations.",
         "review": False,
-        "last_verified": "2026-10-08 (401 'Empty Authorization header' without a key; no key "
-                         "here for a 200)"},
+        "last_verified": "2026-10-13 (401 'Empty Authorization header' without a key, for "
+                         "both endpoints; no key here for a 200)"},
+    # tenders (Phase 7)
+    "ted": {
+        "endpoint": "POST https://api.ted.europa.eu/v3/notices/search (expert query: "
+                    "buyer-country, notice-type, classification-cpv or FT~(words), "
+                    "publication-date)",
+        "method": "requests (JSON); anonymous",
+        "terms": "The EU Publications Office's Search API, 'primarily targeted at data reusers' "
+                 "and open without authentication; TED content may be reused, commercially "
+                 "too, with the source acknowledged. Pack eu (EU + EEA). Lead type tenders.",
+        "review": False,
+        "last_verified": "2026-10-13 (200; Irish IT notices with buyer, contacts, deadline, "
+                         "value, documents)"},
+    "find_a_tender": {
+        "endpoint": "https://www.find-tender.service.gov.uk/api/1.0/ocdsReleasePackages"
+                    "?stages=tender&updatedFrom=…&limit=100 (cursor pages)",
+        "method": "requests (OCDS JSON); no key",
+        "terms": "UK Cabinet Office, published under the Open Government Licence v3.0 (the "
+                 "package's own licence). No CPV filter: pages are read and sorted here. Pack "
+                 "uk. Lead type tenders.",
+        "review": False, "last_verified": "2026-10-13 (200, OGL v3.0)"},
+    "contracts_finder": {
+        "endpoint": "POST https://www.contractsfinder.service.gov.uk/api/rest/2/search_notices"
+                    "/json (types, statuses, cpvCodes, publishedFrom)",
+        "method": "requests (JSON); no key",
+        "terms": "UK Cabinet Office, Open Government Licence v3.0. Lower-value contracts "
+                 "(England). Pack uk. Lead type tenders.",
+        "review": False, "last_verified": "2026-10-13 (200; open IT notices by CPV)"},
+    "sam_gov": {
+        "endpoint": "https://api.sam.gov/opportunities/v2/search?api_key=…&postedFrom=…"
+                    "&postedTo=…&ptype=o&ptype=k&ptype=p&ptype=r&limit=1000",
+        "method": "requests (JSON); the secret sam-gov-api-key, sent as the API requires and "
+                  "never logged",
+        "terms": "GSA's official public API: a free personal key (SAM.gov → Account Details); "
+                 "10 requests a day for a non-federal user without a SAM.gov role, so one "
+                 "request a run by default. Without the key it is skipped: 'key not "
+                 "configured'. Pack us. Lead type tenders.",
+        "review": False,
+        "last_verified": "2026-10-13 (docs read; without a valid key the API answers an empty "
+                         "404, so no 200 was seen)"},
+    "cppp": {
+        "endpoint": "https://eprocure.gov.in/cppp/latestactivetendersnew/cpppdata (the public "
+                    "latest-active-tenders list; never the CAPTCHA search)",
+        "method": "requests (HTML table, ten a page)",
+        "terms": "No API; no robots.txt (404). Its copyright policy: material 'maybe reproduced "
+                 "free of charge after taking proper permission from the respective "
+                 "Organisation / Department'. Off by default: the owner's call. Pack in. Lead "
+                 "type tenders.",
+        "review": True, "last_verified": "2026-10-13 (200; ten tenders a page, Next link)"},
+    "gem": {
+        "endpoint": "https://bidplus.gem.gov.in/all-bids, then POST /all-bids-data (the page's "
+                    "own form token, a full-text search, ongoing bids)",
+        "method": "requests (JSON behind the public bid listing)",
+        "terms": "robots.txt allows the listing; GeM's copyright policy: contents 'may not be "
+                 "reproduced partially or fully without due permission in writing in "
+                 "advance'. Off by default: the owner's call. Pack in. Lead type tenders.",
+        "review": True, "last_verified": "2026-10-13 (200; 'software': 573 ongoing bids)"},
+    # registrations (Phase 7)
+    "opencorporates": {
+        "endpoint": "https://api.opencorporates.com/v0.4/companies/search?country_code=…"
+                    "&incorporation_date=from:to&current_status=Active&api_token=…",
+        "method": "requests (JSON); the secret opencorporates-api-token, never logged",
+        "terms": "Every request needs a token. Free tokens only for 'Permitted Users' "
+                 "(journalists, NGOs, academics; 'corporations … are not'); commercial use needs "
+                 "a paid non-share-alike key; ODbL. 200 requests a month, 50 a day by default. "
+                 "Off by default. Any country. Lead type registrations.",
+        "review": True,
+        "last_verified": "2026-10-13 (401 'Invalid Api Token' without one; terms read)"},
     "linkedin_search": {
         "endpoint": "Google search (then DuckDuckGo) for site:linkedin.com/in \"<company>\" "
                     "(founder OR CTO …)",

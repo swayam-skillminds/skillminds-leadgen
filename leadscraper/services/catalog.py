@@ -42,6 +42,8 @@ BLOCK_REASONS = frozenset({"blocked", "login_wall", "captcha", "rate_limited"})
 EMPTY_REASONS = frozenset({"no_listings", "no_results", "no_businesses_parsed", "no_properties",
                            "no_property_data", "no_maps_result"})
 HEALTH_WINDOW = 20
+#: A source that needs an API key nobody configured (Phase 7): it is skipped, never tried.
+KEY_NOT_CONFIGURED = "key_not_configured"
 
 
 # --- health ---------------------------------------------------------------------------------
@@ -212,7 +214,7 @@ def _lead_type_sources(health: dict[str, Any], country: str | None) -> list[dict
         for entry in entries:
             countries = entry.get("applicable_countries") or lt.applicable_countries
             applicable = country is None or not countries or country in countries
-            out.append({
+            row = {
                 "name": entry["name"], "kind": entry.get("kind", "discovery"),
                 "pack": entry.get("pack") or "core", "lead_type": lt.key,
                 "applicable": applicable,
@@ -224,5 +226,13 @@ def _lead_type_sources(health: dict[str, Any], country: str | None) -> list[dict
                 "defaults": entry.get("defaults") or {},
                 **note(entry["name"]),
                 "health": health.get(entry["name"], {"status": "unknown"}),
-            })
+            }
+            key = entry.get("key")
+            if key:
+                # Phase 7: a source that only answers with an API key says whether one is
+                # configured (never the key) and where to get one.
+                row["key"] = dict(key)
+                if not key.get("configured") and row["health"].get("status") == "unknown":
+                    row["health"] = {"status": KEY_NOT_CONFIGURED}
+            out.append(row)
     return out

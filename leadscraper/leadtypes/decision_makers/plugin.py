@@ -99,12 +99,18 @@ class DecisionMakersLeadType(LeadType):
         return []            # people are facts about an organisation, not reasons to buy
 
     def catalog_sources(self) -> list[dict[str, Any]]:
+        from ...packs.uk.companies_house import CompaniesHouseIncorporations
+        from ..toolkit import secret
+
         config = DecisionMakersConfig()
+        name = config.sources.registry.key_secret_name
         return [{"name": "team_pages", "kind": "enrichment", "scope": "run",
                  "defaults": config.sources.team_pages.model_dump()},
                 {"name": "companies_house", "kind": "enrichment", "scope": "run",
                  "pack": "uk", "applicable_countries": ["GB"],
-                 "defaults": config.sources.registry.model_dump()},
+                 "defaults": config.sources.registry.model_dump(),
+                 "key": {"secret_name": name, "configured": secret(name) is not None,
+                         "register_url": CompaniesHouseIncorporations.register_url}},
                 {"name": "linkedin_search", "kind": "enrichment", "scope": "run",
                  "defaults": config.sources.linkedin_search.model_dump()},
                 {"name": "github", "kind": "enrichment", "scope": "run",

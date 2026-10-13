@@ -108,9 +108,18 @@ def test_every_registered_source_belongs_to_core_or_one_pack():
         # Phase 6: the UK pack has no local_business source, only a company registry
         # (decision_makers' Companies House directors).
         "uk": set(),
+        # Phase 7: packs for tender portals only.
+        "eu": set(),
+        "us": set(),
     }
     assert {pack.key: [cls.name for cls in pack.registries] for pack in all_packs()
             if pack.registries} == {"uk": ["companies_house"]}
+    assert {pack.key: [cls.name for cls in pack.tenders] for pack in all_packs()
+            if pack.tenders} == {"in": ["cppp", "gem"],
+                                 "uk": ["find_a_tender", "contracts_finder"],
+                                 "eu": ["ted"], "us": ["sam_gov"]}
+    assert {pack.key: [cls.name for cls in pack.incorporations] for pack in all_packs()
+            if pack.incorporations} == {"uk": ["companies_house"]}
     every = set(DISCOVERY_SOURCES) | set(ENRICHMENT_SOURCES)
     assert every == core | set().union(*by_pack.values())
 

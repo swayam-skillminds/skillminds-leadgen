@@ -106,11 +106,14 @@ class DecisionMakersSession(LeadTypeSession):
                     limiter.configure(registry.host, sources.registry.min_delay,
                                       sources.registry.max_delay)
                 if not self.registry_key:
+                    from ..toolkit import KEY_NOT_CONFIGURED, key_not_configured
+
                     self.kit.failures.record(
-                        "registry", "key_missing",
-                        detail=f"{', '.join(r.name for r in self.registries)} needs the secret "
-                               f"{sources.registry.key_secret_name} (leadscraper secrets set "
-                               f"{sources.registry.key_secret_name}); skipped")
+                        "registry", KEY_NOT_CONFIGURED,
+                        detail=key_not_configured(
+                            ", ".join(r.name for r in self.registries),
+                            sources.registry.key_secret_name,
+                            getattr(self.registries[0], "register_url", "")) + "; skipped")
         self.github_token = self._secret(sources.github.token_secret_name) \
             if sources.github.enabled else None
 

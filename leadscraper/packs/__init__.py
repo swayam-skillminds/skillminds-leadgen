@@ -5,7 +5,12 @@
 * ``hospitality`` -- stays and venues: StayVista, SaffronStays, Elivaas, Airbnb,
   Booking.com, plus venue classification and tiers (``venues.py``).
 * ``social``      -- Facebook, Instagram, search-indexed LinkedIn URLs.
-* ``uk``          -- United Kingdom: Companies House officers (decision_makers).
+* ``uk``          -- United Kingdom: Companies House officers (decision_makers) and new
+  incorporations (registrations); Find a Tender, Contracts Finder (tenders).
+* ``eu``          -- EU and EEA: TED (tenders).
+* ``us``          -- United States: SAM.gov (tenders).
+
+The ``in`` pack also carries India's CPPP and GeM (tenders, opt-in).
 
 Core sources (Google Maps, Google Search, website, Maps lookup) are not in a
 pack: they apply everywhere. See ``sources/registry.py``.
@@ -19,30 +24,66 @@ from typing import Iterable
 from .base import Pack, slugify
 
 __all__ = ["Pack", "all_packs", "pack", "inactive_reason", "registries_for", "slugify",
-           "city_slug"]
+           "city_slug", "tender_sources_for", "incorporation_sources_for",
+           "all_tender_sources", "all_incorporation_sources"]
 
 
 @lru_cache(maxsize=1)
 def _packs() -> tuple[Pack, ...]:
     # Imported here, not at module level: pack modules import the sources
     # package, which imports this one.
+    from .eu import PACK as EU
     from .events import PACK as EVENTS
     from .hospitality import PACK as HOSPITALITY
     from .india import PACK as INDIA
     from .social import PACK as SOCIAL
     from .uk import PACK as UK
+    from .us import PACK as US
 
-    return (INDIA, EVENTS, HOSPITALITY, SOCIAL, UK)
+    return (INDIA, EVENTS, HOSPITALITY, SOCIAL, UK, EU, US)
 
 
 def all_packs() -> list[Pack]:
     return list(_packs())
 
 
+def _applies(p: Pack, country: str) -> bool:
+    return p.applicable_countries is None or (country or "").upper() in p.applicable_countries
+
+
 def registries_for(country: str) -> list[type]:
     """Company registries (decision_makers) of every pack that applies to ``country``."""
-    return [cls for p in _packs() if p.applicable_countries is None
-            or (country or "").upper() in p.applicable_countries for cls in p.registries]
+    return [cls for p in _packs() if _applies(p, country) for cls in p.registries]
+
+
+def all_tender_sources() -> list[type]:
+    """Every procurement portal (tenders), in pack order."""
+    return [cls for p in _packs() for cls in p.tenders]
+
+
+def tender_sources_for(country: str) -> list[type]:
+    """The procurement portals (tenders) of every pack that applies to ``country``."""
+    return [cls for p in _packs() if _applies(p, country) for cls in p.tenders
+            if getattr(cls, "applicable_countries", None) is None
+            or (country or "").upper() in cls.applicable_countries]
+
+
+def _generic_incorporations() -> list[type]:
+    from ..sources.registers.opencorporates import OpenCorporatesIncorporations
+
+    return [OpenCorporatesIncorporations]
+
+
+def all_incorporation_sources() -> list[type]:
+    """Every company register's new incorporations (registrations): packs', then generic."""
+    return [cls for p in _packs() for cls in p.incorporations] + _generic_incorporations()
+
+
+def incorporation_sources_for(country: str) -> list[type]:
+    """The registers (registrations) that cover ``country``: its packs', then the generic
+    ones (OpenCorporates covers most jurisdictions)."""
+    return [cls for p in _packs() if _applies(p, country) for cls in p.incorporations] \
+        + _generic_incorporations()
 
 
 def pack(key: str) -> Pack | None:
