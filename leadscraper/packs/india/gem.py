@@ -45,8 +45,11 @@ def _ist(value: Any):
 def parse(doc: dict[str, Any]) -> Tender | None:
     bid_id = str(first(doc.get("b_id")) or doc.get("id") or "")
     number_ = str(first(doc.get("b_bid_number")) or "").strip()
-    department = clean(first(doc.get("ba_official_details_deptName")), 300)
-    ministry = clean(first(doc.get("ba_official_details_minName")), 300)
+    # GeM writes a missing department as the literal "NA".
+    department, ministry = (
+        "" if name.upper() in ("NA", "N/A", "-") else name
+        for name in (clean(first(doc.get("ba_official_details_deptName")), 300),
+                     clean(first(doc.get("ba_official_details_minName")), 300)))
     buyer = department or ministry
     if not bid_id or not number_ or not buyer:
         return None
@@ -67,7 +70,9 @@ def payload(keyword: str, page: int) -> str:
     return json.dumps({"page": page, "param": {"searchBid": keyword, "searchType": "fullText"},
                        "filter": {"bidStatusType": "ongoing_bids", "byType": "all",
                                   "highBidValue": "", "byEndDate": {"from": "", "to": ""},
-                                  "sort": "Bid-End-Date-Oldest"}})
+                                  # Newest bids first: "end date, oldest" fills the pages
+                                  # with bids closing within the hour (live, 2026-10-13).
+                                  "sort": "Bid-Start-Date-Latest"}})
 
 
 class GemTenders:

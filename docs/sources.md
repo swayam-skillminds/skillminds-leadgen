@@ -159,6 +159,56 @@ in `feeds.urls`.
 **Company registries elsewhere:** India's MCA has no free public API (its
 master-data search sits behind a captcha), so no Indian registry yet.
 
+## `tenders` lead type (Phase 7.1; per country pack)
+
+Public procurement notices. Each portal sits in the pack of the countries it
+covers (`Pack.tenders`); elsewhere it is not built and the lead type plans
+nothing for it. Every request carries the identifying `core.geo.USER_AGENT`.
+
+| Source | Pack | Endpoint | Method | Auth | Default delays | Terms note | Last verified |
+|---|---|---|---|---|---|---|---|
+| `ted` | `eu` (EU 27 + IS, LI, NO) | `POST https://api.ted.europa.eu/v3/notices/search` with an expert query (`buyer-country=IRL AND notice-type IN (cn-standard …) AND publication-date>=… AND classification-cpv IN (72000000 …)`), `fields`, `limit` ≤ 250, `page` | requests, JSON | none (anonymous) | 1.5–3 s | TED's developer docs: the Search API is "primarily targeted at data reusers and does not require authentication". TED content may be reused, commercially too, with the source acknowledged. A CPV code finds its whole hierarchy | **2026-10-13**: 200, `notices[]` {publication-number, notice-title (every EU language), buyer-name, buyer-city, buyer-email, buyer-internet-address, deadline-receipt-tender-date-lot `2026-11-17+01:00`, estimated-value-*, classification-cpv, document-url-lot, links}; an unknown field is a 400 listing all 1,830 supported ones |
+| `find_a_tender` | `uk` (GB) | `https://www.find-tender.service.gov.uk/api/1.0/ocdsReleasePackages?stages=tender&updatedFrom=…&limit=100`, then `links.next` (a cursor) | requests, OCDS JSON | none | 1.5–3 s; 20 pages a run | Cabinet Office; the package's own `license`: Open Government Licence v3.0. No classification filter, so pages are read and sorted here. The buyer's site is its party's `details.url` only: a contact point's link is usually the e-tendering portal hundreds of buyers share | **2026-10-13**: 200, `releases[]` {id, date, tender{title, status, classification, items[].additionalClassifications, tenderPeriod.endDate, value, lots[].value, documents}, parties[] with role buyer, address, contactPoint}; notice pages `/Notice/{id}` answer 403 to curl (they open in a browser) |
+| `contracts_finder` | `uk` (GB) | `POST https://www.contractsfinder.service.gov.uk/api/rest/2/search_notices/json` `{"searchCriteria": {"types": ["Contract","Pipeline"], "statuses": ["Open"], "cpvCodes": […], "publishedFrom": "…"}, "size": 1000}` | requests, JSON | none | 1.5–3 s | Cabinet Office, Open Government Licence v3.0. England's lower-value contracts. A result has the buyer's name and postcode, not its contacts | **2026-10-13**: 200, `noticeList[].item` {id, title, organisationName, postcode, deadlineDate, valueLow, valueHigh, cpvCodes "72262000 72230000", noticeType, noticeStatus} |
+| `sam_gov` | `us` (US) | `GET https://api.sam.gov/opportunities/v2/search?api_key=…&postedFrom=MM/dd/yyyy&postedTo=…&ptype=o&ptype=k&ptype=p&ptype=r&limit=1000[&state=TX]` | requests, JSON; **one attempt per request** | **a free personal API key**, secret `sam-gov-api-key` (must start `sam-gov`). Without it the unit is skipped: "key not configured" | 1.5–3 s; **one request a run** (`max_requests`) | GSA's official API. A non-federal user without a SAM.gov role gets **10 requests a day** (the rate-limit table in GSA's Entity API docs). The key must travel in the query string; requests' errors quote the URL, so the key is redacted from every error, and a request is never retried (no retry log line) | **2026-10-13**: docs read (open.gsa.gov); an empty 404 without a valid key (the docs list 404 as "No data found"), so no 200 was seen. Fixtures follow the documented response |
+| `cppp` (opt-in) | `in` (IN) | `https://eprocure.gov.in/cppp/latestactivetendersnew/cpppdata`, then its "Next" links | requests, HTML table (ten tenders a page) | none | 3–6 s; 10 pages a run | No API; no robots.txt (404). The portal's copyright policy: material "maybe reproduced free of charge after taking proper permission from the respective Organisation / Department". The keyword search sits behind a CAPTCHA and is never used. **Off by default: the owner's call** | **2026-10-13**: 200; columns e-Published Date, Bid Submission Closing Date, Opening Date, Title/Ref.No./Tender Id, Organisation; times in IST without a zone |
+| `gem` (opt-in) | `in` (IN) | `GET https://bidplus.gem.gov.in/all-bids` (the page's form token `csrf_bd_gem_nk`), then `POST /all-bids-data` with `payload={"page": n, "param": {"searchBid": "<keyword>", "searchType": "fullText"}, "filter": {"bidStatusType": "ongoing_bids", …}}`; documents `/showbidDocument/{id}` | requests, JSON behind the public listing; one search per keyword | none | 3–6 s; 2 pages × 8 keywords | robots.txt disallows only `/resources/` and some bank-guarantee paths. GeM's copyright policy: contents "may not be reproduced partially or fully without due permission in writing in advance". **Off by default: the owner's call** | **2026-10-13**: 200; "software" found 573 ongoing bids, ten a page {b_bid_number, b_category_name, final_start/end_date_sort "…T13:00:00Z" (1 pm IST), ba_official_details_minName/deptName} |
+
+Not used: data.gov.in has no current tender dataset; state e-procurement portals
+(India) and other national portals are not built.
+
+## `registrations` lead type (Phase 7.2)
+
+| Source | Pack | Endpoint | Method | Auth | Default delays | Terms note | Last verified |
+|---|---|---|---|---|---|---|---|
+| `companies_house` | `uk` (GB) | `GET https://api.company-information.service.gov.uk/advanced-search/companies?incorporated_from=…&incorporated_to=…&company_status=active&location=<place>&size=…[&sic_codes=…]`; directors from `/company/{number}/officers` | requests, JSON; HTTP Basic, the key as user name | **a free API key**, secret `companies-house-api-key` (shared with decision_makers). Without it the units are skipped: "key not configured" | 0.6–1.2 s (600 requests per 5 minutes allowed); 100 director lookups a run | The UK registry's official public API, for real-time lookups. `location` matches the registered office, so one unit per place. 404 means "No companies found" | **2026-10-13**: 401 `{"error":"Empty Authorization header"}` without a key; the API reference lists the parameters above and `size` up to 5,000. No key here for a 200: fixtures follow the documented shape |
+| `opencorporates` (opt-in) | none (any country) | `GET https://api.opencorporates.com/v0.4/companies/search?country_code=…&incorporation_date=from:to&current_status=Active&per_page=100&api_token=…[&registered_address=<place>]` | requests, JSON; one attempt per request | a token, secret `opencorporates-api-token` (must start `opencorporates`) | 2–4 s; 2 pages a run | Every request needs a token. Its terms: free tokens only for "Permitted Users" (journalists, NGOs, academics; "corporations … are not Permitted Users"); commercial use needs a **paid** non-share-alike key; the database is ODbL. 200 requests a month, 50 a day by default. The docs don't say what a search without a name term returns (not verifiable without a token). **Off by default** | **2026-10-13**: 401 "Invalid Api Token. Please check your OpenCorporates account" without one; terms and API reference read |
+
+**India:** no source. The MCA has no free API; data.gov.in's "Registrars of
+Companies (RoC)-wise Company Master Data" (the newest company master data
+there, refreshed 2026-07-22) says "The data upto 3rd November 2023": no new
+incorporations to find (checked 2026-10-13 through the OGD platform).
+
+## Keys: where to register
+
+A source that needs a key and has none is **skipped, never tried**: its work
+units are recorded `skipped` with "key not configured: … needs the secret …
+(leadscraper secrets set …); get one at …", the estimate lists them under
+"Not run", the run's failures hold one `key_not_configured` row per source,
+`GET /catalog/sources` shows `key.configured: false` and the register link,
+and `GET /health` lists the key as not configured.
+
+| Secret | Used by | Where to get it | Cost / limits |
+|---|---|---|---|
+| `sam-gov-api-key` | tenders: `sam_gov` | https://sam.gov: create a login.gov account, sign in, open **Account Details**, enter your password, **Request Public API Key** | Free. 10 requests/day without a SAM.gov role; 1,000/day with a role (an entity registration) |
+| `companies-house-api-key` | registrations: `companies_house`; decision_makers: UK registry | https://developer.company-information.service.gov.uk: register, **create an application**, add a **REST** API key | Free. 600 requests per 5 minutes |
+| `opencorporates-api-token` | registrations: `opencorporates` (opt-in) | https://opencorporates.com/api_accounts/new | Free only for public-benefit users; commercial use needs a paid plan |
+| `pagespeed-api-key` | digital_audit: `pagespeed` | Google Cloud console: enable the PageSpeed Insights API, create an API key | Free quota |
+
+Set one with `leadscraper secrets set <name>` (local keychain), or as
+`LEADSCRAPER_SECRET_<NAME>` / a file in `LEADSCRAPER_SECRETS_DIR` in server
+mode. Keys are never stored in the database, configs, logs or exports.
+
 ## Open questions for the project owner
 
 A.2.4 says: never scrape sites whose terms prohibit it when a public API

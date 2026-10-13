@@ -686,9 +686,7 @@ def tenders_registrations(engine) -> int:
                  source_urls=["https://www.contractsfinder.service.gov.uk/Notice/0000-1"]),
             lead_type="tenders", days=40)
     run.tag("Northwick Borough Council", "tenders")
-    for org, source in (("Northwick Borough Council", "find_a_tender"),
-                        ("Eastvale Health Trust", "find_a_tender"),
-                        ("Ashby Parish Council", "contracts_finder")):
+    for org in ("Northwick Borough Council", "Eastvale Health Trust", "Ashby Parish Council"):
         run.attribute(org, "org_type", "public_buyer", origin="rule", lead_type="tenders")
     tenders = [
         ("Northwick Borough Council", "tender",

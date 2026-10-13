@@ -414,6 +414,11 @@ def test_gem_posts_its_own_form_token_per_keyword():
     assert first.url == "https://bidplus.gem.gov.in/showbidDocument/9900001"
     assert first.deadline.utcoffset() == timedelta(hours=5, minutes=30)
     assert notices[1].buyer.name == "Ministry of Examples"           # no department named
+    na = gem.parse({"b_id": [1], "b_bid_number": ["GEM/2026/B/1"],
+                    "ba_official_details_deptName": ["NA"],
+                    "ba_official_details_minName": ["Ministry of Examples"]})
+    assert na.buyer.name == "Ministry of Examples"                   # "NA" is no name
+    assert json.loads(gem.payload("x", 1))["filter"]["sort"] == "Bid-Start-Date-Latest"
     url, body = web.posts[0]
     assert url == gem.DATA and body["csrf_bd_gem_nk"] == "0123456789abcdef0123456789abcdef"
     assert json.loads(body["payload"])["param"]["searchBid"] == "web portal"
@@ -652,6 +657,23 @@ def test_uk_portals_together(tmp_path, monkeypatch, portals):
 
 def orgs_named(config, name: str) -> list[dict]:
     return [o for o in project_rows(config, Organization) if o["name"] == name]
+
+
+def test_a_deadline_is_stored_as_the_same_moment_in_any_zone(tmp_path):
+    """SQLite keeps a time's wall clock and drops its offset: 1 pm IST must read back as
+    07:30 UTC, never as 1 pm UTC (live, GeM's deadlines came back 5.5 hours late)."""
+    store = LeadStore(f"sqlite:///{tmp_path / 'zones.sqlite3'}", project="zones")
+    store.lead_type = "tenders"
+    org, _, _ = store.upsert(Lead(business_name="Example Board"))
+    ist = timezone(timedelta(hours=5, minutes=30))
+    store.add_signal(org, "tender", key="ist", title="IST deadline",
+                     published_at=datetime(2026, 10, 1, 9, 0, tzinfo=timezone(timedelta(
+                         hours=1))),
+                     expires_at=datetime(2026, 10, 13, 13, 0, tzinfo=ist))
+    [signal] = store.signals(org)
+    store.close()
+    assert signal["expires_at"].replace(tzinfo=None) == datetime(2026, 10, 13, 7, 30)
+    assert signal["published_at"].replace(tzinfo=None) == datetime(2026, 10, 1, 8, 0)
 
 
 def test_one_shared_phone_never_merges_two_registered_buyers(tmp_path):

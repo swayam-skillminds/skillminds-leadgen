@@ -750,6 +750,11 @@ class LeadStore:
         is stamped with the lead type (``stamp``); its record is not touched.
         """
         now = utcnow()
+        # SQLite keeps an aware time's wall clock and drops its offset: store UTC, so a
+        # deadline at 1 pm IST (or "+01:00" from TED) reads back as the same moment.
+        published_at, expires_at = (
+            when.astimezone(timezone.utc) if when is not None and when.tzinfo else when
+            for when in (published_at, expires_at))
         values = {"title": (title or "")[:500], "payload": dict(payload or {}),
                   "strength": max(0.0, min(1.0, float(strength))),
                   "published_at": published_at, "expires_at": expires_at,
