@@ -46,8 +46,8 @@ Each unit has an expected cost (`UnitCost`: seconds, new organisations, spread):
 In both modes, `run`-scope units go first, and **stages** order lead types
 (Phase 6): a unit starts only once every unit of a lower `discovery_stage` has
 finished. The finders (`local_business`) are stage 0; lead types that attach
-signals to organisations others may hold (`hiring`, `funding_news`,
-`digital_audit`'s uploads) are stage 1, so they find the finders' records instead of racing them. Stages
+signals to organisations others may hold (`hiring`, `funding_news`, `tenders`,
+`registrations`, `digital_audit`'s uploads) are stage 1, so they find the finders' records instead of racing them. Stages
 order units. Under a budget, a unit also leaves time for every queued
 later-stage unit that outranks it (better expected new organisations per
 second): those would have been chosen first had stages not forced the order,
@@ -138,7 +138,20 @@ unit per host" rule, same worker count, same budget check. It returns:
 - with a budget: units that fit, units skipped (by source, and the first 200
   by key), expected new organisations, whether enrichment completes, and the
   p50/p90 of the budgeted run;
-- the AI cost, when AI is on (rough, list-price equivalent).
+- the AI cost, when AI is on (rough, list-price equivalent);
+- `unavailable`: units that will not run at all, with the reason (Phase 7, below).
+  `--dry-run` prints them under "Not run".
+
+**Units that can't run here** (Phase 7). A session may say a unit can't run in
+this run (`LeadTypeSession.unit_skip_reason`): a portal or register whose API
+key isn't configured (SAM.gov, Companies House, OpenCorporates). Such a unit is
+planned, so the plan shows what the run would do, but never started or
+simulated. The runner records it `skipped` with the reason ("key not configured:
+SAM.gov … needs the secret sam-gov-api-key (leadscraper secrets set
+sam-gov-api-key); get one at …") in `work_units.skip_reason`, a `unit_skipped`
+event, `stats.engine.skipped_units` and the CLI report, and the session records
+one `key_not_configured` failure per source. The run still completes. A resumed
+run asks again, so configuring the key and resuming runs the unit.
 
 During a run each `progress` event carries a refined ETA. The cost model has
 by then learned from every finished unit, and the parallelism actually

@@ -7,8 +7,9 @@ Each one is a self-contained plugin, and all of them resolve what they find
 to the same deduplicated **organisation** in a project.
 
 Built today: **`local_business`**, **`hiring`**, **`funding_news`**,
-**`decision_makers`** and **`digital_audit`** (Phase 6). The rest of the A.7
-table arrives in Phases 7 and 8, each as its own plugin under this contract.
+**`decision_makers`** and **`digital_audit`** (Phase 6), **`tenders`** and
+**`registrations`** (Phase 7). `tech_stack` and `app_store` arrive in Phase 8,
+each as its own plugin under this contract.
 
 ## The contract (`leadscraper/leadtypes/base.py`)
 
@@ -51,6 +52,9 @@ class LeadTypeSession(ABC):                    # one lead type's share of one ru
     # Phase 6
     discovery_stage: int = 0                   # its units wait for every lower stage's
     post_scope: str = "own"                    # "run": post_estimate sized by every lead type
+    # Phase 7
+    def unit_skip_reason(self, unit) -> str | None   # "key not configured: …": planned,
+                                               # never started; recorded skipped (docs/engine.md)
 ```
 
 | Type | Fields |
@@ -478,7 +482,7 @@ lead_types:
   (similarity ≥ 90), with the free key in the secret `companies-house-api-key`.
   Several active companies of that name: the one whose registered address names
   the organisation's locality or postcode, else nobody (`registry_ambiguous`).
-  Without the key it says so once (`key_missing`) and skips. India: the MCA
+  Without the key it says so once (`key_not_configured`, naming where to register) and skips. India: the MCA
   has no free public API, so no Indian registry yet.
 - **LinkedIn (opt-in).** A search for `site:linkedin.com/in "<company>"
   (founder OR CEO OR CTO …)`; a result counts when its title names this
@@ -518,6 +522,128 @@ lead_types:
   nothing from it; the email pattern also needs `emails`.
 - **Depth:** quick reads one team page each for at most 50 organisations,
   deep up to six for up to 500.
+
+## `tenders` (Phase 7.1)
+
+Public buyers inviting bids for IT work: open tenders and planned procurements.
+
+| Part | Where |
+|---|---|
+| Plugin, columns, score | `leadtypes/tenders/plugin.py` (`TENDERS`) |
+| Config | `leadtypes/tenders/config.py` (`TendersConfig`) |
+| The record and the rules | `sources/tenders/base.py`: `Tender`, `Buyer`, `Money`, `TenderQuery`; `code_matches` (prefixes), `keyword_hits` (whole words), `parse_time`, `own_site` |
+| Portals (country packs, `Pack.tenders`) | `packs/eu/ted.py` (EU 27 + IS, LI, NO), `packs/uk/find_a_tender.py`, `packs/uk/contracts_finder.py`, `packs/us/sam_gov.py`, `packs/india/cppp.py`, `packs/india/gem.py` |
+| Engine session | `session.py`: one unit per portal that applies and is enabled, stage 1 |
+
+```yaml
+lead_types:
+  tenders:
+    cpv: ["72000000", "48000000", "30200000", "80533000"]   # EU / UK, prefixes
+    naics: ["5415", "518210", "611420"]                     # US, prefixes
+    keywords: [software, website, web portal, ERP, …]       # where a portal has no codes
+    match: auto            # auto | codes | keywords | any
+    min_value: null        # in the tender's own currency; no stated value = kept
+    max_value: null
+    closing_after: null    # default: still open now
+    posted_within_days: 30
+    planned: true          # prior-information / pre-solicitation / sources-sought notices
+    scope: country         # country | place (the buyer or the work in a run place)
+    create_new: true
+    sources:
+      ted: {enabled: true, max_results: 250}
+      find_a_tender: {enabled: true, max_pages: 20}
+      contracts_finder: {enabled: true, max_results: 1000}
+      sam_gov: {enabled: true, key_secret_name: sam-gov-api-key, max_requests: 1}
+      cppp: {enabled: false, max_pages: 10}        # opt-in: terms ask for permission
+      gem: {enabled: false, max_pages: 2, max_keywords: 8}   # opt-in, as cppp
+```
+
+- **Where.** A portal runs only in its pack's countries; elsewhere the lead type
+  plans nothing for it (Australia: no portal; India: none unless opted in).
+- **Which notices count.** `auto`: a portal that classifies (CPV, NAICS) decides
+  by code, as a prefix (`72000000` is every IT service); India's portals by
+  keyword in the title. A notice must still be open after `closing_after`, within
+  the value range (one stating no value is kept), published within the window
+  (undated planned notices), and with `scope: place` name a run place.
+- **Keys.** SAM.gov needs a free personal key. Without it the unit is skipped:
+  "key not configured: … (leadscraper secrets set sam-gov-api-key); get one at
+  https://sam.gov …". The key is never logged: it is redacted from every error,
+  and the one request a run makes is never retried (10 a day without a SAM.gov
+  role).
+- **Organisations.** The buyer, a public body, is the organisation: one the
+  project holds keeps its record (rule 6); one nobody holds is created with the
+  contacts the notice publishes and the portal's buyer id as a registry id
+  (`ted_buyer`, `gb_fts`, `us_sam_office`). Its website is its own site only,
+  never an e-procurement portal (`own_site`). Either way it gets the attribute
+  `org_type: public_buyer`.
+- **Signals.** `tender` (open, strength 0.75 by code, 0.65 by words only) or
+  `tender_planned` (0.5), keyed `portal:notice id` so a re-run refreshes it, with
+  `expires_at` = the closing date. The payload: notice id, portal, type, value
+  as stated, deadline, documents link, codes and what matched, contact point,
+  places.
+- **Score.** *intent* = the strongest open tender, halving every 60 days (planned:
+  90) since publication, + 0.05 per further open tender. **A tender past its
+  closing date counts nothing**, and an export regenerated after the deadline
+  agrees (`score(..., now=)`).
+- **Columns.** Org Type (front, a breakdown), Open Tender, Tender Closes, Tender
+  Value, Tender Link, Tender Documents; Open Tenders, Tenders, Tender Portals,
+  Tender Codes, Tender Contact at the tail.
+- **Depth.** quick reads half the pages and notices, deep twice as many.
+
+## `registrations` (Phase 7.2)
+
+Newly incorporated companies: a new company needs a website, software and
+systems from scratch.
+
+| Part | Where |
+|---|---|
+| Plugin, columns, score | `leadtypes/registrations/plugin.py` (`REGISTRATIONS`) |
+| Config | `leadtypes/registrations/config.py` (`RegistrationsConfig`) |
+| The record | `sources/registers/base.py` (`Incorporation`, `Officer`, `IncorporationQuery`); `sic.py` (UK SIC 2007 division names) |
+| Registers | `packs/uk/companies_house.py` (`CompaniesHouseIncorporations`, `Pack.incorporations`); `sources/registers/opencorporates.py` (any country, opt-in) |
+| Engine session | `session.py`: one unit per register and place (registers that can narrow by place), stage 1 |
+
+```yaml
+lead_types:
+  registrations:
+    incorporated_within_days: 30
+    industry_codes: []           # prefixes (UK SIC: "62"); empty = every industry
+    exclude_codes: ["99999", "74990"]   # dormant, non-trading
+    company_types: []            # ltd, llp, plc …; empty = every type
+    scope: place                 # place: registered office in a run place | country
+    create_new: true
+    directors: true              # current directors become people (one request each)
+    max_director_lookups: 100
+    sources:
+      companies_house: {enabled: true, key_secret_name: companies-house-api-key, max_results: 500}
+      opencorporates: {enabled: false, token_secret_name: opencorporates-api-token}
+```
+
+- **Where.** Companies House covers GB; OpenCorporates any country but is off by
+  default (free tokens are only for public-benefit users). India: none (the MCA
+  has no free API, and data.gov.in's company master data stops at November 2023).
+- **Keys.** Both registers need a key; without one the units are skipped: "key
+  not configured: Companies House (UK) needs the secret companies-house-api-key
+  (…); get one at https://developer.company-information.service.gov.uk …".
+- **Which companies count.** Incorporated within the window, not only dormant /
+  non-trading codes, in a wanted industry and company type, and with `scope:
+  place` a registered office naming the place.
+- **Organisations.** One the project holds keeps its record (rule 6); a new one
+  carries its register number as a registry id (`uk_company`), the strongest
+  identity key. Two different numbers in one register are never merged, however
+  alike the names or a shared phone (`core/identity.py`).
+- **People.** Its current directors and LLP members (`/officers`, resigned ones
+  left out) become people of this lead type (`source: registry`); a re-read is a
+  snapshot, so a director who resigned goes. Not with `fields.include` without
+  `decision_makers`; not at quick depth.
+- **Signal.** `incorporation`, keyed `uk_company:<number>`, `published_at` = the
+  incorporation date; payload: number, date, type, status, industry codes with
+  their divisions, registered office, register page.
+- **Score.** *intent* = 0.7, halving every 90 days of the company's age; nothing
+  after about a year.
+- **Columns.** Industry (front, a breakdown), Incorporated, Company No., Company
+  Type, Register Link; Industry Codes and Register at the tail. Directors appear
+  in the core Decision Makers columns.
 
 ## The export (Phase 4)
 

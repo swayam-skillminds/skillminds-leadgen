@@ -232,6 +232,8 @@ lead_types:
   local_business: {categories: [{name: Dentists}]}
   hiring: {boards: [greenhouse:acme]}          # tech roles: ATS boards, HN, careers pages
   funding_news: {}                             # funding, launches, new offices… (GDELT news)
+  tenders: {}                                  # public IT tenders: TED, Find a Tender, SAM.gov…
+  registrations: {}                            # newly incorporated companies (Companies House)
   decision_makers: {}                          # founders, CEOs, CTOs from team pages
   digital_audit: {}                            # audit every organisation the run found
 ```
@@ -240,6 +242,8 @@ lead_types:
 python run.py --config my-run.yaml --dry-run          # plan; no requests
 python run.py --config presets/nashik-venues.yaml     # a shipped preset
 python -m leadscraper audit targets my-list.xlsx      # a list of businesses -> digital_audit YAML
+python -m leadscraper secrets set sam-gov-api-key     # SAM.gov (US tenders); free, sam.gov → Account Details
+python -m leadscraper secrets set companies-house-api-key   # UK registrations and directors; free
 python -m leadscraper presets                         # list presets
 python -m leadscraper config validate my-run.yaml
 python -m leadscraper db info                         # projects and sizes
