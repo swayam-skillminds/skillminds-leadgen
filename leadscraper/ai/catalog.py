@@ -25,7 +25,8 @@ FEATURES: dict[str, str] = {
                      "duplicate adjudication (judge tier).",
     "venue_classification": "Types venues the rules could not (hospitality vertical).",
     "signal_interpretation": "Classifies news items and job posts into signal types and "
-                             "strength.",
+                             "strength, and app reviews into complaint themes (grounded "
+                             "quotes).",
     "lead_summary": "One line on what the organisation does and why it matched. No "
                     "outreach copy.",
 }

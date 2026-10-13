@@ -4,7 +4,7 @@
 # finding, the decision-maker roles, the buying signals, and the lead types
 # that find them. The ICP builder starts from one of these when the brief names
 # it (or when no AI provider is available), and the model adapts it to the brief.
-# Lead types not built yet (Phase 6+) are kept as notes, never put in a config.
+# A lead type this build doesn't register is kept as a note, never put in a config.
 
 custom_software:
   title: Custom software development
@@ -25,9 +25,9 @@ web_app_dev:
                coaching classes, hotels]
   roles: [Owner, Founder, Marketing Manager]
   signals: [no website, site not mobile-friendly, no online booking, poor page speed,
-            neglected app, newly incorporated company]
+            outdated CMS, neglected app, newly incorporated company]
   industries: [hospitality, retail, healthcare, real estate, fitness, education]
-  lead_types: [local_business, digital_audit, registrations, app_store]
+  lead_types: [local_business, digital_audit, registrations, tech_stack, app_store]
   must_have: [phone]
 
 erp:

@@ -35,19 +35,21 @@ def _load_builtins() -> None:
         if _builtins_loaded:
             return
         _builtins_loaded = True
+        from .app_store.plugin import APP_STORE
         from .decision_makers.plugin import DECISION_MAKERS
         from .digital_audit.plugin import DIGITAL_AUDIT
         from .funding_news.plugin import FUNDING_NEWS
         from .hiring.plugin import HIRING
         from .local_business.plugin import LOCAL_BUSINESS
         from .registrations.plugin import REGISTRATIONS
+        from .tech_stack.plugin import TECH_STACK
         from .tenders.plugin import TENDERS
 
         # Registry order is the order of lead types in configs, columns and
         # post-discovery (before ``post_order``): finders first, then enrichment
-        # (decision_makers) and assessment (digital_audit).
+        # (decision_makers) and assessment (tech_stack, digital_audit).
         for builtin in (LOCAL_BUSINESS, HIRING, FUNDING_NEWS, TENDERS, REGISTRATIONS,
-                        DECISION_MAKERS, DIGITAL_AUDIT):
+                        APP_STORE, DECISION_MAKERS, TECH_STACK, DIGITAL_AUDIT):
             _lead_types.setdefault(builtin.key, builtin)
         for module_name in filter(None, (m.strip() for m in
                                          os.environ.get(PLUGINS_ENV, "").split(","))):

@@ -152,7 +152,7 @@ NOTES.update({
         "review": True, "last_verified": None},
     "upload": {
         "endpoint": "your own list (targets, domains, targets_file, POST /audit/targets)",
-        "method": "none", "terms": "Your data. Lead type digital_audit.",
+        "method": "none", "terms": "Your data. Lead types digital_audit and tech_stack.",
         "review": False, "last_verified": None},
     "site_audit": {
         "endpoint": "the organisation's own site: TLS handshake, home (HTTPS then HTTP), one "
@@ -320,6 +320,62 @@ NOTES.update({
                  "at the same domain, always labelled Inferred Email (unverified), never "
                  "published, never used for matching. Lead type decision_makers.",
         "review": False, "last_verified": "2026-10-08 (example.com: a null MX, so no mail)"},
+    # tech_stack (Phase 8.1)
+    "site_fingerprint": {
+        "endpoint": "the organisation's own site: robots.txt, then its homepage (HTTPS, then "
+                    "HTTP)",
+        "method": "requests; the shared fingerprint rules (sources/web/fingerprints.yaml: meta "
+                  "generator, script URLs, headers, HTML)",
+        "terms": "The business's public homepage, one request at a time per site, robots.txt "
+                 "honoured. Outdated thresholds dated against endoflife.date (2026-10-13). Lead "
+                 "type tech_stack.",
+        "review": False, "last_verified": "2026-10-13 (endoflife.date API for the thresholds)"},
+    "footprints": {
+        "endpoint": "Google search (then DuckDuckGo) for a technology's footprint phrases in a "
+                    "place: \"powered by Shopify\" \"Pune\"; each result's homepage is then "
+                    "fingerprinted",
+        "method": "via google_search's SERP client, then site_fingerprint",
+        "terms": "Google's terms restrict automated queries: off by default (the owner's "
+                 "call, as board_search). A site is kept only when its own homepage shows the "
+                 "technology. Lead type tech_stack.",
+        "review": True, "last_verified": None},
+    # app_store (Phase 8.2)
+    "itunes": {
+        "endpoint": "https://itunes.apple.com/search?term=…&country=…&entity=software&limit=…; "
+                    "https://itunes.apple.com/lookup?id=…&country=…",
+        "method": "requests (JSON); keyless; an identifying User-Agent",
+        "terms": "Apple's documented Search API: 'approximately 20 calls per minute', paced "
+                 "3.5–5 s apart. Its terms govern promotional content (artwork, previews), none "
+                 "of which is kept. robots.txt disallows /search* for crawlers, and Apple's site "
+                 "terms forbid page-scraping 'through any means not purposely made available': "
+                 "the API is that means, so App Store web pages and the customer-review RSS "
+                 "(robots.txt: /*/rss/*) are never read. Lead type app_store.",
+        "review": True,
+        "last_verified": "2026-10-13 (200; trackId, sellerUrl, averageUserRating, "
+                         "userRatingCount, currentVersionReleaseDate, bundleId)"},
+    "google_play": {
+        "endpoint": "https://play.google.com/store/apps/details?id={package}&hl=en&gl={country}",
+        "method": "requests (HTML: JSON-LD, 'Updated on', downloads, App support, the reviews "
+                  "the page shows; never reviewers' names)",
+        "terms": "robots.txt allows /store/apps/details and disallows /store/search; Google's "
+                 "terms forbid automated access 'in violation of the machine-readable "
+                 "instructions on our web pages (for example, robots.txt …)'. So listings are "
+                 "read one at a time (packages from organisations' sites, the config, or an iOS "
+                 "bundle id confirmed by the same developer website), never searched. Lead type "
+                 "app_store.",
+        "review": True,
+        "last_verified": "2026-10-13 (200; JSON-LD rating 4.49 / 278,696, 'Updated on Oct 10, "
+                         "2026', '10M+ Downloads', developer contacts, 3 reviews)"},
+    "listed": {
+        "endpoint": "the apps a config names (store links, Apple ids, Play packages), read "
+                    "through itunes lookup and google_play",
+        "method": "as itunes and google_play", "terms": "Your list. Lead type app_store.",
+        "review": False, "last_verified": None},
+    "site_apps": {
+        "endpoint": "the organisation's own homepage, read for App Store and Google Play links",
+        "method": "requests (robots.txt honoured), then itunes lookup / google_play",
+        "terms": "The business's public homepage, paced per site. Lead type app_store.",
+        "review": False, "last_verified": None},
 })
 
 

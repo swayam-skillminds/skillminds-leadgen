@@ -76,7 +76,8 @@ def _slug(text: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", (text or "").lower()).strip("-")[:60] or "icp-draft"
 
 
-#: The A.7 lead types; those not registered in this build are noted, never configured.
+#: The A.7 lead types (all built since Phase 8); a draft naming one this build doesn't
+#: register (a plugin not loaded, a made-up key) is noted, never configured.
 LATER_PHASES = ("digital_audit", "hiring", "funding_news", "decision_makers", "tenders",
                 "registrations", "tech_stack", "app_store")
 
