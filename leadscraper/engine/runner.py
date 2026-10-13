@@ -435,7 +435,7 @@ class _Run:
             post_p50 = est["post"]["p50_seconds"]
             reserve = min(share * budget, post_p50) if budget and post_p50 else 0.0
             self.eta = LiveEta(workers, post_p50, est["post"]["p90_seconds"],
-                               tail if budget else est["finalise_seconds"])
+                               est["finalise_seconds"])
             self.scheduler = Scheduler(planned, self.costs, control, order=order,
                                        reserve=lambda: reserve, on_skip=self._skipped)
             if phase == "discovery":

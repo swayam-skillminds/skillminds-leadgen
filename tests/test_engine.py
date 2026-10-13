@@ -37,7 +37,7 @@ from leadscraper.engine import events as ev  # noqa: E402
 from leadscraper.engine.clock import FakeClock  # noqa: E402
 from leadscraper.engine.control import RunControl  # noqa: E402
 from leadscraper.engine.costs import CostModel, Tally, UnitStatsReader, blend, prior_cost  # noqa: E402
-from leadscraper.engine.estimator import LiveEta, describe_estimate  # noqa: E402
+from leadscraper.engine.estimator import FINALISE_SECONDS, LiveEta, describe_estimate  # noqa: E402
 from leadscraper.engine.parallel import EXHAUSTED, HostQueue, run_across_hosts  # noqa: E402
 from leadscraper.engine.runner import RunRequest, execute, request_from_row  # noqa: E402
 from leadscraper.engine.scheduler import SKIP_BUDGET, Planned, Scheduler  # noqa: E402
@@ -218,6 +218,33 @@ def test_estimator_simulates_parallel_hosts_and_reports_the_budget(synthetic):
     assert budget["units_skipped"] and budget["p50_seconds"] <= 15 * 60
     text = describe_estimate(estimate(discovery_workers=3, time_budget_minutes=15))
     assert "Time budget" in text and "skipped" in text
+
+
+def test_a_budget_that_fits_everything_does_not_change_the_estimate(synthetic):
+    # The tail is a reservation, not time spent: the first live check
+    # (docs/live-check-1.md) estimated 3.9 min for one unit under a 15-minute
+    # budget, against 2.7 min without one, and finished in 1.4.
+    def estimate(**kwargs):
+        return execute(RunRequest(config=compiled(recorded("fits", 0)), dry_run=True,
+                                  print_plan=False, discovery_workers=3, **kwargs)).estimate
+
+    full = estimate()
+    budget = estimate(time_budget_minutes=100_000)["budget"]
+    assert budget["units_skipped"] == 0
+    assert budget["p50_seconds"] == full["p50_seconds"]
+    assert budget["p90_seconds"] == full["p90_seconds"]
+
+
+def test_a_budgeted_run_s_last_eta_is_finalise_not_the_tail(synthetic):
+    seen: list = []
+    config = compiled(synthetic_config("eta-tail", budget=15,
+                                       units=units(2, seconds=10.0, source="eta-tail"),
+                                       priors={"eta-tail": [10.0, 1.0]}))
+    execute(RunRequest(config=config, install_signals=False, clock=FakeClock(),
+                       discovery_workers=1, sinks=[seen.append]))
+    last = [e for e in seen if e.type == "progress"][-1]
+    assert last.units_done == 2
+    assert last.eta_p50_seconds == FINALISE_SECONDS
 
 
 def test_live_eta_measures_the_parallelism_achieved():
