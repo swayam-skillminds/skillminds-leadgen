@@ -1,0 +1,12 @@
+{
+ "resultCount": 1,
+ "results": [
+  {"wrapperType": "software", "kind": "software", "trackId": 1700000009,
+   "trackName": "Baner Bakes Order", "sellerName": "AppCrafters Studio",
+   "sellerUrl": "https://appcrafters.example/",
+   "trackViewUrl": "https://apps.apple.com/in/app/baner-bakes-order/id1700000009?uo=4",
+   "bundleId": "com.banerbakes.order.ios", "averageUserRating": 2.2, "userRatingCount": 40,
+   "currentVersionReleaseDate": "@iso:120", "version": "3.0", "primaryGenreName": "Food & Drink",
+   "description": "Order cakes from Baner Bakes."}
+ ]
+}

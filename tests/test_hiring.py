@@ -506,12 +506,12 @@ def test_the_icp_builder_switches_built_lead_types_on_and_notes_later_ones():
     draft = ICPDraft(name="Staff aug", country="IN", places=["Pune"],
                      categories=[{"name": "Software companies"}],
                      lead_types=["local_business", "hiring", "digital_audit", "funding_news",
-                                 "tech_stack"])
+                                 "crm_sync"])
     document, notes = to_document(draft)
     config = RunConfig.model_validate(document)
     assert config.enabled_lead_types() == ["local_business", "hiring", "funding_news",
                                            "digital_audit"]
-    assert any("tech_stack" in note for note in notes)   # Phase 8: still a later phase
+    assert any("crm_sync" in note for note in notes)     # not a lead type of this build
 
 
 # --- live (opt-in) -------------------------------------------------------------------------

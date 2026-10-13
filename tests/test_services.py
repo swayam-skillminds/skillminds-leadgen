@@ -364,13 +364,18 @@ def test_every_source_has_catalog_notes_and_applicability():
     assert us["linkedin_serp"]["fills"] == ["decision_makers"]
     by_key = {lt["key"]: lt for lt in catalog.lead_types("US")}
     assert list(by_key) == ["local_business", "hiring", "funding_news", "tenders",
-                            "registrations", "decision_makers", "digital_audit"]
+                            "registrations", "app_store", "decision_makers", "tech_stack",
+                            "digital_audit"]
     local = by_key["local_business"]
     assert local["key"] == "local_business" and local["applicable"]
     # Phase 6: a lead type's own sources are in the catalog too, with terms notes.
     assert us["greenhouse"]["lead_type"] == "hiring" and us["greenhouse"]["terms"]
     assert us["workable"]["review"] is True and us["greenhouse"]["last_verified"]
     assert us["site_audit"]["lead_type"] == "digital_audit" and us["pagespeed"]["applicable"]
+    # Phase 8: tech_stack's and app_store's sources, with their terms notes.
+    assert us["site_fingerprint"]["lead_type"] == "tech_stack"
+    assert us["footprints"]["review"] is True and us["itunes"]["last_verified"]
+    assert us["google_play"]["lead_type"] == "app_store" and us["google_play"]["terms"]
     headers = [c["header"] for c in local["columns"]]
     # Its own columns only: phones, emails and the rest are the export's core columns.
     assert "Category" in headers and "Phones" not in headers
