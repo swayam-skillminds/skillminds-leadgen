@@ -51,6 +51,8 @@ class LocalDirectorySource(Source):
 
     base_url: str = ""
     listing_template: str = ""
+    #: The directory's category slugs are lowercase: a capital letter is a 404.
+    lowercase_slugs: bool = False
     listing_pattern: re.Pattern[str] = re.compile(r"$^")
     host: str = ""
 
@@ -96,8 +98,9 @@ class LocalDirectorySource(Source):
             # search phrases, which are only a best guess at its taxonomy.
             configured = category.directory_slugs.get(self.name)
             for query in ([configured] if configured else category.queries[:2]):
+                slug = query.replace(" ", "-")
                 urls.append(self.listing_template.format(
-                    query=quote_plus(query.replace(" ", "-")),
+                    query=quote_plus(slug.lower() if self.lowercase_slugs else slug),
                     locality=quote_plus(locality.primary_term.replace(" ", "-")),
                     city=quote_plus(self.city_segment()),
                     city_lower=quote_plus(self.city_segment().lower()),
@@ -293,6 +296,10 @@ class SulekhaSource(LocalDirectorySource):
     base_url = "https://www.sulekha.com"
     host = "www.sulekha.com"
     listing_template = "https://www.sulekha.com/{query}/{city_lower}"
+    # /Dentists/pune redirects to /404?reason=page-config-not-found (checked live
+    # 2026-10-13); /dentists/pune is the listing. A new config's queries default
+    # to the category's name, capitals included.
+    lowercase_slugs = True
 
     def listing_pattern_for(self, city: str) -> re.Pattern[str]:
         return re.compile(r"sulekha\.com/[\w\-]+/" + re.escape(self.city_segment().lower()), re.I)

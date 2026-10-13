@@ -355,3 +355,24 @@ def test_local_directory_serp_runs_when_opted_in(monkeypatch, name):
 
     source._listing_urls(LOCALITY, category, max_pages=1)
     assert RecordingSerp.queries == [f"site:{source.host} catering services Andheri East Mumbai"]
+
+
+# --- live check 2: Sulekha's listing slugs are lowercase --------------------------------------
+
+def test_sulekha_listing_urls_are_lowercase_whatever_the_category_says():
+    """Live check 2 (Pune): a new run config's category queries default to its
+    name, so Sulekha was asked for /Dentists/pune -- which redirects to its 404
+    page -- and every new config got nothing from Sulekha. Its slugs are lowercase
+    (/dentists/pune answered with a listing); Justdial's keep their capitals."""
+    sulekha = local_source(DISCOVERY_SOURCES["sulekha"])
+    category = Category(name="Software companies", queries=["Software companies"])
+    assert sulekha._listing_urls(LOCALITY, category, max_pages=1) == [
+        "https://www.sulekha.com/software-companies/mumbai"]
+    configured = Category(name="Dentists", directory_slugs={"sulekha": "Dentists"})
+    assert sulekha._listing_urls(LOCALITY, configured, max_pages=1) == [
+        "https://www.sulekha.com/dentists/mumbai"]
+
+    justdial = local_source(DISCOVERY_SOURCES["justdial"])
+    dentists = Category(name="Dentists", queries=["Dentists"])
+    assert justdial._listing_urls(LOCALITY, dentists, max_pages=1) == [
+        "https://www.justdial.com/Mumbai/Dentists-in-Andheri-East-Mumbai"]
