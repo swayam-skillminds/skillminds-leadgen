@@ -3,8 +3,8 @@
 
 Each scenario of ``tests/workbook_fixtures.py`` -- local_business only, a
 three-lead-type mix, venues (the hospitality vertical), an empty run, Phase 6's
-digital_audit + hiring, its funding_news + decision_makers, and Phase 7's tenders +
-registrations -- is
+digital_audit + hiring, its funding_news + decision_makers, Phase 7's tenders +
+registrations and Phase 8's tech_stack + app_store -- is
 built into a throwaway database and exported exactly as a run's workbook is.
 ``tests/test_workbook.py`` pins the same workbooks' structure, and
 ``test_samples_are_current`` fails when a sample here is out of date.
@@ -25,7 +25,8 @@ NAMES = {"local_business": "sample-local-business.xlsx", "mix": "sample-three-le
          "venues": "sample-venues.xlsx", "empty": "sample-empty-run.xlsx",
          "audit_hiring": "sample-audit-and-hiring.xlsx",
          "news_people": "sample-news-and-people.xlsx",
-         "tenders_registrations": "sample-tenders-and-registrations.xlsx"}
+         "tenders_registrations": "sample-tenders-and-registrations.xlsx",
+         "techstack_appstore": "sample-tech-stack-and-app-store.xlsx"}
 
 
 def main() -> int:

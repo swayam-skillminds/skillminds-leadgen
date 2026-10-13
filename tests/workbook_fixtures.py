@@ -44,7 +44,7 @@ from leadscraper.sources.registers.sic import division
 UTC = timezone.utc
 FIXED_NOW = datetime(2026, 10, 1, 9, 30, tzinfo=UTC)
 SCENARIOS = ("local_business", "mix", "venues", "empty", "audit_hiring", "news_people",
-             "tenders_registrations")
+             "tenders_registrations", "techstack_appstore")
 ROOT = Path(__file__).resolve().parent.parent
 
 
@@ -747,9 +747,121 @@ def tenders_registrations(engine) -> int:
     return run.finish(minutes=9)
 
 
+def techstack_appstore(engine) -> int:
+    """Phase 8 in Pune: local_business shops; tech_stack's named technologies (an outdated
+    WordPress, a current Shopify, a Magento 1 shop footprints found); app_store's neglected
+    apps (a developer with an App Store app and its Play twin, a dentist's app, a bakery's
+    app its own site links)."""
+    document = _doc("Sample Pune tech stack and apps", "IN", ["Pune"],
+                    {"local_business": {"categories": [{"name": "Shops"}, {"name": "Clinics"}]},
+                     "tech_stack": {"technologies": ["WordPress", "Shopify", "Magento 1"],
+                                    "sources": {"footprints": {"enabled": True}}},
+                     "app_store": {"keywords": ["clinic"]}},
+                    center=[18.52, 73.85], admin_area="Maharashtra",
+                    scoring={"weights": {"fit": 0.4, "intent": 0.4, "reach": 0.2}})
+    run = _Run(engine, document, "IN")
+    shops = [
+        ("Old Mill Bistro", "Shops", "+912000000801", "https://oldmill-bistro.example/", 1),
+        ("Deccan Spice Traders", "Shops", "+912000000802", "https://deccan-spice.example/", 2),
+        ("Kothrud Dental Care", "Clinics", "+912000000803", "https://kothrud-dental.example/",
+         3),
+        ("Baner Bakes", "Shops", "+912000000804", "https://baner-bakes.example/", 4),
+    ]
+    for name, category, phone, site, n in shops:
+        run.add(Lead(business_name=name, category=category, locality="Pune", phones=[phone],
+                     website=site, gmaps_url=_maps(800 + n), gmaps_rating=4.0 + n / 10,
+                     gmaps_reviews=20 * n, address=f"{n} Sample Road, Pune",
+                     sources=["google_maps"]), days=30 - n)
+    # Found by tech_stack's footprints ("powered by …" "Pune"), confirmed on its own site.
+    run.add(Lead(business_name="Lotus Woodworks", website="https://lotus-woodworks.example/",
+                 locality="Pune", sources=["footprints"],
+                 source_urls=["https://lotus-woodworks.example/"]), lead_type="tech_stack",
+            days=2)
+    # Found by app_store: the developer of a neglected clinic app, with Play's contacts.
+    run.add(Lead(business_name="Sahyadri Care Pvt Ltd", website="https://sahyadri-care.example/",
+                 emails=["care@sahyadri-care.example"], phones=["+912040001234"],
+                 address="12 FC Road, Shivajinagar, Pune, Maharashtra 411005, India",
+                 sources=["app_store", "google_play"],
+                 source_urls=["https://apps.apple.com/in/app/sahyadri-clinic/id1700000001"]),
+            lead_type="app_store", days=2)
+
+    stacks = {
+        "Old Mill Bistro": ([("outdated_technology", "WordPress", "4.9.8", "CMS", "meta generator",
+                              "No formal end of life; 6.4 shipped Nov 2023, so anything older "
+                              "is about three years behind.")],
+                            ["WordPress 4.9.8", "jQuery 1.12.4", "PHP 7.2.34", "Apache 2.2.15"]),
+        "Deccan Spice Traders": ([("technology", "Shopify", "", "Ecommerce", "html", "")],
+                                 ["Shopify"]),
+        "Lotus Woodworks": ([("outdated_technology", "Magento 1", "", "Ecommerce", "html",
+                              "Magento 1 ended June 2020.")],
+                            ["Magento 1", "jQuery 1.8.3", "PHP 5.6.40"]),
+    }
+    for org, (found, stack) in stacks.items():
+        run.tag(org, "tech_stack")
+        url = run.store.get(run.ids[org]).website
+        for type_, name, version, category, evidence, why in found:
+            run.signal(org, "tech_stack", type_, f"{name} {version}".strip(), None, url,
+                       0.7 if type_ == "outdated_technology" else 0.5,
+                       key=f"tech:{name.lower().replace(' ', '')}", technology=name,
+                       version=version, category=category, outdated=type_ != "technology",
+                       why=why, evidence=evidence, targeted=True)
+        run.attribute(org, "tech_stack", {"url": url, "status": "checked", "stack": stack,
+                                          "matched": [f"{f[1]} {f[2]}".strip() for f in found],
+                                          "checked_at": ago(1).isoformat()},
+                      origin="rule", lead_type="tech_stack")
+
+    apple = "https://apps.apple.com/in/app/sahyadri-clinic-appointments/id1700000001"
+    play = "https://play.google.com/store/apps/details?id=com.sahyadricare.patient"
+    apps = [
+        ("Sahyadri Care Pvt Ltd", "low_rating", "app_store", "1700000001",
+         "Sahyadri Clinic Appointments", apple, 2.4, 58, None, 800, 0.626, {}),
+        ("Sahyadri Care Pvt Ltd", "stale_app", "app_store", "1700000001",
+         "Sahyadri Clinic Appointments", apple, 2.4, 58, None, 800, 0.537,
+         {"months_since_update": 26}),
+        ("Sahyadri Care Pvt Ltd", "review_complaints", "google_play", "com.sahyadricare.patient",
+         "Sahyadri Care", play, 2.1, 1240, "10K+", 760, 0.65,
+         {"themes": [{"theme": "crashes", "label": "crashes / won't open", "reviews": 2,
+                      "quote": "The app crashes every time I try to book an appointment."},
+                     {"theme": "login", "label": "login / OTP", "reviews": 1,
+                      "quote": "OTP never arrives so I cannot log in."}],
+          "low_star_reviews": 3}),
+        ("Kothrud Dental Care", "low_rating", "app_store", "1700000002", "Kothrud Dental Care",
+         "https://apps.apple.com/in/app/kothrud-dental-care/id1700000002", 3.1, 12, None, 200,
+         0.546, {}),
+        ("Baner Bakes", "stale_app", "google_play", "com.banerbakes.order", "Baner Bakes",
+         "https://play.google.com/store/apps/details?id=com.banerbakes.order", 4.0, 210, "1K+",
+         1100, 0.67, {"months_since_update": 36}),
+    ]
+    for org in ("Kothrud Dental Care", "Baner Bakes"):
+        run.tag(org, "app_store")
+    titles = {"low_rating": "{app} ({store}): rated {rating:.1f} from {ratings:,} ratings",
+              "stale_app": "{app} ({store}): last updated {when:%b %Y}, {months} months ago",
+              "review_complaints": "{app} ({store}): reviewers complain of crashes / won't "
+                                   "open, login / OTP"}
+    for org, type_, store, app_id, app, url, rating, ratings, installs, updated, strength, \
+            extra in apps:
+        when = ago(updated)
+        title = titles[type_].format(app=app, store="App Store" if store == "app_store"
+                                     else "Google Play", rating=rating, ratings=ratings,
+                                     when=when, months=extra.get("months_since_update"))
+        run.signal(org, "app_store", type_, title, None, url, strength,
+                   key=f"{store}:{app_id}:{type_}", store=store, app_id=app_id, app=app,
+                   rating=rating, ratings=ratings, installs=installs,
+                   updated=when.date().isoformat(),
+                   developer="AppCrafters Studio" if org == "Baner Bakes" else org,
+                   genre="Medical" if org != "Baner Bakes" else "Food & Drink", **extra)
+    run.unit("local_business", "google_maps", "Pune", "Shops", found=3, new=3)
+    run.unit("local_business", "google_maps", "Pune", "Clinics", found=1, new=1)
+    run.unit("tech_stack", "footprints", "Pune", "Magento 1", found=1, new=1)
+    run.unit("app_store", "itunes", None, "clinic", found=50, new=1)
+    run.failure("site_fingerprint", "robots_disallowed")
+    return run.finish(minutes=14)
+
+
 BUILDERS = {"local_business": local_business, "mix": mix, "venues": venues, "empty": empty,
             "audit_hiring": audit_hiring, "news_people": news_people,
-            "tenders_registrations": tenders_registrations}
+            "tenders_registrations": tenders_registrations,
+            "techstack_appstore": techstack_appstore}
 
 
 def build(engine, scenario: str) -> int:
