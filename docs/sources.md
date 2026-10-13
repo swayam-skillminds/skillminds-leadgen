@@ -189,6 +189,29 @@ Companies (RoC)-wise Company Master Data" (the newest company master data
 there, refreshed 2026-07-22) says "The data upto 3rd November 2023": no new
 incorporations to find (checked 2026-10-13 through the OGD platform).
 
+## `tech_stack` lead type (Phase 8.1; every country)
+
+| Source | Endpoint | Method | Auth | Default delays | Terms note | Last verified |
+|---|---|---|---|---|---|---|
+| `upload` | your list (`targets`, `domains`, `targets_file` from the CLI) | none | none | n/a | Your data | n/a |
+| `site_fingerprint` | the organisation's own site: robots.txt, then its homepage (HTTPS, then HTTP) | requests (public-only client); the shared rules in `sources/web/fingerprints.yaml` over the HTML, meta generator, script / stylesheet URLs and response headers | none | 1–3 s per site; 6 sites at once | The business's public homepage, robots.txt honoured, one request at a time per site | n/a (any site). The rules' outdated thresholds were checked against **endoflife.date**'s API on **2026-10-13** (Angular 19 ended May 2026, 20 until Nov 2026; Vue 2 Dec 2023; TYPO3 12 Apr 2026; PHP 8.1 Dec 2025; SharePoint 2013 Apr 2023). Live smoke test: blog.mozilla.org → WordPress |
+| `footprints` (opt-in) | Google search (then DuckDuckGo) for a technology's footprint phrases in a place: `"powered by Shopify" "Pune"`; each result's homepage is then fingerprinted | via `google_search`'s SERP client, then `site_fingerprint` | none | 12–28 s (shared SERP pacing, set only when enabled) | Google's terms restrict automated queries: **off by default**, the owner's call (as `board_search`). The technology's own sites, social profiles and directories are never candidates; a site is kept only when its homepage shows the technology | Not run live: Google and DuckDuckGo SERP are blocked from this network (see live check 2) |
+
+**Other "who uses X" sources considered:** BuiltWith, Wappalyzer and PublicWWW
+sell this data (paid APIs); HTTP Archive needs BigQuery. None is used.
+
+## `app_store` lead type (Phase 8.2; every country)
+
+| Source | Endpoint | Method | Auth | Default delays | Terms note | Last verified |
+|---|---|---|---|---|---|---|
+| `itunes` | `GET https://itunes.apple.com/search?term=…&country=…&entity=software&limit=…`; `GET https://itunes.apple.com/lookup?id=…&country=…` | requests, JSON; the identifying User-Agent | none | 3.5–5 s (Apple: "approximately 20 calls per minute") | Apple's documented Search API. Its terms govern promotional content (artwork, previews), none of which is kept. robots.txt disallows `/search*` and `/*/lookup?` for crawlers, and Apple's site terms forbid page-scraping "through any means not purposely made available": the API is that means, so **App Store web pages and the customer-review RSS (robots.txt: `/*/rss/*`) are never read**. **To review against A.2.4** | **2026-10-13**: 200; `trackId`, `trackName`, `sellerName`, `sellerUrl`, `averageUserRating` (0 when unrated), `userRatingCount`, `currentVersionReleaseDate`, `bundleId`, `primaryGenreName`, `description`; a `genreId` filter is ignored, so genres are filtered here. Live smoke test passes |
+| `google_play` | `GET https://play.google.com/store/apps/details?id={package}&hl=en&gl={country}` | requests, HTML: JSON-LD `SoftwareApplication`, "Updated on", "<band> Downloads", the App support section, the reviews the page shows (never reviewers' names) | none | 2–4 s; 60 listings a run | robots.txt **allows** `/store/apps/details` and **disallows** `/store/search`; Google's terms forbid automated access "in violation of the machine-readable instructions on our web pages (for example, robots.txt files …)". So listings are read one at a time -- packages from organisations' sites, the config, or an App Store app's bundle id (kept only with the same developer website) -- and **Play is never searched**. **To review against A.2.4** | **2026-10-13**: 200 for a live listing (rating 4.49 from 278,696, "Updated on Oct 10, 2026", "10M+ Downloads", the developer's website, email, phone and address, 3 reviews); a missing package is a 404. Live smoke test passes |
+| `listed` | the apps a config names | via `itunes` lookup and `google_play` | none | as those | Your list | n/a |
+| `site_apps` | the organisation's own homepage, read for App Store / Play links | requests (robots.txt honoured), then `itunes` / `google_play` | none | 1–3 s per site; 4 at once | The business's public homepage | n/a (any site) |
+
+**Not used:** Apple's App Store web pages and review RSS (site terms, robots.txt),
+Google Play search (robots.txt), and third-party app-data APIs (paid).
+
 ## Keys: where to register
 
 A source that needs a key and has none is **skipped, never tried**: its work
@@ -229,6 +252,12 @@ Phase 6b adds four more, all **off by default** (2026-10-08): `google_news`
 (its feed terms forbid other than personal use), `press_releases`
 (GlobeNewswire's terms page could not be found), `linkedin_search` (Google
 SERP) and `github` (GitHub's Acceptable Use Policies on personal information).
+
+Phase 8 adds `footprints` (Google SERP, **off by default**) and two **on by
+default** that are marked for review: `itunes` (Apple's Search API, whose terms
+are written for partners promoting store content) and `google_play` (listing
+pages, read only where robots.txt allows). Turning either off is
+`lead_types.app_store.sources.<name>.enabled: false`.
 
 Phase 1 moved these sources into packs without changing their behaviour.
 Whether each one stays, moves to an official API, or is retired is a

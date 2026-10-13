@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A failure-tolerant Python lead generator. It discovers businesses from free public sources (Playwright + `requests`, no paid APIs), merges them into one deduplicated **organisation** per business inside a **project**, scores and ranks them, and exports to XLSX / CSV / JSON / Google Sheets. It is a backend application with an HTTP API, a CLI and a worker over one services layer (`APP-BUILD-PROMPT.md`; Phases 0–7 are done (Phase 6: `digital_audit`, `hiring` in `docs/phase-6a-report.md`; `funding_news`, `decision_makers` in `docs/phase-6b-report.md`; Phase 7: `tenders`, `registrations` in `docs/phase-7-report.md`), see `docs/phase-*-report.md`; the API is documented in `docs/api.md`, deployment in `docs/deploy.md`, the AI layer in `docs/ai.md`). Despite the directory name it does **not** use LangGraph; orchestration is plain Python (`engine/runner.py` drives each lead type's session unit by unit; `docs/engine.md`).
+A failure-tolerant Python lead generator. It discovers businesses from free public sources (Playwright + `requests`, no paid APIs), merges them into one deduplicated **organisation** per business inside a **project**, scores and ranks them, and exports to XLSX / CSV / JSON / Google Sheets. It is a backend application with an HTTP API, a CLI and a worker over one services layer (`APP-BUILD-PROMPT.md`; Phases 0–8 are done (Phase 6: `digital_audit`, `hiring` in `docs/phase-6a-report.md`; `funding_news`, `decision_makers` in `docs/phase-6b-report.md`; Phase 7: `tenders`, `registrations` in `docs/phase-7-report.md`; Phase 8: `tech_stack`, `app_store` in `docs/phase-8-report.md`), see `docs/phase-*-report.md`; the API is documented in `docs/api.md`, deployment in `docs/deploy.md`, the AI layer in `docs/ai.md`). Despite the directory name it does **not** use LangGraph; orchestration is plain Python (`engine/runner.py` drives each lead type's session unit by unit; `docs/engine.md`).
 
 Runs are described by **run configs** (`config/schema.py`, `schema_version: 1`). Two presets reproduce the original runs:
 - `presets/mumbai-event-vendors.yaml` (Mumbai event vendors), imported from `config.yaml`.
@@ -25,7 +25,7 @@ playwright install chromium
 python -m pytest tests/ -q                                    # ~35 s (incl. a real worker kill/resume)
 ruff check leadscraper tests tools run.py                     # lint (CI runs it)
 python -m pytest tests/test_pipeline.py::test_name -q         # one test
-python -m pytest -q -m "not characterisation" --deselect tests/test_engine.py   # fast loop (~6 s)
+python -m pytest -q -m "not characterisation and not live" --deselect tests/test_engine.py   # fast loop (a bare -m replaces the default "not live")
 LEADSCRAPER_TEST_POSTGRES_URL=postgresql+psycopg://USER@HOST:PORT/THROWAWAY_DB \
   python -m pytest -m postgres -q                             # server mode, incl. both real stores (drops app tables!)
 LEADSCRAPER_TEST_ENGINE_DB_URL=postgresql+psycopg://…/THROWAWAY_DB python -m pytest tests/test_engine.py -q   # engine suite on Postgres
@@ -82,7 +82,7 @@ python -m pytest -m live tests/test_ai_live.py -q             # one tiny call pe
 .venv/bin/python -I tools/make_ai_fixture_pages.py tests/fixtures/pages   # the fictional AI fixture pages
 
 # Phase 6 lead types (docs/lead-types.md). Tests serve fictional fixtures (tests/fake_web.py)
-python -m leadscraper audit targets list.xlsx [-o snippet.yaml]   # a CSV/XLSX of businesses -> digital_audit YAML
+python -m leadscraper audit targets list.xlsx [-o snippet.yaml] [--lead-type tech_stack]   # a CSV/XLSX of businesses -> YAML
 python -m leadscraper secrets set pagespeed-api-key               # PageSpeed needs a key in practice
 python -m pytest -m live tests/test_hiring.py tests/test_digital_audit.py -q   # one real board per ATS, HN, example.com
 python -m leadscraper secrets set companies-house-api-key        # UK directors (decision_makers); github-token optional
@@ -92,6 +92,9 @@ python -m pytest -m live tests/test_funding_news.py tests/test_decision_makers.p
 python -m leadscraper secrets set sam-gov-api-key                 # tenders: SAM.gov (US), 10 requests/day
 python -m leadscraper secrets set companies-house-api-key         # registrations (and decision_makers' UK registry)
 python -m pytest -m live tests/test_tenders.py tests/test_registrations.py -q   # TED, Find a Tender, Contracts Finder, CPPP, GeM; keyed ones skip without a key
+
+# Phase 8 lead types (docs/lead-types.md). Tests: fictional apps/sites (tests/fixtures/apps, sites)
+python -m pytest -m live tests/test_tech_stack.py tests/test_app_store.py -q   # one iTunes search, one Play listing, one WordPress site
 ```
 
 Full runs take many hours at the default polite delays (`--dry-run` estimates them). Don't run several copies in parallel, and don't lower delays casually (Justdial, Instagram and Google SERP block quickly). Tests isolate app state via `LEADSCRAPER_DATA_DIR` (`tests/conftest.py`); when you smoke-test by hand, point it at a scratch directory so you never touch the real per-user database.
@@ -113,10 +116,12 @@ engine/      runner.py (one project, one Run row; plan -> discover -> post -> fi
              keepawake.py (wakepy + sleep detection), preview.py, clock.py, failures.py (FailureLog)
 leadtypes/   base.py (the A.7 contract), registry.py, toolkit.py (Kit: paced http, failures, robots for a session),
              local_business/ (config, plugin, planning, pipeline, session, estimates, scoring),
-             hiring/ (config, roles, session, plugin), digital_audit/ (config, checks, fingerprint(s.yaml), auditor,
+             hiring/ (config, roles, session, plugin), digital_audit/ (config, checks, fingerprint (re-export), auditor,
              pagespeed, targets, session, plugin), funding_news/ (config, events: headline rules, amounts,
              session, plugin), decision_makers/ (config, email_pattern, session, plugin),
-             tenders/ (config, session, plugin), registrations/ (config, session, plugin)
+             tenders/ (config, session, plugin), registrations/ (config, session, plugin),
+             tech_stack/ (config, sitecheck: one site's fingerprint, targets, session, plugin),
+             app_store/ (config, session: assess + scope + own-site store links, plugin)
 packs/       in/ (justdial, sulekha, indiamart), events/ (wedmegood, weddingwire),
              hospitality/ (stay platforms + venues.py), social/ (facebook, instagram, linkedin_serp),
              uk/ (Companies House directors: a `Pack.registries` entry for decision_makers; new
@@ -128,7 +133,10 @@ sources/     base.py (Source/Enricher contract), registry.py, core sources: goog
              news/ (gdelt, google_news, feeds: GlobeNewswire + any RSS/Atom; base: NewsItem, safe feed parser)
              for funding_news; people/ (roles: names + title families, team_pages, linkedin, github) for
              decision_makers; tenders/ (base: Tender, Buyer, code/keyword matching, own_site) and
-             registers/ (base: Incorporation; sic; opencorporates) for Phase 7
+             registers/ (base: Incorporation; sic; opencorporates) for Phase 7; web/ (fingerprint.py +
+             fingerprints.yaml: the shared, dated technology rules of digital_audit and tech_stack) and
+             apps/ (base: AppListing, store links; itunes: Search API; google_play: listing pages; themes)
+             for Phase 8
 net/         http.py (+ get_once, probe, get(attempts=)), browser.py, ratelimit.py, robots.py (robots.txt, RFC 9309), tls.py (certificates)
 export/      excel.py (Overview + Records), table.py (ExportTable, CSV, JSON), columns.py (column model),
              records.py (score/place/sort), summary.py (Overview numbers), outputs.py (run files),
@@ -167,8 +175,8 @@ Output is flushed periodically and on exit. Ctrl-C pauses (in-flight units finis
 - Lifecycle: queued → running → pausing/paused, stopping/cancelled, completed/failed. Requests go through `runs.status`; the runner heartbeats, claims runs atomically, and only writes while it owns the run. Workers recover runs with a stale heartbeat from their checkpoint.
 - Depth presets live in each lead type's `apply_depth`; `balanced` changes nothing. Learned `unit_stats` keys carry `@quick`/`@deep`.
 - Store writes are tagged per thread (`LeadStore.tag_thread`), because units of different lead types can run side by side.
-- Stages (Phase 6): a unit waits for every unit of a lower `LeadTypeSession.discovery_stage` (hiring, funding_news, tenders, registrations and audit uploads are stage 1, after the finders).
-- Units that can't run (Phase 7): `LeadTypeSession.unit_skip_reason(unit)` (a source whose API key isn't configured) → planned, never started, recorded `skipped` with "key not configured: … (leadscraper secrets set …); get one at …", listed under the estimate's `unavailable` ("Not run"); asked again on resume. The catalog shows `key.configured` + `register_url`, `/health` the source keys. Post-discovery runs in `LeadType.post_order` (local_business 0, funding_news 0, hiring 5, decision_makers 7, digital_audit 10); `post_scope = "run"` sizes a session's estimate by every lead type's expected new orgs.
+- Stages (Phase 6): a unit waits for every unit of a lower `LeadTypeSession.discovery_stage` (hiring, funding_news, tenders, registrations, app_store, tech_stack's and the audit's uploads are stage 1, after the finders).
+- Units that can't run (Phase 7): `LeadTypeSession.unit_skip_reason(unit)` (a source whose API key isn't configured) → planned, never started, recorded `skipped` with "key not configured: … (leadscraper secrets set …); get one at …", listed under the estimate's `unavailable` ("Not run"); asked again on resume. The catalog shows `key.configured` + `register_url`, `/health` the source keys. Post-discovery runs in `LeadType.post_order` (local_business 0, funding_news 0, hiring 5, app_store 6, decision_makers 7, tech_stack 8, digital_audit 10); `post_scope = "run"` sizes a session's estimate by every lead type's expected new orgs.
 - `LEADSCRAPER_PLUGINS=module` loads extra lead types in any process (used by the worker-kill test).
 
 **Services and API (Phase 3, `docs/api.md`):**
@@ -229,7 +237,7 @@ Keep this property when you add or modify sources.
 - Schema changes need an Alembic migration (`db/migrations/versions/`). `tests/test_db.py::test_alembic_migrations_build_exactly_the_models` fails until the migration matches the models.
 - An original lead store is refused (checked read-only) and only ever imported from a copy.
 
-**Lead types** (`leadtypes/`, `docs/lead-types.md`): A.7 contract; `local_business` is today's scraper; `hiring` (tech roles: ATS boards, HN, careers pages), `funding_news` (funding, launches, expansion, acquisitions, digital transformation, leadership changes from GDELT headlines; Google News RSS and GlobeNewswire opt-in), `decision_makers` (people from team pages, UK Companies House via the `uk` pack, opt-in LinkedIn search and GitHub; the optional labelled email pattern, MX only) and `digital_audit` (eleven checks over others' organisations or uploads) since Phase 6; `tenders` (public buyers' IT tenders from each country pack's portals: TED, Find a Tender, Contracts Finder, SAM.gov with a key, CPPP/GeM opt-in; buyer `org_type: public_buyer` attribute, signal `expires_at` = deadline, closed tenders score nothing) and `registrations` (new incorporations: Companies House with a key, OpenCorporates opt-in; directors become people) since Phase 7. `LeadStore.add_signal` stores times in UTC (SQLite drops offsets). Lead-type config is `lead_types.<key>`, validated against the registry. The runner tags every row with the active lead type. Rules: no lead type depends on another; enabling, disabling or crashing one never changes another's output (`tests/test_phase1_acceptance.py`, `test_hiring.py`, `test_digital_audit.py`); a lead type **never rewrites another's record**: a company the project already holds gets its signals via `LeadStore.add_signal` / `stamp` (tag, run membership, its own evidence), keyed so re-runs refresh rather than duplicate (`signals.key`, migration 0005); only a company nobody holds is `upsert`ed. local_business works on `LeadStore.owned_by("local_business")`, so its CSV, Sheet, report, rescore and enrichment/AI targets cover only its own organisations. The Phase 6 lead types fetch through `toolkit.Kit`: the run's shared `RateLimiter` (`LeadTypeContext.limiter`) and a public-only `HttpClient` (`PublicOnlyAdapter`; internal addresses refused, also in `net/tls.py`; `LEADSCRAPER_ALLOW_PRIVATE_TARGETS=1` opts in). `targets_file` is refused in API/saved configs. Signals that fade take the export's `now` (`score(..., now=)`, `ExportRecord.as_of`), so a regenerated export agrees with itself; a lead type whose facts aren't signals takes `record=` (decision_makers' reach). News APIs and feeds send the identifying `core.geo.USER_AGENT`; GDELT gets one attempt per query (≤ 6 OR terms) and no more queries after a throttle.
+**Lead types** (`leadtypes/`, `docs/lead-types.md`): A.7 contract; `local_business` is today's scraper; `hiring` (tech roles: ATS boards, HN, careers pages), `funding_news` (funding, launches, expansion, acquisitions, digital transformation, leadership changes from GDELT headlines; Google News RSS and GlobeNewswire opt-in), `decision_makers` (people from team pages, UK Companies House via the `uk` pack, opt-in LinkedIn search and GitHub; the optional labelled email pattern, MX only) and `digital_audit` (eleven checks over others' organisations or uploads) since Phase 6; `tenders` (public buyers' IT tenders from each country pack's portals: TED, Find a Tender, Contracts Finder, SAM.gov with a key, CPPP/GeM opt-in; buyer `org_type: public_buyer` attribute, signal `expires_at` = deadline, closed tenders score nothing) and `registrations` (new incorporations: Companies House with a key, OpenCorporates opt-in; directors become people) since Phase 7; `tech_stack` (named or outdated technologies on others' sites, uploads or opt-in "powered by" search footprints, each confirmed by fingerprinting the homepage; technology = fit, outdated = intent) and `app_store` (Apple's iTunes Search API + Google Play listing pages, never Play search or Apple's web pages; low_rating / stale_app / review_complaints, resolved to the developer's website; default scope `country` needs evidence the developer is in the run's country; `max_ratings` drops national brands) since Phase 8. `LeadStore.add_signal` stores times in UTC (SQLite drops offsets). Lead-type config is `lead_types.<key>`, validated against the registry. The runner tags every row with the active lead type. Rules: no lead type depends on another; enabling, disabling or crashing one never changes another's output (`tests/test_phase1_acceptance.py`, `test_hiring.py`, `test_digital_audit.py`); a lead type **never rewrites another's record**: a company the project already holds gets its signals via `LeadStore.add_signal` / `stamp` (tag, run membership, its own evidence), keyed so re-runs refresh rather than duplicate (`signals.key`, migration 0005); only a company nobody holds is `upsert`ed. local_business works on `LeadStore.owned_by("local_business")`, so its CSV, Sheet, report, rescore and enrichment/AI targets cover only its own organisations. The Phase 6 lead types fetch through `toolkit.Kit`: the run's shared `RateLimiter` (`LeadTypeContext.limiter`) and a public-only `HttpClient` (`PublicOnlyAdapter`; internal addresses refused, also in `net/tls.py`; `LEADSCRAPER_ALLOW_PRIVATE_TARGETS=1` opts in). `targets_file` (digital_audit, tech_stack) is refused in API/saved configs; uploads are read by `core/uploads.py`. Signals that fade take the export's `now` (`score(..., now=)`, `ExportRecord.as_of`), so a regenerated export agrees with itself; a lead type whose facts aren't signals takes `record=` (decision_makers' reach). News APIs and feeds send the identifying `core.geo.USER_AGENT`; GDELT gets one attempt per query (≤ 6 OR terms) and no more queries after a throttle.
 
 **Profiles / verticals:**
 - `Config.profile` (`venues` when the hospitality vertical is on) and `Config.verticals` drive:
@@ -274,6 +282,6 @@ The Google service-account key is looked up as: `GOOGLE_SERVICE_ACCOUNT_JSON` (i
 
 ## Scope notes
 
-`APP-BUILD-PROMPT.md` is the build plan (Section A context + Phases 0–8, one phase per session; Phases 0–7 are done). It supersedes `REBUILD-PROMPT.md`, of which only Parts 0, 2 and 3 still apply. Follow them only when asked to do that work.
+`APP-BUILD-PROMPT.md` is the build plan (Section A context + Phases 0–8, one phase per session; all of them are done). It supersedes `REBUILD-PROMPT.md`, of which only Parts 0, 2 and 3 still apply. Follow them only when asked to do that work.
 
 The hard boundary applies to the project generally: this tool **generates** leads and must not grow outreach/CRM features (contact status, email sending, sequences, and so on). LinkedIn is never logged into or crawled; only search-indexed public profile URLs are recorded. `docs/sources.md` lists every external endpoint with its terms note and last live check; several inherited sources are flagged for review against A.2.4.

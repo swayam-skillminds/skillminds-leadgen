@@ -47,7 +47,7 @@ In both modes, `run`-scope units go first, and **stages** order lead types
 (Phase 6): a unit starts only once every unit of a lower `discovery_stage` has
 finished. The finders (`local_business`) are stage 0; lead types that attach
 signals to organisations others may hold (`hiring`, `funding_news`, `tenders`,
-`registrations`, `digital_audit`'s uploads) are stage 1, so they find the finders' records instead of racing them. Stages
+`registrations`, `app_store`, `tech_stack`'s and `digital_audit`'s uploads and searches) are stage 1, so they find the finders' records instead of racing them. Stages
 order units. Under a budget, a unit also leaves time for every queued
 later-stage unit that outranks it (better expected new organisations per
 second): those would have been chosen first had stages not forced the order,
@@ -56,9 +56,10 @@ outrank it waits its turn, as before. The estimate doesn't model stages yet.
 
 Post-discovery runs session by session in `post_order` (ties: registry
 order): `local_business` (0, enrichment and AI), `funding_news` (0, nothing to
-do after discovery), `hiring` (5, careers pages), `decision_makers` (7, people of
-everyone's organisations), `digital_audit` (10, the audit, over everyone's
-enriched organisations). A
+do after discovery), `hiring` (5, careers pages), `app_store` (6, store links on
+everyone's sites), `decision_makers` (7, people of everyone's organisations),
+`tech_stack` (8, fingerprints of everyone's sites), `digital_audit` (10, the audit,
+over everyone's enriched organisations). A
 session whose `post_scope` is `"run"` is estimated from every lead type's
 expected new organisations, not only its own.
 

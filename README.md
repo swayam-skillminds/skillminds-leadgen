@@ -224,7 +224,7 @@ lead_types:
     categories: [{name: Dentists}]
 ```
 
-Lead types beyond local businesses (Phase 6, `docs/lead-types.md`) find a
+Lead types beyond local businesses (Phases 6–8, `docs/lead-types.md`) find a
 reason to buy now. Add them to the same config:
 
 ```yaml
@@ -234,7 +234,9 @@ lead_types:
   funding_news: {}                             # funding, launches, new offices… (GDELT news)
   tenders: {}                                  # public IT tenders: TED, Find a Tender, SAM.gov…
   registrations: {}                            # newly incorporated companies (Companies House)
+  app_store: {keywords: [dentist]}             # neglected apps: low ratings, stale updates
   decision_makers: {}                          # founders, CEOs, CTOs from team pages
+  tech_stack: {technologies: [WordPress, Magento 1]}   # sites on (outdated) platforms
   digital_audit: {}                            # audit every organisation the run found
 ```
 
@@ -242,6 +244,7 @@ lead_types:
 python run.py --config my-run.yaml --dry-run          # plan; no requests
 python run.py --config presets/nashik-venues.yaml     # a shipped preset
 python -m leadscraper audit targets my-list.xlsx      # a list of businesses -> digital_audit YAML
+python -m leadscraper audit targets my-list.xlsx --lead-type tech_stack   # ... -> tech_stack YAML
 python -m leadscraper secrets set sam-gov-api-key     # SAM.gov (US tenders); free, sam.gov → Account Details
 python -m leadscraper secrets set companies-house-api-key   # UK registrations and directors; free
 python -m leadscraper presets                         # list presets

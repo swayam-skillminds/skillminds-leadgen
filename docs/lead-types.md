@@ -6,10 +6,10 @@ roles (`hiring`, Phase 6), public tenders (`tenders`, Phase 7), and so on.
 Each one is a self-contained plugin, and all of them resolve what they find
 to the same deduplicated **organisation** in a project.
 
-Built today: **`local_business`**, **`hiring`**, **`funding_news`**,
+Built today, all of A.7: **`local_business`**, **`hiring`**, **`funding_news`**,
 **`decision_makers`** and **`digital_audit`** (Phase 6), **`tenders`** and
-**`registrations`** (Phase 7). `tech_stack` and `app_store` arrive in Phase 8,
-each as its own plugin under this contract.
+**`registrations`** (Phase 7), **`tech_stack`** and **`app_store`** (Phase 8),
+each its own plugin under this contract.
 
 ## The contract (`leadscraper/leadtypes/base.py`)
 
@@ -212,9 +212,9 @@ domains; it finds no businesses itself.
 | Config | `leadtypes/digital_audit/config.py` (`DigitalAuditConfig`) |
 | The checks | `checks.py`: pure functions, page facts in, one plain-language finding out |
 | Fetching | `auditor.py`: one TLS handshake, the homepage (HTTPS, then HTTP), at most one contact page, a HEAD per checked link; robots.txt for every page and link; paced per site |
-| Fingerprints | `fingerprints.yaml` (dated rules, ours) + `fingerprint.py` |
+| Fingerprints | `sources/web/fingerprints.yaml` (dated rules, ours) + `fingerprint.py`, shared with `tech_stack` since Phase 8 (re-exported as `digital_audit/fingerprint.py`) |
 | PageSpeed | `pagespeed.py`: Google PageSpeed Insights v5, capped per run, off for the run on quota or a refused key |
-| Uploads | `targets.py` (inline `targets` / `domains`, a CSV/XLSX `targets_file`); `POST /api/v1/audit/targets` and `leadscraper audit targets FILE` turn a file into config entries |
+| Uploads | `targets.py` (inline `targets` / `domains`, a CSV/XLSX `targets_file`, read by the shared `core/uploads.py`); `POST /api/v1/audit/targets` and `leadscraper audit targets FILE` turn a file into config entries |
 | Engine session | `session.py`: one `upload` unit (stage 1) when there are uploads; the audit itself in post-discovery, several sites at once |
 
 ```yaml
@@ -645,6 +645,156 @@ lead_types:
   Type, Register Link; Industry Codes and Register at the tail. Directors appear
   in the core Decision Makers columns.
 
+## `tech_stack` (Phase 8.1)
+
+Companies running a specific or an outdated technology: a platform the seller
+builds on, migrates from or supports (WordPress, Shopify, Magento 1, Odoo …), or
+an outdated version that is a reason to upgrade now. Every candidate is
+confirmed by fingerprinting its own site.
+
+| Part | Where |
+|---|---|
+| Plugin, columns, score | `leadtypes/tech_stack/plugin.py` (`TECH_STACK`, `post_order = 8`) |
+| Config | `leadtypes/tech_stack/config.py` (`TechStackConfig`; technology names validated against the table) |
+| The rules | `sources/web/fingerprints.yaml` + `fingerprint.py`, shared with `digital_audit`: 44 technologies (CMS, shops, site builders, frameworks, libraries, languages, servers), each outdated threshold with a dated reason; `vendor` sites and search `footprints` per technology |
+| One site | `sitecheck.py`: robots.txt, the homepage (HTTPS, then HTTP), the rules over its HTML, generator, script URLs and headers (cookies included) |
+| Uploads | `targets.py`: `targets` / `domains` / a CSV/XLSX `targets_file` (CLI only), the same rows `POST /audit/targets` returns (`leadscraper audit targets FILE --lead-type tech_stack`) |
+| Engine session | `session.py`: an `upload` unit; opt-in `footprints` units (place x technology); the other lead types' sites in post-discovery |
+
+```yaml
+lead_types:
+  tech_stack:
+    technologies: [WordPress, Shopify, Magento 1]   # empty: any technology, outdated only
+    outdated_only: false        # only outdated versions of the named ones count
+    thresholds: {WordPress: "6.6"}                  # the oldest version still current
+    check: run                  # run | project | targets: whose sites besides uploads
+    targets: []                 # [{name, website, …}], as /audit/targets returns
+    domains: []
+    targets_file: null          # CSV/XLSX (CLI only; refused through the API)
+    recheck_after_days: 30      # checked more recently: skipped (--force-enrich re-checks)
+    create_new: true            # a site the search found becomes an organisation
+    max_orgs: null
+    workers: 6
+    sources:
+      footprints: {enabled: false, max_results: 20, max_sites: 15,
+                   phrases: {Odoo: ['"Odoo ERP"']}}     # added to the table's phrases
+```
+
+- **Candidates.** The run's organisations (`check: run`) or the project's, the
+  uploads, and -- opt-in, because Google's terms restrict automated queries --
+  a web search per place and technology for the phrases its users' sites show
+  (`"powered by Shopify" "Pune"`). A search result is kept only when its own
+  homepage shows the technology; the technology's own sites (`vendor`), social
+  profiles and directories are never candidates.
+- **Which technologies count.** The named ones (any version, or only outdated
+  versions with `outdated_only`); with none named, any outdated technology.
+  Outdated = an end-of-life version, or older than the table's (or the run's)
+  threshold. A technology seen without a version is never called outdated.
+- **Honesty.** A site that refused us, robots.txt-disallowed its homepage,
+  resolved to an internal address, didn't answer, or was cut by a stop is "not
+  checked": nothing is written and the previous check stands.
+- **Signals.** `technology` ("Runs: Shopify") and `outdated_technology`
+  ("Outdated technology: WordPress 4.9.8"), keyed `tech:<name>`; payload:
+  technology, version, category, outdated, why (the dated reason), evidence,
+  whether the run named it. Each check is a snapshot: a technology no longer seen
+  goes. The whole stack is the `tech_stack` attribute (`origin: rule`).
+- **Organisations.** One the project holds is stamped, its record untouched (rule
+  6). A site the search found and nobody holds becomes an organisation named by
+  its `og:site_name` (or title), with its homepage as website. A checked site with
+  nothing wanted is not a lead of this type: only the attribute records the check.
+- **Score.** *fit* = 0.6 for running a named technology, +0.1 per further one (max
+  0.9), halving yearly with the check's age; none when the run names none.
+  *intent* = the strongest outdated version, 0.7 halving every 180 days, +0.05 per
+  further one.
+- **Columns.** Technology and Tech Status (front, breakdowns; Outdated in red),
+  Tech Found, Outdated Tech (with the reasons), Technologies (the whole stack);
+  Tech Evidence and Tech Checked at the tail.
+- **Depth.** quick: at most 100 sites checked, 8 per search; deep: 30 per search.
+- **digital_audit** reads the same rules for its `cms_age` check; with both on, a
+  site's homepage is fetched by each (they never share state, A.3).
+
+## `app_store` (Phase 8.2)
+
+Apps with poor ratings, long-stale updates or reviewers complaining of fixable
+problems, resolved to the organisations that own them.
+
+| Part | Where |
+|---|---|
+| Plugin, columns, score | `leadtypes/app_store/plugin.py` (`APP_STORE`, `post_order = 6`) |
+| Config | `leadtypes/app_store/config.py` (`AppStoreConfig`) |
+| The record | `sources/apps/base.py` (`AppListing`, `Review`; store links, app references) |
+| Apple | `sources/apps/itunes.py`: the iTunes Search API (`/search`, `/lookup`), keyless, paced 3.5–5 s (Apple: about 20 calls a minute) |
+| Google Play | `sources/apps/google_play.py`: public listing pages, read without relying on generated class names (JSON-LD, "Updated on", downloads, App support, the reviews shown) |
+| Complaint themes | `sources/apps/themes.py` (rules); `ai/features/review_themes.py` (grounded AI, under `signal_interpretation`) |
+| Engine session | `session.py`: `itunes` units (one per keyword), a `listed` unit, own-site store links in post-discovery |
+
+```yaml
+lead_types:
+  app_store:
+    keywords: [clinic, restaurant ordering]   # App Store searches in the run's storefront
+    genres: []                  # store categories to keep; empty = any
+    exclude_genres: [Games]
+    rating_ceiling: 3.5         # at or below: low_rating
+    min_ratings: 5
+    stale_months: 18            # no update for this long: stale_app
+    min_complaints: 2           # low-star reviews naming a theme: review_complaints
+    installs: {min: null, max: null}   # Play's download band
+    max_ratings: 100000         # national brands left out; null: no cap
+    scope: country              # country | place | storefront
+    apps: []                    # store links, Apple ids (id123…), Play packages
+    check_sites: run            # run | project | none: store links on these orgs' sites
+    max_sites: 200
+    create_new: true
+    sources:
+      itunes: {enabled: true, max_results: 50}
+      google_play: {enabled: true, match_ios: true, max_listings: 60}
+```
+
+- **Where apps come from.** Apple's Search API by keyword in the run's
+  storefront; apps the config names; and App Store / Play badges on the run's
+  (or project's) organisations' own homepages -- an app a site links is that
+  organisation's, whoever built it. **Google Play is never searched**: its
+  robots.txt disallows `/store/search` and Google's terms tie automated access to
+  robots.txt. A Play listing is read for a package the config or a site names, or
+  for an App Store app's bundle id, kept only when it names the same developer
+  website (`match_ios`). Apple's web pages and review feeds are never read
+  (Apple's site terms; robots.txt): Apple facts come from the API only.
+- **Which apps count.** Not an excluded genre (Games by default), inside the
+  download band, rated by at most `max_ratings` people in either store, and in
+  scope: `country` (the default) needs evidence the developer is in the run's
+  country (Play's developer address, the country's domain such as `.in` or
+  `.co.uk`, or the app naming the country or a run place) -- a storefront lists
+  apps from everywhere; `place` needs a run place named; `storefront` takes
+  everything. Apps the config names or a site links skip these filters.
+- **Findings** (`assess`):
+  - `low_rating`: rated at or below the ceiling by at least `min_ratings`;
+    strength 0.5–0.9, lower rating = stronger. Apple's "0" for an unrated app is
+    no rating.
+  - `stale_app`: no update for `stale_months`; 0.5, +0.05 per further six months
+    (max 0.85).
+  - `review_complaints`: at least `min_complaints` low-star (≤ 2) reviews on the
+    Play listing naming a theme (crashes / won't open, login / OTP, slow, payments
+    / refunds, bugs / errors, hard to use, no support, too many ads, not updated),
+    each with a quote; with `signal_interpretation` on, reviews the rules can't
+    place go to the model, kept only with a verbatim quote. 0.45 + 0.1 per theme
+    (max 0.75), scaled down for an app rated above the ceiling (Play shows the
+    harshest reviews first). Reviewers' names are never read.
+- **Signals.** One per app and finding, keyed `<store>:<app id>:<type>`, so a
+  re-run refreshes it; an app that has become healthy loses its signals (other
+  apps' on the same organisation stay). Payload: store, app id, name, link,
+  rating, ratings, installs, last update, version, genre, developer, themes.
+- **Organisations.** The developer's own website (Apple's `sellerUrl`, Play's
+  developer site) resolves the app; one the project holds is stamped, its record
+  untouched (rule 6). A developer nobody holds becomes an organisation with the
+  contacts Play's listing publishes for it (support email, phone, address).
+- **Score.** *intent* = the worst finding, halving every 120 days since the app was
+  assessed, +0.05 per further finding.
+- **Columns.** App Issue (front, a breakdown: Low rating, Not updated,
+  Complaints), App, App Store, App Rating, App Ratings, Installs, App Updated, App
+  Link; App Complaints, Flagged Apps, App Developer at the tail.
+- **Depth.** quick: 25 apps per keyword, 20 Play listings, 50 sites; deep: 200,
+  200, 500.
+
 ## The export (Phase 4)
 
 `export/columns.py` assembles the Records columns for each export: the core
@@ -697,8 +847,8 @@ ledger under the feature it used.
 6. Tests: fixture-based tests for its sources, signals, columns and score,
    plus an isolation test like `test_enabling_or_disabling_a_lead_type_leaves_local_business_unchanged`.
    To see it in the workbook, add it to a scenario in `tests/workbook_fixtures.py`
-   (the `audit_hiring` and `news_people` scenarios show the real Phase 6 lead
-   types).
+   (the `audit_hiring`, `news_people`, `tenders_registrations` and
+   `techstack_appstore` scenarios show the real Phase 6–8 lead types).
 7. If it finds companies other lead types may also hold, resolve them with
    `find_match` first and only attach to a match (rule 6), and set
    `discovery_stage = 1`. If it assesses others' organisations, do that in
