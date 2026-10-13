@@ -5,9 +5,12 @@ sleeps when ``real_seconds`` is set -- the subprocess worker test) and write
 real organisations to the store. Load it in another process with
 ``LEADSCRAPER_PLUGINS=tests.engine_fixtures``.
 
-Config (``lead_types.synthetic``)::
+Config (``lead_types.synthetic``, and ``lead_types.later``: the same, one stage on)::
 
-    units:   [{source, area, category, host, seconds, new}]   # one per unit
+    units:   [{source, area, category, host, seconds, new,
+               requests,        # spend `seconds` in this many requests, each paced
+                                # by the run's limiter (as a source waits on a host)
+               hang}]           # then block this many REAL seconds (a hung page)
     recorded: path to a JSON of recorded durations; attempt picks the run
     priors:  {source: [seconds, new]}                          # cold-start guesses
     post_seconds: post-discovery work, spent in 10 s slices
@@ -52,7 +55,8 @@ class SyntheticSession(LeadTypeSession):
 
     def __init__(self, context):
         self.context = context
-        self.cfg: SyntheticConfig = context.config.run_config.lead_type("synthetic")
+        self.cfg: SyntheticConfig = context.config.run_config.lead_type(self.lead_type)
+        self.limiter = getattr(context, "limiter", None)
         self.store = context.store
         self.control = context.control
         self.clock = self.control.clock if self.control is not None else None
@@ -67,6 +71,13 @@ class SyntheticSession(LeadTypeSession):
         self._result.units_planned = len(self._units)
         self.post_done = 0.0
         self.finalized: list[bool] = []
+        for spec in self._specs.values():
+            if spec.get("requests") and self.limiter is not None:
+                # Paced in fake time only: no real delay between requests.
+                self.limiter.configure(spec.get("host") or spec["source"], 0.0, 0.0)
+        hook = HOOKS.get("opened")
+        if hook is not None:
+            hook(self)
 
     def _unit_specs(self) -> list[dict]:
         if not self.cfg.recorded:
@@ -103,11 +114,16 @@ class SyntheticSession(LeadTypeSession):
                 handle.write(unit.key + "\n")
         count = int(spec.get("new", 1))
         seconds = float(spec.get("seconds", 60))
-        slices = max(1, count)
+        requests = int(spec.get("requests", 0))
+        slices = max(1, count, requests)
         outcome = UnitOutcome()
         for i in range(slices):
+            if requests and self.limiter is not None:
+                self.limiter.wait(spec.get("host") or unit.source)
             self._spend(seconds / slices)
-            if count:
+            if spec.get("hang"):
+                time.sleep(float(spec["hang"]))
+            if i < count:
                 name = f"{unit.source} {unit.area} {unit.category} {i}"
                 digits = sum(ord(ch) * (k + 1) for k, ch in enumerate(name)) % 100_000_000
                 _, action, _ = self.store.upsert(Lead(
@@ -178,6 +194,24 @@ class SyntheticLeadType(LeadType):
 
 
 LEAD_TYPE = SyntheticLeadType()
+
+
+class LaterSession(SyntheticSession):
+    """The synthetic lead type one discovery stage on (like hiring after the finders)."""
+
+    lead_type = "later"
+    discovery_stage = 1
+
+
+class LaterLeadType(SyntheticLeadType):
+    key = "later"
+    title = "Synthetic, stage 1 (tests)"
+
+    def open(self, context):
+        return LaterSession(context)
+
+
+LATER_LEAD_TYPE = LaterLeadType()
 
 
 def synthetic_config(name: str = "synthetic", *, budget: float | None = None,

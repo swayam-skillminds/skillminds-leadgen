@@ -23,7 +23,9 @@ from sqlalchemy import select
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from engine_fixtures import HOOKS, LEAD_TYPE, RECORDED, SyntheticSession, synthetic_config  # noqa: E402
+from engine_fixtures import (  # noqa: E402
+    HOOKS, LATER_LEAD_TYPE, LEAD_TYPE, RECORDED, SyntheticSession, synthetic_config,
+)
 from leadscraper.config import Config  # noqa: E402
 from leadscraper.config.compile import compile_run_config  # noqa: E402
 from leadscraper.config.schema import RunConfig  # noqa: E402
@@ -121,6 +123,117 @@ def test_a_unit_that_overruns_into_the_tail_is_cut(synthetic):
     statuses = {r["unit_key"]: r["status"] for r in unit_rows(engine, outcome.run_id)}
     engine.dispose()
     assert "partial" in statuses.values()
+
+
+# --- live check 2: a unit stuck on a throttled host ------------------------------------------
+
+@pytest.fixture
+def staged(synthetic):
+    registry.register(LATER_LEAD_TYPE)
+    yield
+    registry.unregister("later")
+
+
+def test_a_unit_stuck_on_a_throttled_host_is_cut_before_it_starves_later_stages(staged):
+    """Live check 2 (Austin): a LinkedIn SERP unit expected to take ~25 s sat for
+    12 minutes in Google's escalating penalty waits. Hiring's and funding_news's
+    units (stage 1, other hosts) waited for it until the deadline skipped them, and
+    post-discovery (the audit) never ran. An overrunning unit is now cut, at its
+    next paced request, once it would eat into time promised to the work behind it."""
+    opened: dict[str, SyntheticSession] = {}
+    HOOKS["opened"] = lambda session: opened.setdefault(session.lead_type, session)
+    stuck = {"source": "serp", "area": "A", "category": "C", "host": "google",
+             "seconds": 2_400.0, "new": 1, "requests": 240}      # 10 s a request, forever
+    document = synthetic_config("throttled", budget=20, units=[stuck],
+                                priors={"serp": [30.0, 1.0]}, post_seconds=50.0)
+    document["lead_types"]["later"] = {
+        "units": [{"source": "news", "area": "A", "category": "C", "host": "news",
+                   "seconds": 20.0, "new": 1}],
+        "priors": {"news": [20.0, 1.0]}}
+    outcome = execute(RunRequest(config=compiled(document), install_signals=False,
+                                 clock=FakeClock(), discovery_workers=2))
+
+    assert outcome.status == "completed"
+    assert outcome.elapsed_seconds <= 20 * 60 + 90
+    engine = app_engine()
+    rows = {r["source"]: r for r in unit_rows(engine, outcome.run_id)}
+    engine.dispose()
+    assert rows["news"]["status"] == "done"                  # stage 1 still ran
+    assert opened["synthetic"].post_done == 50.0             # and post-discovery
+    assert not outcome.skipped
+    assert rows["serp"]["status"] == "partial" and "cut" in rows["serp"]["error"]
+
+
+@pytest.mark.parametrize("news_new, expected, skipped", [
+    (3.0, "gdelt", "serp"),      # news outranks the SERP unit: its time is kept
+    (0.01, None, "gdelt"),       # it doesn't: the finders' unit runs, news waits its turn
+])
+def test_a_budget_keeps_time_for_later_stage_units_that_outrank_the_candidate(
+        news_new, expected, skipped):
+    """Live check 2 (Austin, rerun): with the stuck unit cut, the scheduler gave the
+    freed time to another near-empty SERP unit of stage 0, and funding_news's GDELT
+    unit (stage 1, better yield per second) no longer fitted."""
+    clock = FakeClock()
+    control = RunControl(budget_seconds=300, tail_seconds=0, clock=clock)
+    maps = Planned(WorkUnit("local_business", "maps", "A", "C"), None, 0, frozenset({"maps"}))
+    serp = Planned(WorkUnit("local_business", "serp", "A", "C"), None, 1,
+                   frozenset({"google"}))
+    news = Planned(WorkUnit("funding_news", "gdelt", "A", None), None, 2,
+                   frozenset({"gdelt"}), stage=1)
+    priors = {"maps": (100.0, 10.0), "serp": (150.0, 0.1), "gdelt": (60.0, news_new)}
+    model = CostModel(None, lambda unit: prior_cost(*priors[unit.source]),
+                      lambda unit: (unit.source, "*", "*"))
+    passed: list[str] = []
+    scheduler = Scheduler([maps, serp, news], model, control, order="priority",
+                          on_skip=lambda planned, reason: passed.append(planned.unit.source))
+
+    first = scheduler.next_ready(set())
+    assert first is maps
+    clock.advance(100.0)
+    scheduler.finished(first)
+    second = scheduler.next_ready(set())
+    if expected == "gdelt":
+        assert second is news and passed == ["serp"]
+    else:
+        assert second is serp
+        clock.advance(150.0)
+        scheduler.finished(second)
+        assert scheduler.next_ready(set()) is EXHAUSTED and passed == [skipped]
+
+
+def test_a_unit_within_its_estimate_or_without_a_budget_is_never_cut(staged):
+    stuck = {"source": "serp", "area": "A", "category": "C", "host": "google",
+             "seconds": 600.0, "new": 1, "requests": 60}
+    later = {"units": [{"source": "news", "area": "A", "category": "C", "host": "news",
+                        "seconds": 20.0, "new": 1}], "priors": {"news": [20.0, 1.0]}}
+    for budget, prior in ((None, 30.0), (20, 600.0)):
+        document = synthetic_config(f"uncut-{budget}", budget=budget, units=[stuck],
+                                    priors={"serp": [prior, 1.0]}, post_seconds=50.0)
+        document["lead_types"]["later"] = later
+        outcome = execute(RunRequest(config=compiled(document), install_signals=False,
+                                     clock=FakeClock(), discovery_workers=2))
+        engine = app_engine()
+        statuses = {r["source"]: r["status"] for r in unit_rows(engine, outcome.run_id)}
+        engine.dispose()
+        assert statuses == {"serp": "done", "news": "done"}, (budget, statuses)
+
+
+def test_an_abandoned_unit_is_not_left_running_in_a_finished_run(synthetic):
+    """Live check 2: a unit still in flight after the stop's grace period was
+    abandoned but left "running" in a run recorded as completed."""
+    hung = {"source": "slow", "area": "A", "category": "C", "host": "slow",
+            "seconds": 400.0, "new": 0, "hang": 1.5}        # past the deadline, then hung
+    config = compiled(synthetic_config("abandoned", budget=5, units=[hung],
+                                       priors={"slow": [30.0, 1.0]},
+                                       runtime={"stop_grace_seconds": 0.2}))
+    outcome = execute(RunRequest(config=config, install_signals=False, clock=FakeClock(),
+                                 discovery_workers=1))
+    assert outcome.status == "completed"
+    engine = app_engine()
+    rows = unit_rows(engine, outcome.run_id)
+    engine.dispose()
+    assert [(r["status"], "abandoned" in (r["error"] or "")) for r in rows] == [
+        ("partial", True)]
 
 
 def test_without_a_budget_every_unit_runs_in_plan_order(synthetic):

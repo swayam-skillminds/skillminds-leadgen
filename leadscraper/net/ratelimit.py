@@ -19,11 +19,26 @@ log = logging.getLogger(__name__)
 T = TypeVar("T")
 
 
+class UnitCut(BaseException):
+    """The engine cut the work unit this thread runs (it overran its estimate
+    into time the budget had promised to other work).
+
+    A BaseException, like KeyboardInterrupt, so the sources' own ``except
+    Exception`` guards don't record it as a failed request: it ends the unit,
+    which the engine records as ``partial`` (it runs again on resume).
+    """
+
+
 class RateLimiter:
     """Randomised per-key minimum interval between calls.
 
     Keys are usually hostnames, so two sources hitting google.com share a
     budget rather than each thinking they're being polite on their own.
+
+    ``interrupt`` (set by the engine) is asked before every request and about
+    once a second while pacing: when it says so, ``wait`` raises ``UnitCut``
+    instead of sleeping on. A host under an escalating penalty can make one
+    wait last minutes, and nothing else could stop the unit then.
     """
 
     def __init__(self, default_range: tuple[float, float] = (2.0, 5.0)):
@@ -33,6 +48,7 @@ class RateLimiter:
         self._lock = threading.Lock()
         # Escalating penalty applied after 429/403 responses, per key.
         self._penalty: dict[str, float] = {}
+        self.interrupt: Callable[[], bool] | None = None
 
     def configure(self, key: str, min_delay: float, max_delay: float) -> None:
         """Set the delay range for `key`, keeping whichever is more cautious.
@@ -56,7 +72,10 @@ class RateLimiter:
             return self._ranges.get(key, self._default)
 
     def wait(self, key: str) -> None:
-        """Block until it's polite to hit `key` again."""
+        """Block until it's polite to hit `key` again (``UnitCut``: don't)."""
+        interrupt = self.interrupt
+        if interrupt is not None and interrupt():
+            raise UnitCut(key)
         with self._lock:
             low, high = self._ranges.get(key, self._default)
             penalty = self._penalty.get(key, 0.0)
@@ -69,7 +88,16 @@ class RateLimiter:
             self._last_call[key] = now + sleep_for
         if sleep_for > 0:
             log.debug("pacing %s: sleeping %.1fs", key, sleep_for)
-            time.sleep(sleep_for)
+            if interrupt is None:
+                time.sleep(sleep_for)
+                return
+            # The slot stays reserved if we are cut: the next caller waits as
+            # if this request had been made, which errs on the polite side.
+            end = time.monotonic() + sleep_for
+            while (left := end - time.monotonic()) > 0:
+                time.sleep(min(left, 1.0))
+                if interrupt():
+                    raise UnitCut(key)
 
     def penalise(self, key: str, seconds: float = 30.0, cap: float = 300.0) -> None:
         """Slow down further after a block signal (429/403/CAPTCHA)."""

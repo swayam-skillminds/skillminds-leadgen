@@ -48,7 +48,11 @@ In both modes, `run`-scope units go first, and **stages** order lead types
 finished. The finders (`local_business`) are stage 0; lead types that attach
 signals to organisations others may hold (`hiring`, `funding_news`,
 `digital_audit`'s uploads) are stage 1, so they find the finders' records instead of racing them. Stages
-order units; they don't change what fits a budget (the estimate is the same).
+order units. Under a budget, a unit also leaves time for every queued
+later-stage unit that outranks it (better expected new organisations per
+second): those would have been chosen first had stages not forced the order,
+so ordering never costs a later stage its turn. A later-stage unit that doesn't
+outrank it waits its turn, as before. The estimate doesn't model stages yet.
 
 Post-discovery runs session by session in `post_order` (ties: registry
 order): `local_business` (0, enrichment and AI), `funding_news` (0, nothing to
@@ -66,10 +70,23 @@ The budget is
   enrichment estimate) when any enricher is active.
 
 A unit that overruns its estimate into the tail is cut (status `partial`) once
-half of the tail is spent, so a run finishes within budget + tail. A unit that
-hangs without yielding is abandoned after a grace period once a stop or the
-deadline arrives (`runtime.stop_grace_seconds`, 120 s, or half the tail on a
-budgeted run); it stays `running` in the checkpoint and runs again on resume.
+half of the tail is spent, so a run finishes within budget + tail.
+
+A unit that overruns its estimate is also cut **earlier**, once going on would
+eat into time promised to the work behind it: the post-discovery share plus the
+later-stage units that outrank it, with 30 s of headroom. The cut lands at its
+next paced request: the run's `RateLimiter` asks the engine before every
+request and about once a second while pacing (`RateLimiter.interrupt`), and
+raises `UnitCut` instead of waiting on. Without this, one SERP unit sitting in
+Google's escalating penalty (minutes per request) held every later stage and
+post-discovery until the deadline skipped them (live check 2). The unit keeps
+what it stored, is `partial`, and runs again on resume. Unbudgeted runs never
+cut a unit.
+
+A unit that hangs without yielding (a page load, not a pacing wait) is
+abandoned after a grace period once a stop or the deadline arrives
+(`runtime.stop_grace_seconds`, 120 s, or half the tail on a budgeted run); it
+is recorded `partial` ("abandoned") and runs again on resume.
 Units that don't run are listed with their reason in
 `stats.engine.skipped_units`, in `work_units.skip_reason`, as `unit_skipped`
 events and in the CLI report.

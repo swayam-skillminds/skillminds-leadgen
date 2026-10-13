@@ -193,3 +193,35 @@ def test_one_session_per_host(monkeypatch):
     assert set(sessions[0].mounted) == {"http://", "https://"}
     client.close()
     assert all(session.closed for session in sessions)
+
+
+# --- live check 2: a pacing wait the engine can cut ------------------------------------------
+
+def test_a_pacing_wait_ends_as_soon_as_the_engine_cuts_the_unit(monkeypatch):
+    """Under an escalating penalty one wait lasted 200 s; nothing could stop the
+    unit then. With ``interrupt`` set, the wait sleeps in one-second slices and
+    raises ``UnitCut`` once the engine says so."""
+    from leadscraper.net import ratelimit
+    from leadscraper.net.ratelimit import UnitCut
+
+    limiter = RateLimiter()
+    limiter.configure("throttled.example", 200.0, 200.0)
+    limiter.wait("throttled.example")                  # the first request never waits
+    slept: list[float] = []
+    monkeypatch.setattr(ratelimit.time, "sleep", slept.append)
+
+    answers = iter([False, False, False, True])
+    limiter.interrupt = lambda: next(answers)
+    with pytest.raises(UnitCut):
+        limiter.wait("throttled.example")
+    assert slept == [1.0, 1.0, 1.0]                     # cut on the third check, not 200 s
+
+    slept.clear()
+    limiter.interrupt = lambda: True                   # already cut: no request, no sleep
+    with pytest.raises(UnitCut):
+        limiter.wait("throttled.example")
+    assert slept == []
+
+    limiter.interrupt = None                           # no engine: one plain sleep, as before
+    limiter.wait("throttled.example")
+    assert len(slept) == 1 and slept[0] > 100

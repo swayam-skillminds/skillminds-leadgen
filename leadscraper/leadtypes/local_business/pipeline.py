@@ -37,7 +37,7 @@ from ...engine.parallel import HostQueue, run_across_hosts
 from ...net.http import HttpClient
 from ...core.country import format_money
 from ...core.lead import Lead
-from ...net.ratelimit import RateLimiter
+from ...net.ratelimit import RateLimiter, UnitCut
 from .scoring import Scorer
 from ...export.sheets import SheetsWriter
 from .planning import DiscoveryPlan, SelectionPlan, plan_discovery, select_sources
@@ -440,6 +440,10 @@ class Pipeline:
                     result.new += 1
                 elif action == "merged":
                     result.merged += 1
+        except UnitCut:
+            # The engine cut it while it waited on a host (an overrun under a
+            # budget); what it stored stays, and it runs again on resume.
+            result.status, result.error = "partial", "cut by the engine (overran its estimate)"
         except Exception as exc:
             # A source that raises despite its own guards must not kill the run.
             result.status, result.error = "failed", repr(exc)

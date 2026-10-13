@@ -41,6 +41,7 @@ from ..db.runs import (
 from ..db.store import LeadStore, store_target
 from ..leadtypes import registry
 from ..leadtypes.base import LeadTypeResult, UnitOutcome
+from ..net.ratelimit import UnitCut
 from . import events as ev
 from .clock import SYSTEM_CLOCK, Clock
 from .control import RunControl
@@ -61,6 +62,11 @@ DEFAULT_HEARTBEAT_SECONDS = 5.0
 DEFAULT_STALE_SECONDS = 60.0
 #: How long a stop waits for in-flight units before abandoning them.
 DEFAULT_STOP_GRACE_SECONDS = 120.0
+#: A unit cut for overrunning into time promised to other work (``_should_cut``).
+CUT_ERROR = "cut: overran its estimate into time promised to other work"
+#: A cut lands at the unit's next request, so it is made this much early: the
+#: work behind it must still fit once the unit has stopped.
+CUT_HEADROOM_SECONDS = 30.0
 
 
 class RunBusyError(RuntimeError):
@@ -275,6 +281,11 @@ class _Run:
         self.new = 0
         self.merged = 0
         self.discovery_started = 0.0
+        #: Discovery units in flight, by the thread running them: (unit, started).
+        self._in_flight: dict[int, tuple[Planned, float]] = {}
+        #: Seconds of the budget kept back for post-discovery.
+        self._reserve = 0.0
+        self._cut_keys: set[str] = set()
 
     # --- setup ------------------------------------------------------------------------
 
@@ -364,6 +375,8 @@ class _Run:
         from ..net.ratelimit import RateLimiter
 
         limiter = RateLimiter()
+        if budget:
+            limiter.interrupt = self._should_cut
         try:
             for key in keys:
                 lead_type = registry.get(key)
@@ -434,6 +447,7 @@ class _Run:
             phase = ((row or {}).get("checkpoint") or {}).get("phase", "discovery")
             post_p50 = est["post"]["p50_seconds"]
             reserve = min(share * budget, post_p50) if budget and post_p50 else 0.0
+            self._reserve = reserve
             self.eta = LiveEta(workers, post_p50, est["post"]["p90_seconds"],
                                est["finalise_seconds"])
             self.scheduler = Scheduler(planned, self.costs, control, order=order,
@@ -626,11 +640,17 @@ class _Run:
         def work(planned: Planned):
             self.store.tag_thread(planned.session.lead_type)
             started = self.clock.now()
+            thread = threading.get_ident()
+            self._in_flight[thread] = (planned, started)
             try:
                 outcome = planned.session.run_unit(planned.unit)
+            except UnitCut:
+                outcome = UnitOutcome(status="partial", error=CUT_ERROR)
             except Exception as exc:  # run_unit must not raise; contain it if it does
                 log.exception("unit %s crashed", planned.key)
                 outcome = UnitOutcome(status="failed", error=repr(exc))
+            finally:
+                self._in_flight.pop(thread, None)
             return outcome, self.clock.now() - started
 
         def done(planned: Planned, result, error) -> None:
@@ -652,6 +672,45 @@ class _Run:
         for planned in abandoned:
             log.warning("unit %s did not finish within %.0fs of the stop; abandoned (it runs "
                         "again on resume)", planned.key, grace)
+            # Not "running": the run ends here, and a finished run with a unit
+            # still in flight is a contradiction in its history.
+            try:
+                mark_unit(engine, run_id, planned.key, status="partial",
+                          error=f"abandoned: still running {grace:.0f}s after the stop",
+                          finished_at=datetime.now(timezone.utc))
+            except Exception as exc:
+                log.warning("could not checkpoint abandoned unit %s: %s", planned.key, exc)
+
+    def _should_cut(self) -> bool:
+        """Cut the discovery unit running on this thread? (``RateLimiter.interrupt``)
+
+        Only in a budgeted run, only a unit that has overrun its estimate, and
+        only once going on would eat into time the budget promised to the work
+        waiting behind it: the queued later-stage units that outrank it (the
+        scheduler's own promise) and the share kept for post-discovery. A unit stuck behind a host's escalating penalty
+        otherwise held every later stage and post-discovery until the deadline
+        skipped them (live check 2).
+        """
+        entry = self._in_flight.get(threading.get_ident())
+        control, scheduler = self.control, self.scheduler
+        if entry is None or control is None or scheduler is None or not control.budgeted:
+            return False
+        planned, started = entry
+        if planned.key in self._cut_keys:
+            return True
+        expected = planned.cost.seconds if planned.cost is not None else 0.0
+        ran = self.clock.now() - started
+        if ran <= expected:
+            return False
+        priority = planned.cost.priority if planned.cost is not None else 0.0
+        promised = self._reserve + scheduler.waiting_behind(planned.stage, priority)
+        if control.remaining() > promised + CUT_HEADROOM_SECONDS:
+            return False
+        self._cut_keys.add(planned.key)
+        log.warning("unit %s overran its estimate (%.0fs expected, %.0fs so far) into the "
+                    "%.0fs promised to the work behind it: cut (it runs again on resume)",
+                    planned.key, expected, ran, promised)
+        return True
 
     def _unit_done(self, planned: Planned, result, error) -> None:
         if error is not None or result is None:

@@ -560,3 +560,40 @@ def test_keyword_stuffed_names_are_cleaned_by_rule_when_ai_is_off(tmp_path, monk
     assert names == ["Best Caterers in Andheri | Book Now", "Royal Caterers"]
     royal = next(lead for lead in pipe.leads if lead.business_name == "Royal Caterers")
     assert "renamed by rule from: Royal Caterers | Best Caterers in Mumbai" in royal.notes
+
+
+# --- live check 2: a unit the engine cuts mid-source ------------------------------------------
+
+class PacedSource(Source):
+    """Yields one lead, then waits on a host the engine has cut the unit on."""
+
+    name = "stub"
+
+    def discover(self, locality, category):
+        yield self.make_lead(business_name="First Paced Lead", category=category.name,
+                             locality=locality.name, phones=["+912226700001"])
+        try:
+            self.ctx.limiter.wait("throttled.example")
+        except Exception:                               # a source's own guard
+            self.ctx.failures.record(self.name, "fetch_failed")
+            return
+        yield self.make_lead(business_name="Never Reached", category=category.name,
+                             locality=locality.name, phones=["+912226700002"])
+
+
+def test_a_unit_cut_by_the_engine_is_partial_and_keeps_what_it_stored(tmp_path, monkeypatch):
+    from leadscraper.net.ratelimit import RateLimiter
+
+    monkeypatch.setattr(pipeline_mod, "DISCOVERY_SOURCES", {"stub": PacedSource})
+    monkeypatch.setattr(pipeline_mod, "ENRICHMENT_SOURCES", {})
+    config = make_config(tmp_path)
+    limiter = RateLimiter()
+    limiter.interrupt = lambda: True
+    pipe = build(config, source_names=["stub"], enricher_names=[], limiter=limiter,
+                 engine_driven=True)
+    result = pipe.run_planned_unit(pipe.discovery_units()[0])
+
+    assert (result.status, result.found) == ("partial", 1)
+    assert "cut" in result.error
+    assert [lead.business_name for lead in pipe.store.all_leads()] == ["First Paced Lead"]
+    assert not pipe.failures._records                   # a cut is not a failed request

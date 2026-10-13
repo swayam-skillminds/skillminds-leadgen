@@ -17,6 +17,10 @@ that can't finish:
   unit starts only once every unit of an earlier stage has finished, so a
   lead type that attaches signals to organisations (``hiring``) sees what the
   finders (``local_business``) found, rather than racing them for a record.
+  Under a budget a unit leaves time for every queued later-stage unit that
+  outranks it (better yield per second), so ordering never costs a later
+  stage its turn (live check 2: hiring and funding_news were skipped while
+  near-empty SERP units of stage 0 used up the budget).
 
 Without a time budget the units run in **plan order** -- exactly the order
 the original scraper used -- so unbudgeted runs (both legacy presets) are
@@ -88,12 +92,14 @@ class Scheduler:
                 stages += [stage for stage, count in self._running.items() if count > 0]
                 current = min(stages)
                 skipped = False
+                later = self._later() if self.control.budgeted else []
                 for planned in self._ordered():
                     if planned.stage > current or planned.hosts & busy:
                         continue
                     cost = self.costs.cost(planned.unit)
                     if self.control.budgeted and not self.control.fits(
-                            cost.seconds, reserve=self._reserve()):
+                            cost.seconds, reserve=self._reserve() + _promised(
+                                later, planned.stage, cost.priority)):
                         self._skip(planned, SKIP_BUDGET)
                         skipped = True
                         continue
@@ -125,6 +131,22 @@ class Scheduler:
             for planned in list(self._pending):
                 self._skip(planned, reason)
 
+    def _later(self) -> list[tuple[int, float, float]]:
+        """(stage, priority, seconds) of every queued unit past stage 0. Under the lock."""
+        out = []
+        for planned in self._pending:
+            if planned.stage > 0:
+                cost = self.costs.cost(planned.unit)
+                out.append((planned.stage, cost.priority, cost.seconds))
+        return out
+
+    def waiting_behind(self, stage: int, priority: float) -> float:
+        """Seconds promised to queued later-stage units that outrank a unit of
+        ``stage`` with this priority (see ``_promised``)."""
+        with self._lock:
+            later = self._later()
+        return _promised(later, stage, priority)
+
     def expected_remaining(self) -> tuple[float, float]:
         """(mean seconds, variance) of everything still queued."""
         with self._lock:
@@ -135,3 +157,13 @@ class Scheduler:
             total += cost.seconds
             var += cost.sd ** 2
         return total, var
+
+
+def _promised(later: list[tuple[int, float, float]], stage: int, priority: float) -> float:
+    """Seconds a unit of ``stage`` and ``priority`` must leave to the later
+    stages: the expected seconds of each queued later-stage unit that outranks
+    it. Under a budget those would have been chosen first had stages not forced
+    the order, so time is kept for them. One that doesn't outrank it waits its
+    turn and is skipped if the budget runs out, as it would be anyway."""
+    return sum(seconds for unit_stage, unit_priority, seconds in later
+               if unit_stage > stage and unit_priority > priority)
