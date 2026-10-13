@@ -659,6 +659,93 @@ def orgs_named(config, name: str) -> list[dict]:
     return [o for o in project_rows(config, Organization) if o["name"] == name]
 
 
+def test_review_a_ted_buyer_id_written_two_ways_is_one_buyer(tmp_path):
+    assert ted.buyer_id("IE 20110042", "IE") == ted.buyer_id("20110042", "IE") == \
+        ted.buyer_id("ie-20110042", "IE") == "20110042"
+    assert ted.buyer_id("NA", "IE") == "" and ted.buyer_id("IEUA1234", "IE") == "IEUA1234"
+    store = LeadStore(f"sqlite:///{tmp_path / 'ted.sqlite3'}", project="ted")
+    s = session(tmp_path, store=store)
+    for number, spelled in (("900201-2026", "20110042"), ("900202-2026", "IE 20110042")):
+        notice = {**TED["notices"][0], "publication-number": number,
+                  "organisation-identifier-buyer": [spelled]}
+        s.record(ted.parse(json.loads(relative(json.dumps(notice))), "IE"), {"codes": []})
+    names = [lead.business_name for _, lead in store.all_with_ids()]
+    store.close()
+    assert names == ["Fernvale County Council"]
+
+
+def test_review_same_named_buyers_in_two_towns_stay_two(tmp_path):
+    store = LeadStore(f"sqlite:///{tmp_path / 'towns.sqlite3'}", project="towns")
+    s = session(tmp_path, store=store)
+    for number, town in (("900500-2026", "Fernvale"), ("900501-2026", "Kilbarra")):
+        notice = {"publication-number": number, "publication-date": "@date:3",
+                  "notice-type": "cn-standard", "title-proc": {"eng": "Website"},
+                  "classification-cpv": ["72000000"],
+                  "deadline-receipt-tender-date-lot": ["@date:-10"],
+                  "buyer-name": {"eng": ["Municipal District Office"]},
+                  "buyer-city": {"mul": [town]}, "buyer-country": ["IRL"]}
+        s.record(ted.parse(json.loads(relative(json.dumps(notice))), "IE"), {"codes": []})
+    towns = sorted(lead.locality for _, lead in store.all_with_ids())
+    store.close()
+    assert towns == ["Fernvale", "Kilbarra"]
+
+
+def test_review_no_codes_named_means_words_decide(tmp_path):
+    notices = {n.notice_id: n for n in ted.TedTenders().search(tender_web(), query("IE"))}
+    words_only = session(tmp_path, cpv=[], keywords=["case management"])
+    assert words_only.wanted(notices["900101-2026"])[0]
+    assert words_only.wanted(notices["900102-2026"])[1] == "skipped_unmatched"
+
+
+def test_review_a_json_answer_mentioning_access_denied_is_not_a_block_page(monkeypatch):
+    from leadscraper.net.http import HttpClient
+    from leadscraper.net.ratelimit import RateLimiter
+
+    def response(content_type: str):
+        r = requests.Response()
+        r.status_code, r._content = 200, b'{"title": "Access denied logging for CCTV"}'
+        r.headers["Content-Type"] = content_type
+        return r
+
+    class Session:
+        headers: dict = {}
+
+        def __init__(self, content_type):
+            self.content_type = content_type
+
+        def post(self, url, **kwargs):
+            return response(self.content_type)
+
+    client = HttpClient(RateLimiter((0.0, 0.0)), max_retries=1)
+    monkeypatch.setattr(client, "session_for", lambda host: Session("application/json"))
+    monkeypatch.setattr("leadscraper.net.http.resolution_failure", lambda host: None)
+    assert client.post("https://api.example.org/search", json={}).json()["title"]
+    monkeypatch.setattr(client, "session_for", lambda host: Session("text/html"))
+    with pytest.raises(BlockedError):                       # a page saying so still is one
+        client.post("https://api.example.org/search", json={})
+
+
+def test_review_a_key_is_redacted_as_a_url_quotes_it():
+    assert sam_gov._redact("401 for url: https://x?api_key=k%2Fy%2Bz", "k/y+z") == \
+        "401 for url: https://x?api_key=***"
+    assert sam_gov._redact("api_key=k%2Fy+z", "k/y z") == "api_key=***"
+
+
+def test_review_catalog_still_says_key_not_configured_after_a_keyless_run(
+        tmp_path, monkeypatch, portals):
+    monkeypatch.delenv("LEADSCRAPER_SECRET_SAM_GOV_API_KEY", raising=False)
+    section = {"sources": {"sam_gov": {"min_delay": 0, "max_delay": 0}}}
+    config, outcome = run(tmp_path, monkeypatch, "health", {"tenders": section},
+                          country="US", places=("Austin",))
+    target, kwargs = store_target(config)
+    store = LeadStore(target, **kwargs)
+    rows = [s for s in catalog.sources(store.engine, default_workspace(store.engine),
+                                       country="US") if s["name"] == "sam_gov"]
+    store.close()
+    assert rows[0]["health"]["status"] == "key_not_configured"
+    assert rows[0]["health"]["failures"] == {"key_not_configured": 1}
+
+
 def test_a_deadline_is_stored_as_the_same_moment_in_any_zone(tmp_path):
     """SQLite keeps a time's wall clock and drops its offset: 1 pm IST must read back as
     07:30 UTC, never as 1 pm UTC (live, GeM's deadlines came back 5.5 hours late)."""

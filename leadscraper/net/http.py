@@ -429,7 +429,10 @@ class HttpClient:
                 self.limiter.penalise(key, seconds=45.0)
                 raise BlockedError(f"HTTP {response.status_code} from {key}")
             response.raise_for_status()
-            if self.looks_blocked(response.text):
+            # A bot wall is a page; an API's JSON that mentions "access denied" (a tender
+            # for an access-control system) is data, not a block.
+            is_json = "json" in str(response.headers.get("Content-Type") or "").lower()
+            if not is_json and self.looks_blocked(response.text):
                 self.limiter.penalise(key, seconds=90.0)
                 raise BlockedError(f"block/CAPTCHA page returned by {key}")
             self.limiter.relax(key)

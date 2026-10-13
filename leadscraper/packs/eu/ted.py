@@ -98,15 +98,24 @@ def _places(notice: dict[str, Any]) -> list[str]:
     return list(dict.fromkeys(clean(v, 100) for v in (value or []) if v))
 
 
+def buyer_id(value: Any, country: str) -> str:
+    """The buyer's national identifier, written one way: buyers type it into each notice
+    ("20110042", "IE 20110042", "ie-20110042"), and it is an identity key. Letters and
+    digits only, upper case, without a leading country code; "" for none ("NA")."""
+    text = "".join(ch for ch in str(value or "").upper() if ch.isalnum())
+    if country and text.startswith(country.upper()) and len(text) > len(country) + 2 \
+            and text[len(country)].isdigit():
+        text = text[len(country):]
+    return "" if text in ("", "NA", "NONE", "0") else text
+
+
 def parse(notice: dict[str, Any], country: str) -> Tender | None:
     number_ = str(notice.get("publication-number") or "").strip()
     buyer_name = clean(text_of(notice.get("buyer-name")), 300)
     if not number_ or not buyer_name:
         return None
     title = clean(text_of(notice.get("title-proc")) or text_of(notice.get("notice-title")), 500)
-    identifier = str(first(notice.get("organisation-identifier-buyer")) or "").strip()
-    if identifier.upper() in ("NA", "N/A", "-", "0"):
-        identifier = ""
+    identifier = buyer_id(first(notice.get("organisation-identifier-buyer")), country)
     buyer = Buyer(
         name=buyer_name,
         identifier=f"{country}:{identifier}" if identifier else "",

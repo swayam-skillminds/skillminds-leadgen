@@ -232,7 +232,8 @@ def _lead_type_sources(health: dict[str, Any], country: str | None) -> list[dict
                 # Phase 7: a source that only answers with an API key says whether one is
                 # configured (never the key) and where to get one.
                 row["key"] = dict(key)
-                if not key.get("configured") and row["health"].get("status") == "unknown":
-                    row["health"] = {"status": KEY_NOT_CONFIGURED}
+                if not key.get("configured"):
+                    # Whatever its history: without a key it is skipped every run.
+                    row["health"] = {**row["health"], "status": KEY_NOT_CONFIGURED}
             out.append(row)
     return out

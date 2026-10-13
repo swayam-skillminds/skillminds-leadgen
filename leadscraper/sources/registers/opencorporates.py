@@ -26,7 +26,14 @@ API = "https://api.opencorporates.com/v0.4/companies/search"
 
 
 def _redact(text: str, key: str | None) -> str:
-    return text.replace(key, "***") if key else text
+    """The token out of an error's text, as typed and as a URL quotes it."""
+    if not key:
+        return text
+    from urllib.parse import quote, quote_plus
+
+    for form in {key, quote(key, safe=""), quote_plus(key)}:
+        text = text.replace(form, "***")
+    return text
 
 
 def parse(company: dict[str, Any]) -> Incorporation | None:

@@ -252,7 +252,9 @@ class TendersSession(LeadTypeSession):
             section.naics if tender.scheme == "naics" else []
         codes = code_matches(tender.codes, wanted_codes) if tender.codes else []
         words = keyword_hits(tender.text, section.keywords)
-        coded = bool(tender.scheme and tender.codes)
+        # "auto" decides by code only where the portal classifies *and* the run names codes
+        # of that scheme; with none (cpv: []), words decide, as the portal was asked.
+        coded = bool(tender.scheme and tender.codes and wanted_codes)
         keep = {"auto": bool(codes) if coded else bool(words), "codes": bool(codes),
                 "keywords": bool(words), "any": bool(codes or words)}[section.match]
         if not keep:
@@ -353,15 +355,17 @@ class TendersSession(LeadTypeSession):
     def _resolve(self, lead: Lead, outcome: UnitOutcome) -> int | None:
         """The buyer's organisation: one the project holds keeps its record (A.3); a buyer
         nobody holds becomes a new organisation when ``create_new``."""
+        # Only a buyer with a portal id is cached: same-named buyers in two towns (two
+        # "Municipal District Office"s) must each go through the identity rules.
         ids = lead.registry_ids
-        cache_key = f"{next(iter(ids))}:{next(iter(ids.values()))}" if ids else \
-            lead.business_name.casefold()
-        cached = self._buyers.get(cache_key)
+        cache_key = f"{next(iter(ids))}:{next(iter(ids.values()))}" if ids else None
+        cached = self._buyers.get(cache_key) if cache_key else None
         if cached is not None and self.store.get(cached) is not None:
             return cached
         match = self.store.find_match(lead.normalized())
         if match is not None:
-            self._buyers[cache_key] = match
+            if cache_key:
+                self._buyers[cache_key] = match
             with self._lock:
                 self.stats["attached"] += 1
             return match
@@ -372,7 +376,8 @@ class TendersSession(LeadTypeSession):
         org_id, action, _ = self.store.upsert(lead)
         outcome.new += action == "new"
         outcome.merged += action == "merged"
-        self._buyers[cache_key] = org_id
+        if cache_key:
+            self._buyers[cache_key] = org_id
         return org_id
 
     # --- the end ------------------------------------------------------------------------
