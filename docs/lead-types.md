@@ -752,15 +752,20 @@ lead_types:
 
 - **Where apps come from.** Apple's Search API by keyword in the run's
   storefront; apps the config names; and App Store / Play badges on the run's
-  (or project's) organisations' own homepages -- an app a site links is that
-  organisation's, whoever built it. **Google Play is never searched**: its
+  (or project's) organisations' own homepages. A linked app is the organisation's
+  own when its developer's site is the organisation's or its name (or developer)
+  carries the organisation's name ("Baner Bakes Order" for Baner Bakes, built by an
+  agency); a delivery platform or booking aggregator a site links is judged like
+  any other app and resolved to its own developer. **Google Play is never searched**: its
   robots.txt disallows `/store/search` and Google's terms tie automated access to
   robots.txt. A Play listing is read for a package the config or a site names, or
   for an App Store app's bundle id, kept only when it names the same developer
-  website (`match_ios`). Apple's web pages and review feeds are never read
+  website, the developer's own site, never a shared host (`match_ios`). Discovery
+  (twins, listed apps) and organisations' sites each have `max_listings` Play
+  reads; a spent budget is recorded once (`budget_spent`). Apple's web pages and review feeds are never read
   (Apple's site terms; robots.txt): Apple facts come from the API only.
 - **Which apps count.** Not an excluded genre (Games by default), inside the
-  download band, rated by at most `max_ratings` people in either store, and in
+  download band (Play's, the iOS twin's included), rated by at most `max_ratings` people in either store, and in
   scope: `country` (the default) needs evidence the developer is in the run's
   country (Play's developer address, the country's domain such as `.in` or
   `.co.uk`, or the app naming the country or a run place) -- a storefront lists
