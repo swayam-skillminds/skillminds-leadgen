@@ -41,6 +41,9 @@ from leadscraper.sources.apps.themes import complaints, themes, unplaced
 from leadscraper.sources.base import Source
 
 UTC = timezone.utc
+#: Projects are this session's own, even in a database another session used
+#: (the opt-in Postgres engine database keeps its rows).
+SESSION = __import__("uuid").uuid4().hex[:8]
 TODAY = datetime.now(UTC).date()
 SEARCH = "https://itunes.apple.com/search"
 LOOKUP = "https://itunes.apple.com/lookup"
@@ -339,7 +342,7 @@ def stores(monkeypatch):
 def run(tmp_path, monkeypatch, name: str, lead_types: dict, *, places=("Pune",)):
     (tmp_path / name).mkdir(exist_ok=True)
     monkeypatch.setenv("LEADSCRAPER_DATA_DIR", str(tmp_path / name))
-    document = {"name": "App store test", "project": f"appstore-{tmp_path.name}-{name}",
+    document = {"name": "App store test", "project": f"appstore-{SESSION}-{tmp_path.name}-{name}",
                 "geography": {"country": "IN", "places": list(places)},
                 "lead_types": lead_types, "runtime": {"db_url": run_database(tmp_path, name)}}
     config = compile_run_config(RunConfig.model_validate(document))
@@ -575,7 +578,7 @@ def test_run_py_exits_0_for_a_completed_run_without_local_business(tmp_path, mon
     monkeypatch.setenv("LEADSCRAPER_DATA_DIR", str(tmp_path / "cli"))
     path = tmp_path / "apps.yaml"
     path.write_text(yaml.safe_dump({
-        "schema_version": 1, "name": "Apps only", "project": f"apps-only-{tmp_path.name}",
+        "schema_version": 1, "name": "Apps only", "project": f"apps-only-{SESSION}-{tmp_path.name}",
         "geography": {"country": "IN", "places": ["Pune"]},
         "lead_types": {"local_business": {"enabled": False}, "app_store": FAST},
         "runtime": {"db_url": run_database(tmp_path, "cli")}}), encoding="utf-8")
@@ -701,7 +704,7 @@ def test_review_run_py_exits_1_when_a_lead_type_failed(tmp_path, monkeypatch, st
     monkeypatch.setenv("LEADSCRAPER_DATA_DIR", str(tmp_path / "cli-fail"))
     path = tmp_path / "two.yaml"
     path.write_text(yaml.safe_dump({
-        "schema_version": 1, "name": "Two", "project": f"two-{tmp_path.name}",
+        "schema_version": 1, "name": "Two", "project": f"two-{SESSION}-{tmp_path.name}",
         "geography": {"country": "IN", "places": ["Pune"]},
         "lead_types": {"local_business": {"enabled": False}, "app_store": FAST,
                        "tech_stack": {}},

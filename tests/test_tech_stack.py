@@ -41,6 +41,9 @@ from leadscraper.sources.google_search import SerpResult
 from leadscraper.sources.web.fingerprint import canonical, detect, names, rule, rules
 
 UTC = timezone.utc
+#: Projects are this session's own, even in a database another session used
+#: (the opt-in Postgres engine database keeps its rows).
+SESSION = __import__("uuid").uuid4().hex[:8]
 BISTRO = "https://oldmill-bistro.example/"
 DENTAL = "https://brightwater-dental.example/"
 SPICE = "https://deccan-spice.example/"
@@ -211,7 +214,7 @@ def sites(monkeypatch):
 def run(tmp_path, monkeypatch, name: str, lead_types: dict, *, force=False, places=("Pune",)):
     (tmp_path / name).mkdir(exist_ok=True)
     monkeypatch.setenv("LEADSCRAPER_DATA_DIR", str(tmp_path / name))
-    document = {"name": "Tech stack test", "project": f"techstack-{tmp_path.name}-{name}",
+    document = {"name": "Tech stack test", "project": f"techstack-{SESSION}-{tmp_path.name}-{name}",
                 "geography": {"country": "IN", "places": list(places)},
                 "lead_types": lead_types, "runtime": {"db_url": run_database(tmp_path, name)}}
     config = compile_run_config(RunConfig.model_validate(document))
