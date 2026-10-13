@@ -389,8 +389,11 @@ class TechStackSession(LeadTypeSession):
                 strength=SPEC_OF[type_].default_strength, source_url=check.url,
                 source=SOURCE))
         self.store.prune_signals(org_id, keep)
+        # A site with nothing the run looks for keeps the record of its check (the recheck
+        # window), but doesn't join the run: digital_audit's "run" scope and the run's diff
+        # read run membership (review 2026-10-13).
         self.store.set_attribute(org_id, KEY, self.summary(check, found), origin="rule",
-                                 producer=KEY)
+                                 producer=KEY, note_run=bool(found))
         with self._lock:
             self.checked_ids.add(org_id)
             self.stats["checked"] += 1

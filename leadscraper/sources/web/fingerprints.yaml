@@ -179,7 +179,7 @@ technologies:
     vendor: [vuejs.org]
   React:
     category: JavaScript framework
-    scripts: ['react(?:-dom)?@([\d.]+)', 'react-dom(?:\.production)?(?:\.min)?\.js']
+    scripts: ['(?<![\w-])react(?:-dom)?@([\d.]+)', '(?<![\w-])react-dom(?:\.production)?(?:\.min)?\.js']
     html: ['\sdata-reactroot[\s>=]']
     vendor: [react.dev, reactjs.org]
   TYPO3:

@@ -475,3 +475,32 @@ def test_live_fingerprint_of_a_wordpress_site(tmp_path):
         "The Mozilla Blog", "https://blog.mozilla.org/")
     assert check.checked, check.notes
     assert "WordPress" in [d.name for d in check.stack]
+
+
+# --- the review's findings (2026-10-13) ------------------------------------------------------------
+
+def test_review_preact_is_not_react():
+    found = [d.label for d in detect("", {}, script_urls=[
+        "https://cdn.example/npm/preact@10.19.3/dist/preact.min.js"])]
+    assert found == []
+    assert [d.label for d in detect("", {}, script_urls=[
+        "https://unpkg.com/react@18.2.0/umd/react.production.min.js"])] == ["React 18.2.0"]
+
+
+def test_review_a_check_that_finds_nothing_does_not_join_the_run(tmp_path, monkeypatch, sites):
+    from leadscraper.db.models import RunOrganization
+
+    config, _ = run(tmp_path, monkeypatch, "membership", LOCAL)
+    project = {**TECH, "check": "project"}
+
+    def members(outcome) -> list[str]:
+        names = {o["id"]: o["name"] for o in project_rows(config, Organization)}
+        return sorted(names[r["organization_id"]] for r in project_rows(config, RunOrganization)
+                      if r["run_id"] == outcome.run_id)
+
+    _, nothing = run(tmp_path, monkeypatch, "membership",
+                     {"tech_stack": {**project, "technologies": ["Joomla"]}})
+    assert nothing.results["tech_stack"].stats["checked"] == 3
+    assert members(nothing) == []        # digital_audit's "run" scope and the diff see nothing
+    _, found = run(tmp_path, monkeypatch, "membership", {"tech_stack": project}, force=True)
+    assert members(found) == ["Deccan Spice Traders", "Old Mill Bistro"]

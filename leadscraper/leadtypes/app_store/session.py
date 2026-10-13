@@ -98,10 +98,14 @@ class AppStoreSession(LeadTypeSession):
                                       "play_listings": 0, "play_matched": 0, "sites_read": 0,
                                       "site_apps": 0, "skipped_genre": 0, "skipped_place": 0,
                                       "skipped_country": 0, "skipped_size": 0,
+                                      "site_apps_not_own": 0, "play_budget_spent": 0,
                                       "skipped_installs": 0, "skipped_unknown": 0,
                                       "ai_themes": 0}
-        #: Apps assessed this run (store:id): each once.
-        self.seen: set[str] = set()
+        #: (store:id, organisation or None) assessed this run: each once.
+        self.seen: set[tuple[str, int | None]] = set()
+        #: Play listings read per budget ("discovery": twins and listed apps; "sites").
+        self.play_spent = {"discovery": 0, "sites": 0}
+        self.budget_noted: set[str] = set()
         self.places = [p for p in dict.fromkeys(str(p).strip() for p in
                                                 (self.config.get("places") or [])) if p]
         try:
@@ -133,7 +137,9 @@ class AppStoreSession(LeadTypeSession):
     def prior(self, unit: WorkUnit) -> UnitCost:
         sources = self.section.sources
         if unit.source == ITUNES:
-            play = min(10, sources.google_play.max_listings) \
+            keywords = max(1, sum(1 for u in self._units if u.source == ITUNES))
+            play = min(sources.itunes.max_results,
+                       sources.google_play.max_listings / keywords) \
                 if sources.google_play.enabled and sources.google_play.match_ios else 0
             return prior_cost(self._delay(sources.itunes) + play * self._delay(
                 sources.google_play), 2.0)
@@ -184,7 +190,7 @@ class AppStoreSession(LeadTypeSession):
             self.kit.failures.record(ITUNES, "no_results", query=keyword)
         outcome = UnitOutcome(status="done", found=len(found))
         for listing in found:
-            self._add(outcome, self.consider([listing]))
+            self._add(outcome, self.safe_consider([listing]))
         return outcome
 
     def listed(self) -> UnitOutcome:
@@ -194,39 +200,65 @@ class AppStoreSession(LeadTypeSession):
         apple = [app_id for store, app_id in refs if store == APP_STORE]
         if apple:
             try:
-                for listing in itunes.lookup(self.kit.http, apple, self.country):
-                    self._add(outcome, self.consider([listing], explicit=True))
+                found = itunes.lookup(self.kit.http, apple, self.country)
             except Exception as exc:
                 self._fetch_failed(ITUNES, exc, query="lookup")
+                found = []
+            else:
+                for missing in sorted(set(apple) - {x.app_id for x in found}):
+                    self.kit.failures.record(LISTED, "app_not_found", query=f"id{missing}",
+                                             detail=f"no App Store app id{missing} in the "
+                                                    f"{self.country.upper()} storefront")
+            for listing in found:
+                self._add(outcome, self.safe_consider([listing], explicit=True))
         for store, package in refs:
             if store == GOOGLE_PLAY:
-                listing = self.play(package)
+                listing = self.play(package, budget="discovery", note_missing=True)
                 if listing is not None:
-                    self._add(outcome, self.consider([listing], explicit=True))
+                    self._add(outcome, self.safe_consider([listing], explicit=True))
         return outcome
 
-    def play(self, package: str) -> AppListing | None:
-        """One Play listing, within the run's budget; None if not listed or not readable."""
-        with self._lock:
-            if self.stats["play_listings"] >= self.section.sources.google_play.max_listings:
-                return None
-            self.stats["play_listings"] += 1
-        if not self.section.sources.google_play.enabled:
+    def play(self, package: str, *, budget: str, note_missing: bool = False) -> AppListing | None:
+        """One Play listing, within its budget; None if not listed, not readable or over
+        budget. Discovery (iOS twins, listed apps) and organisations' own sites each have
+        ``max_listings``: a busy search never starves the sites' own apps."""
+        settings = self.section.sources.google_play
+        if not settings.enabled:
             return None
+        with self._lock:
+            if self.play_spent[budget] >= settings.max_listings:
+                if budget not in self.budget_noted:
+                    self.budget_noted.add(budget)
+                    self.stats["play_budget_spent"] += 1
+                    self.kit.failures.record(GOOGLE_PLAY, "budget_spent", detail=(
+                        f"{settings.max_listings} Play listings read for {budget}; the rest "
+                        "were not (sources.google_play.max_listings)"))
+                return None
+            self.play_spent[budget] += 1
+            self.stats["play_listings"] += 1
         try:
-            return google_play.fetch(self.kit.http, package, self.country or "us")
+            listing = google_play.fetch(self.kit.http, package, self.country or "us")
         except Exception as exc:
             self._fetch_failed(GOOGLE_PLAY, exc, url=google_play.public_url(package))
             return None
+        if listing is None and note_missing:
+            self.kit.failures.record(GOOGLE_PLAY, "app_not_found",
+                                     url=google_play.public_url(package),
+                                     detail=f"{package} isn't listed in the "
+                                            f"{(self.country or 'us').upper()} store")
+        return listing
 
     def _ios_twin(self, listing: AppListing) -> AppListing | None:
         """The Play listing of an App Store app: its bundle id as a package, kept only when
         the listing names the same developer website."""
         play = self.section.sources.google_play
+        # A shared host (a social profile, a link-in-bio page) proves nothing about who
+        # published an app: only the developer's own site confirms a twin.
         if not (play.enabled and play.match_ios and listing.store == APP_STORE
-                and listing.developer_website and is_package(listing.bundle_id)):
+                and listing.developer_website and is_vendor_website(listing.developer_website)
+                and is_package(listing.bundle_id)):
             return None
-        twin = self.play(listing.bundle_id)
+        twin = self.play(listing.bundle_id, budget="discovery")
         if twin is None or domain_of(twin.developer_website) != domain_of(
                 listing.developer_website):
             return None
@@ -242,6 +274,13 @@ class AppStoreSession(LeadTypeSession):
 
     # --- which apps count -------------------------------------------------------------------
 
+    def installs_out(self, listing: AppListing) -> bool:
+        """Outside the run's download band (Play's; an App Store listing shows none)."""
+        installs = self.section.installs
+        return listing.installs_min is not None and (
+            (installs.min is not None and listing.installs_min < installs.min) or
+            (installs.max is not None and listing.installs_min > installs.max))
+
     def unwanted(self, listing: AppListing) -> str:
         """"" to assess it, else the stat that says why not."""
         genre = _words(listing.genre)
@@ -251,10 +290,7 @@ class AppStoreSession(LeadTypeSession):
         if self.section.genres and not any(_words(g) and _words(g) in genre
                                            for g in self.section.genres):
             return "skipped_genre"
-        installs = self.section.installs
-        if listing.installs_min is not None and (
-                (installs.min is not None and listing.installs_min < installs.min) or
-                (installs.max is not None and listing.installs_min > installs.max)):
+        if self.installs_out(listing):
             return "skipped_installs"
         return ""
 
@@ -298,32 +334,64 @@ class AppStoreSession(LeadTypeSession):
         names it. Either way the run's genre, download and scope filters don't apply."""
         outcome = UnitOutcome(status="done")
         first = listings[0]
+        # Seen per (app, organisation): an app the search passed over (or gave to its
+        # developer) is still the question for the organisation whose own site links it.
         with self._lock:
-            if first.key in self.seen:
+            if (first.key, org_id) in self.seen:
                 return outcome
-            self.seen.add(first.key)
+            self.seen.add((first.key, org_id))
             self.stats["apps"] += 1
         chosen = org_id is not None or explicit
-        why = "" if chosen else self.unwanted(first)
+        # Cheap checks first: no Play listing is read for an app they already leave out.
+        why = "" if chosen else (self.unwanted(first) or self.too_big([first]))
         if why:
             with self._lock:
                 self.stats[why] += 1
             return outcome
-        twin = self._ios_twin(first)
+        twin = self._ios_twin(first) if org_id is None else None
         if twin is not None:
             with self._lock:
-                if twin.key in self.seen:
+                if (twin.key, org_id) in self.seen:
                     twin = None
                 else:
-                    self.seen.add(twin.key)
+                    self.seen.add((twin.key, org_id))
             if twin is not None:
                 listings = [first, twin]
-        why = "" if chosen else (self.too_big(listings) or self.out_of_scope(listings))
+        why = "" if chosen else (
+            ("skipped_installs" if any(self.installs_out(x) for x in listings) else "")
+            or self.too_big(listings) or self.out_of_scope(listings))
         if why:
             with self._lock:
                 self.stats[why] += 1
             return outcome
         return self.record(listings, org_id, outcome)
+
+    def safe_consider(self, listings: list[AppListing], org_id: int | None = None, *,
+                      explicit: bool = False) -> UnitOutcome:
+        """``consider``, contained: one app's surprise costs that app, not its unit."""
+        try:
+            return self.consider(listings, org_id, explicit=explicit)
+        except Exception as exc:
+            log.exception("assessing %s failed", listings[0].key)
+            self.kit.failures.record(listings[0].store, "assess_failed", url=listings[0].url,
+                                     detail=repr(exc)[:300])
+            return UnitOutcome(status="done")
+
+    def owns(self, lead: Lead, listing: AppListing) -> bool:
+        """Is an app a site links that organisation's own? Its developer's site is the
+        organisation's, or the app (or its developer) carries the organisation's name
+        ("Baner Bakes Order" for Baner Bakes). A delivery platform or booking aggregator a
+        site links is somebody else's app (review 2026-10-13)."""
+        from rapidfuzz import fuzz
+
+        if listing.developer_website and lead.website and \
+                domain_of(listing.developer_website) == domain_of(lead.website):
+            return True
+        name = _words(lead.business_name)
+        if len(name) < 4:
+            return False
+        return any(fuzz.token_set_ratio(name, _words(text)) >= 90
+                   for text in (listing.name, listing.developer) if text)
 
     # --- assessing ----------------------------------------------------------------------
 
@@ -497,7 +565,7 @@ class AppStoreSession(LeadTypeSession):
             log.exception("app_store could not list its organisations")
             self.kit.failures.record(KEY, "post_discovery_failed", detail=repr(exc))
             return
-        found: list[tuple[int, str, str]] = []
+        found: list[tuple[int, Lead, str, str]] = []
 
         def read(item: tuple[int, Lead]) -> None:
             if control is not None and control.stop_requested:
@@ -505,7 +573,7 @@ class AppStoreSession(LeadTypeSession):
             org_id, lead = item
             for store, app_id in self.links(lead):
                 with self._lock:
-                    found.append((org_id, store, app_id))
+                    found.append((org_id, lead, store, app_id))
 
         with ThreadPoolExecutor(max_workers=self.section.workers,
                                 thread_name_prefix="appsites") as pool:
@@ -513,19 +581,33 @@ class AppStoreSession(LeadTypeSession):
         self.store.tag_thread(KEY)
         with self._lock:
             self.stats["site_apps"] += len(found)
-        apple = {app_id: org for org, store, app_id in found if store == APP_STORE}
+        apple: dict[str, list[tuple[int, Lead]]] = {}
+        for org_id, lead, store, app_id in found:
+            if store == APP_STORE:
+                apple.setdefault(app_id, []).append((org_id, lead))
+        listings: list[tuple[int, Lead, AppListing]] = []
         if apple and not (control is not None and control.stop_requested):
             try:
                 for listing in itunes.lookup(self.kit.http, list(apple), self.country):
-                    self.consider([listing], org_id=apple.get(listing.app_id))
+                    listings.extend((o, lead, listing) for o, lead in apple.get(listing.app_id,
+                                                                                 []))
             except Exception as exc:
                 self._fetch_failed(ITUNES, exc, query="lookup")
-        for org_id, store, package in found:
+        for org_id, lead, store, package in found:
             if store != GOOGLE_PLAY or (control is not None and control.stop_requested):
                 continue
-            listing = self.play(package)
+            listing = self.play(package, budget="sites")
             if listing is not None:
-                self.consider([listing], org_id=org_id)
+                listings.append((org_id, lead, listing))
+        for org_id, lead, listing in listings:
+            if control is not None and control.stop_requested:
+                break
+            if self.owns(lead, listing):
+                self.safe_consider([listing], org_id=org_id)
+            else:                       # somebody else's app: judged like any found app
+                with self._lock:
+                    self.stats["site_apps_not_own"] += 1
+                self.safe_consider([listing])
 
     def links(self, lead: Lead) -> list[tuple[str, str]]:
         """App Store and Play links on an organisation's homepage (robots.txt honoured)."""

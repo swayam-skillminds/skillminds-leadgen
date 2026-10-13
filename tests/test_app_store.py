@@ -103,7 +103,8 @@ def play_route(url: str) -> Page:
 def lookup_route(url: str) -> Page:
     ids = (parse_qs(urlsplit(url).query).get("id") or [""])[0].split(",")
     data = json_fixture("apps/itunes_lookup.json")
-    data["results"] = [r for r in data["results"] if str(r["trackId"]) in ids]
+    every = data["results"] + json_fixture("apps/itunes_search_clinic.json")["results"]
+    data["results"] = [r for r in every if str(r.get("trackId")) in ids]
     data["resultCount"] = len(data["results"])
     return Page.of_json(data)
 
@@ -479,8 +480,12 @@ def test_a_crashing_assessment_is_contained(tmp_path, monkeypatch, stores):
     crashed, outcome = run(tmp_path, monkeypatch, "crash", {**LOCAL, "app_store": FAST})
     assert outcome.status == "completed"
     assert local_business_output(crashed) == local_business_output(alone)
-    assert any(f["reason"] == "unit_failed" and "exploded" in (f["detail"] or "")
-               for f in project_rows(crashed, FailureRow))
+    failures = [f for f in project_rows(crashed, FailureRow) if f["reason"] == "assess_failed"]
+    # Each app's crash costs that app, in discovery and in the site links alike.
+    assert {f["url"] for f in failures} >= {
+        "https://apps.apple.com/in/app/sahyadri-clinic-appointments/id1700000001",
+        "https://play.google.com/store/apps/details?id=com.banerbakes.order"}
+    assert all("exploded" in (f["detail"] or "") for f in failures)
 
 
 # --- scoring, columns, depth ---------------------------------------------------------------------
@@ -575,3 +580,142 @@ def test_run_py_exits_0_for_a_completed_run_without_local_business(tmp_path, mon
         "lead_types": {"local_business": {"enabled": False}, "app_store": FAST},
         "runtime": {"db_url": run_database(tmp_path, "cli")}}), encoding="utf-8")
     assert run_cmd.main(["--config", str(path), "--no-sheets"]) == 0
+
+
+# --- the review's findings (2026-10-13) ------------------------------------------------------------
+
+def test_review_short_reviews_keep_their_own_text_and_never_a_name():
+    page = play_page("com.a.b", "Acme", website="https://acme.example/", rating="2.0",
+                     count=50, installs="1K+", updated_days=10, reviews=[
+                         ("Christopher Alexander Montgomery-Smith", 1, 5, "Worst app"),
+                         ("Ann", 1, 6, "Not working"),
+                         ("Bob", 5, 7, "Login used to fail but now it works great, thank you!")])
+    listing = google_play.parse(page.text, "com.a.b")
+    assert [(r.rating, r.text) for r in listing.reviews] == [
+        (1, "Worst app"), (1, "Not working"),
+        (5, "Login used to fail but now it works great, thank you!")]
+    assert [(t.key, t.count) for t in themes(listing.reviews)] == [("bugs", 1)]  # no "login"
+
+
+def test_review_the_developer_is_never_an_email():
+    page = play_page("com.a.b", "Acme", website="https://acme.example/", rating="2.0",
+                     count=50, installs="1K+", updated_days=10, email="dev@acme.example",
+                     author="Acme Apps")
+    listing = google_play.parse(page.text.replace('<div class="pSEeg"></div>', "", 1),
+                                "com.a.b")
+    assert listing.developer == "Acme Apps" and listing.developer_email == "dev@acme.example"
+
+
+def test_review_a_twin_needs_the_developer_s_own_site(tmp_path):
+    web = app_web()
+    s = session(tmp_path, web=web)
+    shared = listing(developer_website="https://www.facebook.com/sahyadri",
+                     bundle_id="com.sahyadricare.patient")
+    assert s._ios_twin(shared) is None
+    assert not [c for c in web.calls if "play.google.com" in c]
+
+
+class SiteSource(Source):
+    """Shops whose sites link apps: their own, a delivery platform's, and one the App Store
+    search passes over (its developer gives no sign of being in India)."""
+
+    name = "stub"
+
+    def discover(self, locality, category) -> Iterator[Lead]:
+        for name, site, phone in (("Baner Bakes", "https://baner-bakes.example/", "+912025550301"),
+                                  ("Corner Cafe", "https://corner-cafe.example/", "+912025550302"),
+                                  ("Lakeside Smile", "https://lakeside-smile.example/",
+                                   "+912025550303")):
+            yield self.make_lead(business_name=name, website=site, locality=locality.name,
+                                 category=category.name, phones=[phone])
+
+
+@pytest.fixture
+def site_stores(monkeypatch, stores):
+    PLAY["com.bigdelivery.app"] = play_page(
+        "com.bigdelivery.app", "BigDelivery", website="https://bigdelivery.example/",
+        rating="3.2", count=2_300_000, installs="100M+", updated_days=3,
+        legal="BigDelivery Inc", category="FOOD_AND_DRINK")
+    stores.add("https://corner-cafe.example/", Page(
+        '<a href="https://play.google.com/store/apps/details?id=com.bigdelivery.app">Order on '
+        'BigDelivery</a>'))
+    stores.add("https://lakeside-smile.example/", Page(
+        '<a href="https://apps.apple.com/in/app/lakeside-smile/id1700000006">Our app</a>'))
+    monkeypatch.setattr(pipeline_mod, "DISCOVERY_SOURCES", {"stub": SiteSource})
+    yield stores
+    PLAY.pop("com.bigdelivery.app", None)
+
+
+def test_review_site_links_own_apps_only_and_after_the_search(tmp_path, monkeypatch,
+                                                             site_stores):
+    config, outcome = run(tmp_path, monkeypatch, "sites", {**LOCAL, "app_store": FAST})
+    assert outcome.ok
+    signals = by_org(config)
+    # A delivery platform a café links is not the café's app (and is a national brand).
+    assert "Corner Cafe" not in signals and "BigDelivery Inc" not in signals
+    # The search left Lakeside's app out (no sign of India); its own site links it.
+    assert signals["Lakeside Smile"] == [("low_rating", "app_store:1700000006:low_rating")]
+    assert ("low_rating", "app_store:1700000009:low_rating") in signals["Baner Bakes"]
+    stats = outcome.results["app_store"].stats
+    assert stats["site_apps_not_own"] == 1 and stats["skipped_size"] >= 1
+
+
+def test_review_a_spent_search_budget_leaves_the_sites_their_own(tmp_path, monkeypatch, stores):
+    tight = {**FAST, "sources": {**FAST["sources"], "google_play": {
+        "min_delay": 1.0, "max_delay": 1.0, "max_listings": 1}}}
+    config, outcome = run(tmp_path, monkeypatch, "budget", {**LOCAL, "app_store": tight})
+    assert outcome.ok
+    assert ("stale_app", "google_play:com.banerbakes.order:stale_app") in \
+        by_org(config)["Baner Bakes"]
+    assert [f["reason"] for f in project_rows(config, FailureRow)
+            if f["source"] == "google_play"] == ["budget_spent"]           # said once
+
+
+def test_review_the_download_band_applies_to_play_twins(tmp_path, monkeypatch, stores):
+    config, outcome = run(tmp_path, monkeypatch, "installs",
+                          {**LOCAL, "app_store": {**FAST, "installs": {"max": 1000}}})
+    assert outcome.ok
+    assert "Sahyadri Care Pvt Ltd" not in by_org(config)                 # its twin: 10K+
+    assert outcome.results["app_store"].stats["skipped_installs"] == 1
+
+
+def test_review_a_missing_listed_app_is_recorded(tmp_path, monkeypatch, stores):
+    config, outcome = run(tmp_path, monkeypatch, "missing", {"app_store": {
+        "apps": ["com.not.listed", "id1700099999"], "check_sites": "none", "min_delay": 0,
+        "max_delay": 0}})
+    assert outcome.ok
+    assert sorted((f["source"], f["reason"]) for f in project_rows(config, FailureRow)) == [
+        ("google_play", "app_not_found"), ("listed", "app_not_found")]
+
+
+def test_review_run_py_exits_1_when_a_lead_type_failed(tmp_path, monkeypatch, stores):
+    import yaml
+
+    from leadscraper.cli import run_cmd
+    from leadscraper.leadtypes.tech_stack.plugin import TECH_STACK
+
+    def broken(context):
+        raise RuntimeError("tech_stack exploded")
+
+    monkeypatch.setattr(TECH_STACK, "open", broken)
+    monkeypatch.setenv("LEADSCRAPER_DATA_DIR", str(tmp_path / "cli-fail"))
+    path = tmp_path / "two.yaml"
+    path.write_text(yaml.safe_dump({
+        "schema_version": 1, "name": "Two", "project": f"two-{tmp_path.name}",
+        "geography": {"country": "IN", "places": ["Pune"]},
+        "lead_types": {"local_business": {"enabled": False}, "app_store": FAST,
+                       "tech_stack": {}},
+        "runtime": {"db_url": run_database(tmp_path, "cli-fail")}}), encoding="utf-8")
+    assert run_cmd.main(["--config", str(path), "--no-sheets"]) == 1
+
+
+def test_review_every_package_directory_is_a_package():
+    """A wheel (non-editable install) carries only what setuptools' find_packages finds:
+    directories with an __init__.py. app_store's was missing (editable installs hid it)."""
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parent.parent / "leadscraper"
+    missing = [str(d.relative_to(root)) for d in root.rglob("*")
+               if d.is_dir() and d.name != "__pycache__" and "migrations" not in d.parts
+               and any(d.glob("*.py")) and not (d / "__init__.py").exists()]
+    assert missing == []

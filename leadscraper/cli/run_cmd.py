@@ -416,7 +416,8 @@ def main(argv: list[str] | None = None, prog: str | None = None) -> int:
         return 0
     local = outcome.results.get("local_business")
     if local is None:               # a run of other lead types only: its own outcome decides
-        return 0 if outcome.status == "completed" else 1
+        return 0 if outcome.status == "completed" and not any(
+            r.failed for r in outcome.results.values()) else 1
     if local.failed:
         return 1
     return 0 if (local.stats.get("combos_done") or args.dry_run or args.enrich_only

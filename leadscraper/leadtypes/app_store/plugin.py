@@ -109,7 +109,8 @@ class AppStoreLeadType(LeadType):
         if depth == "deep":
             return ({"max_sites": max(section.max_sites, 500),
                      "sources": sources.model_copy(update={
-                         "itunes": sources.itunes.model_copy(update={"max_results": 200}),
+                         "itunes": sources.itunes.model_copy(update={
+                             "max_results": max(sources.itunes.max_results, 200)}),
                          "google_play": sources.google_play.model_copy(update={
                              "max_listings": max(sources.google_play.max_listings, 200)})})},
                     ["app_store: 200 apps per keyword, 200 Play listings, 500 sites"])

@@ -104,10 +104,11 @@ def _support(soup: BeautifulSoup) -> dict[str, str]:
             out["phone"] = after[0]
     if "About the developer" in tokens:
         tail = tokens[tokens.index("About the developer") + 1:]
-        if tail:
+        if tail and not _EMAIL.fullmatch(tail[0]) and not _PHONE.match(tail[0]):
             out["legal_name"] = tail[0]
+            tail = tail[1:]
         address = []
-        for token in tail[1:]:
+        for token in tail:
             if _EMAIL.fullmatch(token):
                 out.setdefault("email", token)
             elif _PHONE.match(token):
@@ -121,29 +122,43 @@ def _support(soup: BeautifulSoup) -> dict[str, str]:
     return out
 
 
+#: Text a review's box carries besides the review: menus, flags, helpfulness votes.
+_REVIEW_CHROME = re.compile(r"^(?:more_vert|Flag inappropriate|Show review history|"
+                            r"Did you find this helpful\??|Yes|No|"
+                            r"[\d,]+ (?:people|person) found this review helpful)$", re.I)
+
+
+def _review_box(label):
+    """The review's own element: the largest ancestor that holds this one star rating and
+    no other (its parent is the list of reviews)."""
+    box = None
+    node = label.parent
+    for _ in range(10):
+        if node is None or node.name in ("body", "html"):
+            break
+        if len(node.find_all(attrs={"aria-label": _STARS})) > 1:
+            break
+        box, node = node, node.parent
+    return box
+
+
 def _reviews(soup: BeautifulSoup) -> list[Review]:
+    """Each review's stars, date and text. The text is what follows the review's date in
+    its own box (the reviewer's name comes before it and is never read)."""
     out: list[Review] = []
     for label in soup.find_all(attrs={"aria-label": _STARS}):
-        box, lines = label, []
-        for _ in range(8):
-            box = box.parent
-            if box is None:
-                break
-            lines = [t.strip() for t in box.get_text("\n", strip=True).split("\n") if t.strip()]
-            # The review's own box: its date and a line long enough to be its text.
-            if any(_DATE.search(line) for line in lines) and \
-                    any(len(line) >= 30 and not _DATE.search(line) for line in lines):
-                break
-        if box is None or not any(_DATE.search(line) for line in lines):
+        box = _review_box(label)
+        if box is None:
             continue
-        when = next((_date(m.group(1)) for line in lines for m in [_DATE.search(line)] if m),
-                    None)
-        # The review's text: its longest line (never the reviewer's name).
-        body = max((line for line in lines if not _DATE.fullmatch(line)), key=len, default="")
-        if len(body) < 15:
+        lines = [t.strip() for t in box.get_text("\n", strip=True).split("\n") if t.strip()]
+        dated = next((i for i, line in enumerate(lines) if _DATE.fullmatch(line)), None)
+        if dated is None:
+            continue
+        body = next((line for line in lines[dated + 1:] if not _REVIEW_CHROME.match(line)), "")
+        if not body:
             continue
         stars = int(_STARS.match(label["aria-label"]).group(1))
-        out.append(Review(rating=stars, text=body[:1200], date=when))
+        out.append(Review(rating=stars, text=body[:1200], date=_date(lines[dated])))
     return out
 
 

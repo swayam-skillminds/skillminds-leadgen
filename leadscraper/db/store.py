@@ -660,10 +660,14 @@ class LeadStore:
     # --- attributes (Phase 5: AI industry tags, size estimates, summaries) -------------
 
     def set_attribute(self, lead_id: int, key: str, value: Any, *, origin: str = "ai",
-                      estimated: bool = False, producer: str = "") -> bool:
+                      estimated: bool = False, producer: str = "",
+                      note_run: bool = True) -> bool:
         """Store an attribute that is not a published fact; True if it changed.
 
         Every write leaves an evidence row naming who produced it ("ai:provider/model").
+        ``note_run=False``: the write doesn't make the organisation part of the run (a
+        check that found nothing the run looks for, Phase 8); run membership is what other
+        lead types' ``run`` scope and the run's diff read.
         """
         with self._lock:
             row = self._conn.execute(select(ATTRS.c.id, ATTRS.c.value).where(
@@ -684,7 +688,8 @@ class LeadStore:
                     producer=producer[:160], run_id=self.run_id, updated_at=now))
             self._evidence(lead_id, f"{origin}:{producer}"[:100] if producer else origin, None,
                            [f"attribute:{key}"])
-            self._note_run(lead_id, "updated")
+            if note_run:
+                self._note_run(lead_id, "updated")
             self._conn.commit()
             return True
 
