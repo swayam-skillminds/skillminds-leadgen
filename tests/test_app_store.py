@@ -124,7 +124,7 @@ def test_itunes_search_and_lookup_read_apps(tmp_path):
     web = app_web()
     found = itunes.search(web, "clinic", "IN", 50)
     assert [a.app_id for a in found] == ["1700000001", "1700000002", "1700000003",
-                                         "1700000004", "1700000005"]       # no artist row
+                                         "1700000004", "1700000005", "1700000006"]  # no artist
     first = found[0]
     assert (first.name, first.developer, first.developer_website, first.bundle_id) == (
         "Sahyadri Clinic Appointments", "Sahyadri Care Pvt Ltd",
@@ -134,6 +134,9 @@ def test_itunes_search_and_lookup_read_apps(tmp_path):
     assert (TODAY - first.updated).days == 800
     assert web.calls[0] == ("https://itunes.apple.com/search?term=clinic&country=in"
                             "&entity=software&limit=50")
+    unrated = itunes.parse({"wrapperType": "software", "trackId": 1, "trackName": "New app",
+                            "averageUserRating": 0, "userRatingCount": 0})
+    assert unrated.rating is None and unrated.ratings == 0     # live: Apple says 0, not "none"
     [baner] = itunes.lookup(web, ["1700000009"], "IN")
     assert baner.name == "Baner Bakes Order" and baner.developer == "AppCrafters Studio"
 
@@ -228,6 +231,10 @@ def test_assessment(tmp_path):
     assert [t["label"] for t in payload["themes"]] == ["crashes / won't open", "login / OTP"]
     assert payload["low_star_reviews"] == 3
     assert session(tmp_path, min_complaints=3).complaint_themes(play) == []
+    # The same complaints on an app rated well overall count for less.
+    play.rating = 4.5
+    rated = {f["type"]: f for f in s.assess(play)}
+    assert rated["review_complaints"]["strength"] == pytest.approx(0.65 / 3, abs=0.01)
 
 
 def test_which_apps_count(tmp_path):
@@ -235,8 +242,20 @@ def test_which_apps_count(tmp_path):
     assert s.unwanted(listing(genre="Games")) == "skipped_genre"           # excluded by default
     assert s.unwanted(listing(genre="Business")) == "skipped_genre"        # not a wanted genre
     assert s.unwanted(listing(genre="Medical", installs_min=1_000_000)) == "skipped_installs"
-    assert s.unwanted(listing(genre="Medical")) == "skipped_place"
-    assert s.unwanted(listing(genre="Medical", description="Clinics across Pune")) == ""
+    assert s.unwanted(listing(genre="Medical")) == ""
+    assert s.out_of_scope([listing(description="Clinics across India")]) == "skipped_place"
+    assert s.out_of_scope([listing(description="Clinics across Pune")]) == ""
+    # country (the default): evidence the developer is in the run's country.
+    s = session(tmp_path)
+    assert s.out_of_scope([listing()]) == "skipped_country"              # a storefront lists all
+    assert s.out_of_scope([listing(description="Made in India")]) == ""
+    assert s.out_of_scope([listing(developer_website="https://acme.co.in/")]) == ""
+    assert s.out_of_scope([listing(), listing(store="google_play",
+                                              developer_address="Baner, Pune 411045")]) == ""
+    assert session(tmp_path, scope="storefront").out_of_scope([listing()]) == ""
+    # National brands are left out (live: Subway, Rappi); a run can lift the cap.
+    assert s.too_big([listing(ratings=2_372_879)]) == "skipped_size"
+    assert session(tmp_path, max_ratings=None).too_big([listing(ratings=2_372_879)]) == ""
 
 
 def test_ai_places_reviews_the_rules_cannot_and_must_quote_them(tmp_path):
@@ -355,6 +374,7 @@ def test_a_run_finds_neglected_apps_and_their_developers(tmp_path, monkeypatch, 
         "Pune Physio LLP": [("stale_app", "app_store:1700000005:stale_app")]}
     stats = outcome.results["app_store"].stats
     assert stats["skipped_genre"] == 1 and stats["healthy"] == 1 and stats["play_matched"] == 1
+    assert stats["skipped_country"] == 1                 # Lakeside: nothing says India
     orgs = {o["name"]: o for o in project_rows(config, Organization)}
     sahyadri = orgs["Sahyadri Care Pvt Ltd"]["record"]
     # The developer's own site, and the contacts the Play listing publishes for it.
@@ -504,6 +524,7 @@ def test_column_values():
     assert values["app_complaints"] == 'crashes / won\'t open (2): "it crashes"'
     assert values["flagged_apps"] == "Acme (Google Play); Acme iOS (App Store)"
     assert values["app_updated"].date() == date.today() - timedelta(days=700)
+    assert values["app_updated"].hour == 12            # a calendar date: noon UTC keeps the day
     assert APP_STORE.column_values(SimpleNamespace(as_of=now, signals=[]), None) == {}
 
 
@@ -537,3 +558,20 @@ def test_live_google_play_listing():
     assert listing is not None and listing.name
     assert listing.rating and listing.ratings and listing.installs_min
     assert listing.updated and listing.developer
+
+
+def test_run_py_exits_0_for_a_completed_run_without_local_business(tmp_path, monkeypatch,
+                                                                    stores):
+    """Before Phase 8, run.py exited 1 whenever local_business wasn't in the run."""
+    import yaml
+
+    from leadscraper.cli import run_cmd
+
+    monkeypatch.setenv("LEADSCRAPER_DATA_DIR", str(tmp_path / "cli"))
+    path = tmp_path / "apps.yaml"
+    path.write_text(yaml.safe_dump({
+        "schema_version": 1, "name": "Apps only", "project": f"apps-only-{tmp_path.name}",
+        "geography": {"country": "IN", "places": ["Pune"]},
+        "lead_types": {"local_business": {"enabled": False}, "app_store": FAST},
+        "runtime": {"db_url": run_database(tmp_path, "cli")}}), encoding="utf-8")
+    assert run_cmd.main(["--config", str(path), "--no-sheets"]) == 0

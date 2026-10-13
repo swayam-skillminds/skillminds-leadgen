@@ -97,12 +97,21 @@ class AppStoreSession(LeadTypeSession):
                                       "healthy": 0, "new": 0, "merged": 0, "attached": 0,
                                       "play_listings": 0, "play_matched": 0, "sites_read": 0,
                                       "site_apps": 0, "skipped_genre": 0, "skipped_place": 0,
+                                      "skipped_country": 0, "skipped_size": 0,
                                       "skipped_installs": 0, "skipped_unknown": 0,
                                       "ai_themes": 0}
         #: Apps assessed this run (store:id): each once.
         self.seen: set[str] = set()
         self.places = [p for p in dict.fromkeys(str(p).strip() for p in
                                                 (self.config.get("places") or [])) if p]
+        try:
+            info = self.config.country_info
+            self.country_words = [w for w in dict.fromkeys([info.name, *info.name_noise]) if w]
+        except Exception:
+            self.country_words = []
+        code = self.country
+        #: The country's own domain ending (GB's is .uk).
+        self.country_tld = {"gb": "uk"}.get(code, code)
         sources = section.sources
         self.kit.limiter.configure(itunes.HOST, sources.itunes.min_delay,
                                    sources.itunes.max_delay)
@@ -186,14 +195,14 @@ class AppStoreSession(LeadTypeSession):
         if apple:
             try:
                 for listing in itunes.lookup(self.kit.http, apple, self.country):
-                    self._add(outcome, self.consider([listing]))
+                    self._add(outcome, self.consider([listing], explicit=True))
             except Exception as exc:
                 self._fetch_failed(ITUNES, exc, query="lookup")
         for store, package in refs:
             if store == GOOGLE_PLAY:
                 listing = self.play(package)
                 if listing is not None:
-                    self._add(outcome, self.consider([listing]))
+                    self._add(outcome, self.consider([listing], explicit=True))
         return outcome
 
     def play(self, package: str) -> AppListing | None:
@@ -247,15 +256,46 @@ class AppStoreSession(LeadTypeSession):
                 (installs.min is not None and listing.installs_min < installs.min) or
                 (installs.max is not None and listing.installs_min > installs.max)):
             return "skipped_installs"
-        if self.section.scope == "place" and self.places:
-            text = f" {_words(listing.name)} {_words(listing.description)} " \
-                   f"{_words(listing.developer_address)} "
-            if not any(f" {_words(p)} " in text for p in self.places):
-                return "skipped_place"
         return ""
 
-    def consider(self, listings: list[AppListing], org_id: int | None = None) -> UnitOutcome:
-        """Assess an app (with its Play twin) and record it on its organisation."""
+    def too_big(self, listings: list[AppListing]) -> str:
+        """"skipped_size" for an app rated by more people than ``max_ratings`` in a store."""
+        cap = self.section.max_ratings
+        if cap is not None and any((x.ratings or 0) > cap for x in listings):
+            return "skipped_size"
+        return ""
+
+    def out_of_scope(self, listings: list[AppListing]) -> str:
+        """"" when the app (with its twin) is in the run's scope, else the stat saying why.
+
+        ``country``: the developer is evidently in the run's country -- Play's developer
+        address or the app's own words name the country or a run place, or the developer's
+        site is on the country's domain (.in, .co.uk …). A storefront lists apps from
+        everywhere; without evidence an app is left out. ``place``: a run place is named.
+        """
+        scope = self.section.scope
+        if scope == "storefront":
+            return ""
+        text = " " + " ".join(f"{_words(x.name)} {_words(x.description)} "
+                              f"{_words(x.developer_address)}" for x in listings) + " "
+        if any(f" {_words(p)} " in text for p in self.places):
+            return ""
+        if scope == "place":
+            return "skipped_place"
+        if any(f" {_words(w)} " in text for w in self.country_words):
+            return ""
+        tld = self.country_tld
+        if tld and any((domain_of(x.developer_website) or "").endswith(f".{tld}")
+                       for x in listings if x.developer_website):
+            return ""
+        return "skipped_country"
+
+    def consider(self, listings: list[AppListing], org_id: int | None = None, *,
+                 explicit: bool = False) -> UnitOutcome:
+        """Assess an app (with its Play twin) and record it on its organisation.
+
+        ``org_id``: an organisation whose own site links the app; ``explicit``: the config
+        names it. Either way the run's genre, download and scope filters don't apply."""
         outcome = UnitOutcome(status="done")
         first = listings[0]
         with self._lock:
@@ -263,7 +303,8 @@ class AppStoreSession(LeadTypeSession):
                 return outcome
             self.seen.add(first.key)
             self.stats["apps"] += 1
-        why = self.unwanted(first) if org_id is None else ""
+        chosen = org_id is not None or explicit
+        why = "" if chosen else self.unwanted(first)
         if why:
             with self._lock:
                 self.stats[why] += 1
@@ -277,6 +318,11 @@ class AppStoreSession(LeadTypeSession):
                     self.seen.add(twin.key)
             if twin is not None:
                 listings = [first, twin]
+        why = "" if chosen else (self.too_big(listings) or self.out_of_scope(listings))
+        if why:
+            with self._lock:
+                self.stats[why] += 1
+            return outcome
         return self.record(listings, org_id, outcome)
 
     # --- assessing ----------------------------------------------------------------------
@@ -311,6 +357,10 @@ class AppStoreSession(LeadTypeSession):
         if found:
             labels = [t.label for t in found]
             strength = min(0.75, 0.45 + 0.1 * len(found))
+            # Play shows its "most relevant" reviews, often the harsh ones: on an app rated
+            # well overall, complaints count for less (live check 2026-10-13: a 4.5 app).
+            if listing.rating is not None and listing.rating > section.rating_ceiling:
+                strength *= max(0.3, (5.0 - listing.rating) / (5.0 - section.rating_ceiling))
             out.append({"type": "review_complaints", "strength": round(strength, 3),
                         "title": f"{where}: reviewers complain of {', '.join(labels[:4])}",
                         "payload": {**base, "themes": [

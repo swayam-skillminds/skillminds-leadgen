@@ -50,7 +50,8 @@ def parse(item: dict[str, Any]) -> AppListing | None:
         developer=str(item.get("sellerName") or item.get("artistName") or "").strip(),
         developer_website=str(item.get("sellerUrl") or "").strip() or None,
         bundle_id=str(item.get("bundleId") or ""),
-        rating=round(float(rating), 2) if isinstance(rating, (int, float)) else None,
+        # Apple reports 0 for an app nobody has rated: that is no rating, not a bad one.
+        rating=round(float(rating), 2) if isinstance(rating, (int, float)) and count else None,
         ratings=int(count) if isinstance(count, (int, float)) else None,
         updated=iso_date(item.get("currentVersionReleaseDate")),
         released=iso_date(item.get("releaseDate")),

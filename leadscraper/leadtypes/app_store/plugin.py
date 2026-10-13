@@ -201,8 +201,9 @@ class AppStoreLeadType(LeadType):
             "app_rating": payload.get("rating"),
             "app_ratings": payload.get("ratings"),
             "installs": payload.get("installs"),
-            "app_updated": datetime(updated.year, updated.month, updated.day)
-            if updated else None,
+            # A calendar date: noon UTC, so the run's zone (the export converts) keeps the day.
+            "app_updated": datetime(updated.year, updated.month, updated.day, 12,
+                                    tzinfo=timezone.utc) if updated else None,
             "app_link": payload.get("url") or top.get("source_url"),
             "app_complaints": "; ".join(f"{c.get('label')} ({c.get('reviews')}): "
                                         f"\"{c.get('quote')}\"" for c in complaints) or None,

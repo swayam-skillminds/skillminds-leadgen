@@ -1,5 +1,5 @@
 {
- "resultCount": 6,
+ "resultCount": 7,
  "results": [
   {"wrapperType": "software", "kind": "software", "trackId": 1700000001,
    "trackName": "Sahyadri Clinic Appointments", "sellerName": "Sahyadri Care Pvt Ltd",
@@ -31,13 +31,20 @@
    "trackViewUrl": "https://apps.apple.com/in/app/healthtrack-pro/id1700000004?uo=4",
    "bundleId": "com.healthtrack.pro", "averageUserRating": 4.7, "userRatingCount": 3200,
    "currentVersionReleaseDate": "@iso:10", "version": "8.1", "primaryGenreName": "Medical",
-   "description": "Track your health."},
+   "description": "Track your health. Made in India."},
   {"wrapperType": "software", "kind": "software", "trackId": 1700000005,
    "trackName": "Pune Physio Connect", "sellerName": "Pune Physio LLP",
    "trackViewUrl": "https://apps.apple.com/in/app/pune-physio-connect/id1700000005?uo=4",
    "bundleId": "com.punephysio.app", "averageUserRating": 2.0, "userRatingCount": 3,
    "currentVersionReleaseDate": "@iso:700", "version": "1.0.2",
    "primaryGenreName": "Health & Fitness", "description": "Physiotherapy at home in Pune."},
+  {"wrapperType": "software", "kind": "software", "trackId": 1700000006,
+   "trackName": "Lakeside Smile Clinic", "sellerName": "Lakeside Smile LLC",
+   "sellerUrl": "https://lakeside-smile.example/",
+   "trackViewUrl": "https://apps.apple.com/in/app/lakeside-smile/id1700000006?uo=4",
+   "bundleId": "com.lakesidesmile.app", "averageUserRating": 1.9, "userRatingCount": 300,
+   "currentVersionReleaseDate": "@iso:30", "version": "4.0", "primaryGenreName": "Medical",
+   "description": "Dentistry for the whole family, by the lake."},
   {"wrapperType": "artist", "artistId": 1600000001, "artistName": "Sahyadri Care Pvt Ltd"}
  ]
 }

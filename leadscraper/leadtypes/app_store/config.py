@@ -12,8 +12,9 @@ lead_types:
     stale_months: 18            # no update for this long: a signal
     min_complaints: 2           # low-star reviews naming a theme (Play's listing shows a few)
     installs: {min: null, max: null}   # Play's download band, e.g. min 1000, max 1000000
-    scope: country              # country: the storefront; place: the app or its developer
-                                # names a run place
+    max_ratings: 100000         # leave out national brands (null: no cap)
+    scope: country              # country: the developer is evidently in the run's country;
+                                # place: a run place is named; storefront: anything listed
     apps: []                    # apps to check: store links, Apple ids, Play packages
     check_sites: run            # run | project | none: store links on these organisations' sites
     create_new: true            # a developer nobody holds becomes an organisation
@@ -90,9 +91,15 @@ class AppStoreConfig(_Strict):
     min_complaints: int = Field(2, ge=1, le=10, description="Low-star reviews naming a theme "
                                                             "needed for a complaints signal.")
     installs: InstallRange = Field(default_factory=InstallRange)
-    scope: Literal["country", "place"] = Field(
-        "country", description="country: every app in the storefront; place: only apps whose "
-                               "name, description or developer address names a run place.")
+    max_ratings: int | None = Field(100_000, ge=1, description="Leave out apps rated by more "
+                                    "people than this in either store: national brands "
+                                    "(live check 2026-10-13: Subway, Rappi); null = no cap.")
+    scope: Literal["storefront", "country", "place"] = Field(
+        "country", description="country: apps whose developer is evidently in the run's "
+                               "country (Play's developer address, a website on the country's "
+                               "domain, or the app naming the country or a run place); place: "
+                               "the app or its developer names a run place; storefront: every "
+                               "app the storefront returns, from anywhere.")
     apps: list[str] = Field(default_factory=list,
                             description="Apps to check: store links, Apple ids (id123456789) or "
                                         "Play packages (com.example.app).")
