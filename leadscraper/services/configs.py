@@ -41,7 +41,7 @@ def validate_document(document: Any) -> RunConfig:
 
     The API never lets a config choose the database: ``runtime.db_url`` would
     send a run somewhere the worker does not look (and put a credential in
-    the run history). Nor read the worker's files: a digital_audit
+    the run history). Nor read the worker's files: a digital_audit or tech_stack
     ``targets_file`` must arrive as inline ``targets``.
     """
     if not isinstance(document, dict):
@@ -56,13 +56,15 @@ def validate_document(document: Any) -> RunConfig:
     if isinstance(runtime, dict) and runtime.get("db_url"):
         raise Invalid("runtime.db_url cannot be set through the API: runs use the "
                       "application database (LEADSCRAPER_DB_URL)")
-    audit = (document.get("lead_types") or {}).get("digital_audit") \
-        if isinstance(document.get("lead_types"), dict) else None
-    if isinstance(audit, dict) and audit.get("targets_file"):
-        raise Invalid("lead_types.digital_audit.targets_file cannot be set through the API or "
-                      "in a saved config: it would read a file on the worker. Upload the list "
-                      "(POST /audit/targets, or `leadscraper audit targets FILE`) and put the "
-                      "result in lead_types.digital_audit.targets")
+    lead_types = document.get("lead_types") if isinstance(document.get("lead_types"),
+                                                           dict) else {}
+    for key in ("digital_audit", "tech_stack"):         # the lead types that take uploads
+        section = lead_types.get(key)
+        if isinstance(section, dict) and section.get("targets_file"):
+            raise Invalid(f"lead_types.{key}.targets_file cannot be set through the API or in "
+                          "a saved config: it would read a file on the worker. Upload the list "
+                          "(POST /audit/targets, or `leadscraper audit targets FILE`) and put "
+                          f"the result in lead_types.{key}.targets")
     try:
         return RunConfig.model_validate(document)
     except ValueError as exc:

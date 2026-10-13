@@ -1,5 +1,6 @@
-# Fingerprint rules for the digital_audit `cms_age` check: which CMS, framework
-# or server a site runs, which version, and whether that version is outdated.
+# Fingerprint rules: which CMS, framework, shop or server a site runs, which
+# version, and whether that version is outdated. Read by digital_audit (its
+# `cms_age` check) and tech_stack (Phase 8: the technologies a run targets).
 #
 # Written for this project in the open pattern style of Wappalyzer-like tools
 # (meta generator, HTML, script/link URLs, response headers), so nothing here is
@@ -12,23 +13,34 @@
 #
 # Patterns are Python regular expressions, case-insensitive. A group captures
 # the version where the evidence carries one.
+#
+# `verified` (file-wide, or per rule): when the threshold and its reason were
+# last checked; Phase 8's rules against endoflife.date's API on 2026-10-13.
+# `vendor`: the technology's own sites (never a user of it). `footprints`:
+# phrases its users' pages tend to show, for tech_stack's opt-in web search.
 
 verified: "2026-10-07"
 
 technologies:
   WordPress:
+    vendor: [wordpress.org, wordpress.com]
+    footprints: ['"proudly powered by WordPress"']
     category: CMS
     meta_generator: ['^WordPress ?([\d.]+)?']
     html: ['/wp-content/', '/wp-includes/']
     outdated_below: "6.4"
     eol: "No formal end of life; 6.4 shipped Nov 2023, so anything older is about three years behind and usually missing security releases."
   Joomla:
+    vendor: [joomla.org]
+    footprints: ['"powered by Joomla"']
     category: CMS
     meta_generator: ['^Joomla!?(?: - Open Source Content Management)? ?([\d.]+)?']
     html: ['/media/jui/', '/media/system/js/core\.js', 'option=com_']
     outdated_below: "5.0"
     eol: "Joomla 3 ended Aug 2023, Joomla 4 security support ended Oct 2025."
   Drupal:
+    vendor: [drupal.org]
+    footprints: ['"powered by Drupal"']
     category: CMS
     meta_generator: ['^Drupal ?(\d+)?']
     headers: {x-generator: '^Drupal ?(\d+)?', x-drupal-cache: '.'}
@@ -36,46 +48,68 @@ technologies:
     outdated_below: "10"
     eol: "Drupal 7 ended Jan 2025, Drupal 9 Nov 2023."
   Magento 1:
+    vendor: [magento.com, adobe.com]
     category: Ecommerce
     html: ['Mage\.Cookies', '/skin/frontend/', 'js/varien/']
     outdated: true
     eol: "Magento 1 ended June 2020."
   Magento 2:
+    vendor: [magento.com, adobe.com]
     category: Ecommerce
     html: ['/static/version\d+/frontend/', 'data-mage-init', 'mage/requirejs']
   PrestaShop:
+    vendor: [prestashop.com]
+    footprints: ['"Ecommerce software by PrestaShop"']
     category: Ecommerce
     meta_generator: ['^PrestaShop']
     html: ['var prestashop ?=', '/modules/ps_']
   OpenCart:
+    vendor: [opencart.com]
+    footprints: ['"Powered By OpenCart"']
     category: Ecommerce
     html: ['catalog/view/theme/', 'index\.php\?route=common/home']
   WooCommerce:
+    vendor: [woocommerce.com, wordpress.org]
+    footprints: ['"powered by WooCommerce"']
     category: Ecommerce
     meta_generator: ['^WooCommerce ?([\d.]+)?']
     html: ['/wp-content/plugins/woocommerce/', 'woocommerce-cart']
   Shopify:
+    vendor: [shopify.com, shopify.in, shopify.co.uk]
+    footprints: ['"powered by Shopify"']
     category: Ecommerce
     html: ['cdn\.shopify\.com', 'Shopify\.theme']
   Wix:
+    vendor: [wix.com]
+    footprints: ['"designed with the Wix.com website builder"']
     category: Site builder
     meta_generator: ['^Wix\.com Website Builder']
     html: ['static\.wixstatic\.com', 'static\.parastorage\.com']
   Squarespace:
+    vendor: [squarespace.com]
+    footprints: ['"powered by Squarespace"']
     category: Site builder
     html: ['static1\.squarespace\.com', 'Static\.SQUARESPACE_CONTEXT']
   Webflow:
+    vendor: [webflow.com]
+    footprints: ['"Made in Webflow"']
     category: Site builder
     meta_generator: ['^Webflow']
     html: ['data-wf-page=', 'data-wf-site=']
   Weebly:
+    vendor: [weebly.com, squareup.com]
+    footprints: ['"Powered by Weebly"']
     category: Site builder
     html: ['editmysite\.com', 'weebly\.com/weebly/']
   GoDaddy Website Builder:
+    vendor: [godaddy.com]
+    footprints: ['"Powered by GoDaddy"']
     category: Site builder
     meta_generator: ['^Starfield Technologies; Go Daddy Website Builder ?([\d.]+)?']
     html: ['img1\.wsimg\.com']
   Blogger:
+    vendor: [blogger.com]
+    footprints: ['"Powered by Blogger"']
     category: Site builder
     meta_generator: ['^Blogger']
   Next.js:
@@ -127,3 +161,94 @@ technologies:
     headers: {server: '^Microsoft-IIS/([\d.]+)'}
     outdated_below: "8.5"
     eol: "IIS 7.x and older shipped with Windows Server 2008 R2, supported until Jan 2020."
+  # --- Phase 8 (tech_stack): more of what a web, app or ERP seller looks for ---------------
+  Angular:
+    category: JavaScript framework
+    html: ['\sng-version="([\d.]+)"']
+    outdated_below: "20"
+    eol: "Angular 19 support ended May 2026, 18 Nov 2025; 20 is supported until Nov 2026 (endoflife.date)."
+    verified: "2026-10-13"
+    vendor: [angular.dev, angular.io]
+  Vue.js:
+    category: JavaScript framework
+    scripts: ['vue@([\d.]+)', 'vue/([\d.]+)/vue(?:\.global|\.runtime)?(?:\.min)?\.js', 'vue(?:\.min)?\.js\?ver=([\d.]+)']
+    html: ['\sdata-v-app[\s>=]', '\sdata-v-[0-9a-f]{8}[\s>=]']
+    outdated_below: "3"
+    eol: "Vue 2 ended Dec 2023 (endoflife.date)."
+    verified: "2026-10-13"
+    vendor: [vuejs.org]
+  React:
+    category: JavaScript framework
+    scripts: ['react(?:-dom)?@([\d.]+)', 'react-dom(?:\.production)?(?:\.min)?\.js']
+    html: ['\sdata-reactroot[\s>=]']
+    vendor: [react.dev, reactjs.org]
+  TYPO3:
+    category: CMS
+    meta_generator: ['^TYPO3 (?:CMS )?(\d+(?:\.\d+)*)?']
+    html: ['/typo3conf/', '/typo3temp/']
+    outdated_below: "13"
+    eol: "TYPO3 12 LTS ended Apr 2026, 11 Oct 2024 (endoflife.date; paid ELTS aside)."
+    verified: "2026-10-13"
+    vendor: [typo3.org]
+    footprints: ['"powered by TYPO3"']
+  Ghost:
+    category: CMS
+    meta_generator: ['^Ghost ?([\d.]+)?']
+    vendor: [ghost.org]
+    footprints: ['"Powered by Ghost"']
+  HubSpot CMS:
+    category: CMS
+    meta_generator: ['^HubSpot']
+    html: ['\.hubspotusercontent[\w-]*\.(?:com|net)', 'hs-sites\.com']
+    vendor: [hubspot.com]
+  Odoo:
+    category: ERP
+    meta_generator: ['^Odoo']
+    html: ['/web/assets/[\w./-]*web\.assets_frontend', 'odoo\.define\(']
+    vendor: [odoo.com]
+    footprints: ['"Powered by Odoo"']
+  Duda:
+    category: Site builder
+    html: ['l?irp\.cdn-website\.com']
+    vendor: [duda.co]
+  BigCommerce:
+    category: Ecommerce
+    html: ['cdn\d*\.bigcommerce\.com']
+    vendor: [bigcommerce.com]
+  Salesforce Commerce Cloud:
+    category: Ecommerce
+    html: ['demandware\.static', '/on/demandware\.store/']
+    vendor: [salesforce.com]
+  Adobe Experience Manager:
+    category: CMS
+    html: ['/etc\.clientlibs/', '/etc/designs/']
+    vendor: [adobe.com]
+  Microsoft SharePoint:
+    category: CMS
+    headers: {microsoftsharepointteamservices: '^([\d.]+)'}
+    outdated_below: "16"
+    eol: "SharePoint 2013 (version 15) ended Apr 2023."
+    verified: "2026-10-13"
+    vendor: [microsoft.com]
+  Laravel:
+    category: Framework
+    headers: {set-cookie: 'laravel_session='}
+    vendor: [laravel.com]
+  CodeIgniter:
+    category: Framework
+    headers: {set-cookie: '\bci_session='}
+    vendor: [codeigniter.com]
+  Ruby on Rails:
+    category: Framework
+    html: ['<meta[^>]+name="csrf-param"[^>]+content="authenticity_token"']
+    vendor: [rubyonrails.org]
+  Django:
+    category: Framework
+    html: ['name=["'']csrfmiddlewaretoken["'']']
+    vendor: [djangoproject.com]
+  Classic ASP:
+    category: Language
+    headers: {set-cookie: '\bASPSESSIONID[A-Z]{8}='}
+  ColdFusion:
+    category: Language
+    headers: {set-cookie: '\b(?:CFID|CFTOKEN)='}

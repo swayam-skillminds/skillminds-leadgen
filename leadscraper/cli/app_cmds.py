@@ -487,8 +487,9 @@ def cmd_audit(args: argparse.Namespace) -> int:
     except (OSError, Invalid) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
-    text = yaml.safe_dump({"lead_types": {"digital_audit": {"enabled": True,
-                                                            "targets": result["targets"]}}},
+    key = getattr(args, "lead_type", None) or "digital_audit"
+    text = yaml.safe_dump({"lead_types": {key: {"enabled": True,
+                                                "targets": result["targets"]}}},
                           sort_keys=False, allow_unicode=True)
     if args.output:
         Path(args.output).write_text(text, encoding="utf-8")
@@ -603,9 +604,12 @@ def add_parsers(sub) -> dict:
     audit = sub.add_parser("audit", help="digital_audit helpers: targets FILE")
     audit_sub = audit.add_subparsers(dest="audit_cmd", required=True)
     targets = audit_sub.add_parser("targets", help="a CSV/XLSX of businesses or domains -> "
-                                                   "the YAML for lead_types.digital_audit")
+                                                   "the YAML for lead_types.digital_audit "
+                                                   "(or tech_stack)")
     targets.add_argument("file")
     targets.add_argument("-o", "--output")
+    targets.add_argument("--lead-type", choices=["digital_audit", "tech_stack"],
+                         default="digital_audit", help="which lead type's targets to write")
 
     return {"api": cmd_api, "status": cmd_status, "export": cmd_export, "bundle": cmd_bundle,
             "projects": cmd_projects, "suppression": cmd_suppression,

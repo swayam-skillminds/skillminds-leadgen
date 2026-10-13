@@ -73,7 +73,7 @@ include = ["leadscraper*"]
 [tool.setuptools.package-data]
 "leadscraper.db" = ["alembic.ini", "migrations/*.py", "migrations/versions/*.py"]
 "leadscraper.ai" = ["*.yaml"]
-"leadscraper.leadtypes.digital_audit" = ["*.yaml"]
+"leadscraper.sources.web" = ["*.yaml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
