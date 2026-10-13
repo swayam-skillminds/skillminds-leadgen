@@ -431,7 +431,8 @@ class HttpClient:
             response.raise_for_status()
             # A bot wall is a page; an API's JSON that mentions "access denied" (a tender
             # for an access-control system) is data, not a block.
-            is_json = "json" in str(response.headers.get("Content-Type") or "").lower()
+            content_type = (getattr(response, "headers", None) or {}).get("Content-Type")
+            is_json = "json" in str(content_type or "").lower()
             if not is_json and self.looks_blocked(response.text):
                 self.limiter.penalise(key, seconds=90.0)
                 raise BlockedError(f"block/CAPTCHA page returned by {key}")
