@@ -57,7 +57,9 @@ REVIEW = Template('<div class="EGFGHd"><div class="YNR7H"><div class="gSGphe"><d
 
 
 def day(days_ago: int) -> str:
-    return f"{TODAY - timedelta(days=days_ago):%b %-d, %Y}"
+    # Play's "Oct 4, 2026"; built by hand because %-d is glibc/BSD-only (Windows rejects it)
+    when = TODAY - timedelta(days=days_ago)
+    return f"{when:%b} {when.day}, {when:%Y}"
 
 
 def play_page(package: str, name: str, *, website: str, rating: str, count: int,
