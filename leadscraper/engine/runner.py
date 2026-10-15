@@ -286,6 +286,8 @@ class _Run:
         #: Seconds of the budget kept back for post-discovery.
         self._reserve = 0.0
         self._cut_keys: set[str] = set()
+        #: Lead types whose post-discovery a stop or the deadline left out: (key, reason).
+        self.post_skipped: list[tuple[str, str]] = []
 
     # --- setup ------------------------------------------------------------------------
 
@@ -470,7 +472,15 @@ class _Run:
                 update_run(engine, run_id, checkpoint={"phase": "post"})
                 for key, session in self._post_order():
                     if control.stop_requested:
-                        break
+                        # Say which lead types never got their turn (live check 3: the
+                        # audit, last in order, was silently left out at the deadline).
+                        reason = "time budget spent" if control.requested is None \
+                            else f"run {control.requested} requested"
+                        self.post_skipped.append((key, reason))
+                        log.warning("%s: post-discovery not run (%s)", key, reason)
+                        bus.publish(ev.Activity(phase="post", lead_type=key,
+                                                text=f"{key}: post-discovery not run ({reason})"))
+                        continue
                     store.lead_type = key
                     bus.publish(ev.Activity(phase="post", text=f"{key}: enrichment and AI passes",
                                             lead_type=key))
@@ -880,6 +890,9 @@ class _Run:
                            "units_planned": r.units_planned, "failed": r.failed,
                            "error": r.error, **r.stats}
                      for key, r in outcome.results.items()}
+            for key, reason in self.post_skipped:
+                if key in stats:
+                    stats[key]["post_discovery"] = f"not run: {reason}"
             stats["engine"] = summary
             written = finish_run(self.engine, run_id, status=status, error=error, stats=stats,
                                  worker_id=self.executor,
@@ -911,6 +924,7 @@ class _Run:
             "units_total": self.units_total, "units_done": self.units_done,
             "units_skipped": self.units_skipped,
             "skipped_units": [{"unit": k, "reason": r} for k, r in self.outcome.skipped[:500]],
+            "post_skipped": [{"lead_type": k, "reason": r} for k, r in self.post_skipped],
             "new": self.new, "merged": self.merged,
             "estimate_p50_seconds": basis.get("p50_seconds"),
             "estimate_p90_seconds": basis.get("p90_seconds"),

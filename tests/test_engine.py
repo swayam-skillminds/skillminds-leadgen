@@ -164,6 +164,29 @@ def test_a_unit_stuck_on_a_throttled_host_is_cut_before_it_starves_later_stages(
     assert rows["serp"]["status"] == "partial" and "cut" in rows["serp"]["error"]
 
 
+def test_post_discovery_the_deadline_never_reached_is_reported(staged):
+    """Live check 3 (Pune): tech_stack's site checks ran to the deadline, and
+    digital_audit, last in post-discovery order, never started. The run still said
+    nothing about it: zero audits, ``failed: false``, no event, no reason."""
+    document = synthetic_config("post-deadline", budget=20, units=units(1, seconds=60.0),
+                                priors={"src": [60.0, 2.0]}, post_seconds=5_000.0)
+    document["lead_types"]["later"] = {"post_seconds": 50.0}
+    seen: list = []
+    outcome = execute(RunRequest(config=compiled(document), install_signals=False,
+                                 clock=FakeClock(), discovery_workers=1, sinks=[seen.append]))
+
+    assert outcome.status == "completed"
+    engine = app_engine()
+    stats = get_run(engine, outcome.run_id)["stats"]
+    engine.dispose()
+    assert "post_discovery" not in stats["synthetic"]          # it ran, until the deadline
+    assert stats["later"]["post_discovery"] == "not run: time budget spent"
+    assert stats["engine"]["post_skipped"] == [{"lead_type": "later",
+                                                "reason": "time budget spent"}]
+    assert any(e.type == "activity" and e.lead_type == "later" and "not run" in e.text
+               for e in seen)
+
+
 @pytest.mark.parametrize("news_new, expected, skipped", [
     (3.0, "gdelt", "serp"),      # news outranks the SERP unit: its time is kept
     (0.01, None, "gdelt"),       # it doesn't: the finders' unit runs, news waits its turn

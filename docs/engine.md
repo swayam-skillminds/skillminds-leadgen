@@ -61,7 +61,10 @@ everyone's sites), `decision_makers` (7, people of everyone's organisations),
 `tech_stack` (8, fingerprints of everyone's sites), `digital_audit` (10, the audit,
 over everyone's enriched organisations). A
 session whose `post_scope` is `"run"` is estimated from every lead type's
-expected new organisations, not only its own.
+expected new organisations, not only its own. A session the deadline or a stop
+request reaches before its turn is not started: the runner logs it, publishes an
+`activity` event ("… post-discovery not run (time budget spent)"), and records it in
+the run's stats (`<lead type>.post_discovery`, `engine.post_skipped`).
 
 The budget is
 `time_budget_minutes` (or `--time-budget`). From it the engine reserves:
