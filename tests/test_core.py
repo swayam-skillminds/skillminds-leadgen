@@ -419,6 +419,39 @@ def test_serp_breaker_resets_on_any_success():
     assert health.disabled is False, "a success must clear the failure streak"
 
 
+def test_serp_breaker_trips_per_run_not_per_worker_process():
+    """A worker executes run after run in one process (live check 3): one run's
+    blocked search must not switch search off for the next, nor count toward it."""
+    from types import SimpleNamespace
+
+    from leadscraper.net.ratelimit import BlockedError, RateLimiter
+    from leadscraper.sources.google_search import SerpClient
+
+    class BlockedHttp:
+        calls = 0
+
+        def get(self, url, **kwargs):
+            BlockedHttp.calls += 1
+            raise BlockedError(f"HTTP 429 from {url}")
+
+    def run_context():   # every SERP caller of a run shares the run's limiter
+        return SimpleNamespace(config=None, http=BlockedHttp(), limiter=RateLimiter(),
+                               browser=None)
+
+    first = run_context()
+    for _ in range(3):
+        assert SerpClient(first).search("dentists austin") == []
+    BlockedHttp.calls = 0
+    assert SerpClient(first).search("dentists austin") == []
+    assert BlockedHttp.calls == 0, "within a run, the tripped breaker stops every client"
+
+    second = run_context()
+    assert SerpClient(second).search("dentists pune") == []
+    assert BlockedHttp.calls == 2, "the next run asks Google and DuckDuckGo again"
+    assert SerpClient(second).search("dentists pune") == []
+    assert BlockedHttp.calls == 4, "and needs its own three failures to trip"
+
+
 @pytest.mark.parametrize("title,head", [
     ("Royal Caterers | Best Caterers in Mumbai", "Royal Caterers"),
     ("ayaan photography |Best Wedding Photographers in Mumbai", "ayaan photography"),

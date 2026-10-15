@@ -13,6 +13,8 @@ from __future__ import annotations
 
 import logging
 import re
+import threading
+import weakref
 from dataclasses import dataclass
 from typing import Iterable, Iterator
 from urllib.parse import parse_qs, urlparse
@@ -106,8 +108,27 @@ class _SerpHealth:
         self.disabled = False
 
 
-#: Process-wide, deliberately shared by every SerpClient instance.
+#: For a caller without a run's limiter (a bare context in a script or test).
 SERP_HEALTH = _SerpHealth()
+
+#: One breaker per run, shared by every SerpClient of that run: keyed by the run's
+#: RateLimiter, which every SERP caller reaches through ``ctx.limiter``. A worker
+#: executes run after run in one process; a process-wide breaker carried one run's
+#: block into every later run until the worker restarted (live check 3).
+_RUN_HEALTH: weakref.WeakKeyDictionary = weakref.WeakKeyDictionary()
+_RUN_HEALTH_LOCK = threading.Lock()
+
+
+def serp_health(ctx) -> _SerpHealth:
+    """The search breaker of the run `ctx` belongs to."""
+    limiter = getattr(ctx, "limiter", None)
+    if limiter is None:
+        return SERP_HEALTH
+    with _RUN_HEALTH_LOCK:
+        health = _RUN_HEALTH.get(limiter)
+        if health is None:
+            health = _RUN_HEALTH[limiter] = _SerpHealth()
+        return health
 
 
 @dataclass
@@ -171,7 +192,8 @@ class SerpClient:
         headless browser. The requests tier is kept because it's an order of
         magnitude cheaper on the runs where it does work.
         """
-        if SERP_HEALTH.disabled:
+        health = serp_health(self.ctx)
+        if health.disabled:
             return []
 
         results: list[SerpResult] = []
@@ -211,9 +233,9 @@ class SerpClient:
 
         # Feed the circuit breaker before returning.
         if results:
-            SERP_HEALTH.record_success()
+            health.record_success()
         else:
-            SERP_HEALTH.record_failure()
+            health.record_failure()
 
         # Dedup by URL, preserving rank order.
         seen: set[str] = set()
